@@ -25,7 +25,7 @@ export default function BlogPostPage({ params }: { params: { slug: string } }) {
       <h1 className="mb-2 text-3xl font-bold">{post.title}</h1>
       <p className="mb-6 text-sm text-muted-foreground">By {post.author} • {new Date(post.published_at).toLocaleDateString()}</p>
       <div className="relative mb-6 aspect-video w-full">
-        <Image src={post.image} alt={post.title} fill className="rounded-md object-cover" />
+        <Image src={post.image} alt={post.title} fill unoptimized className="rounded-md object-cover" />
       </div>
       <p className="mb-10 leading-7 text-muted-foreground">{post.content}</p>
       <CommentsClient slug={params.slug} />
