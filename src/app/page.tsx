@@ -25,7 +25,7 @@ export default function Home() {
             </div>
           </div>
           <div className="relative aspect-video w-full">
-            <Image src="https://source.unsplash.com/featured/?lab,community" alt="Community lab" fill className="rounded-lg object-cover" />
+            <Image src="https://source.unsplash.com/featured/?lab,community" alt="Community lab" fill unoptimized className="rounded-lg object-cover" />
           </div>
         </div>
       </section>
@@ -46,7 +46,7 @@ export default function Home() {
               </CardHeader>
               <CardContent>
                 <div className="relative aspect-video w-full">
-                  <Image src={f.img} alt={f.title} fill className="rounded-md object-cover" />
+                  <Image src={f.img} alt={f.title} fill unoptimized className="rounded-md object-cover" />
                 </div>
               </CardContent>
             </Card>
