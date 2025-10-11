@@ -1,0 +1,35 @@
+[
+  {
+    "id": 1,
+    "title": "Citizen Science Engagement Seminar",
+    "type": "Seminar",
+    "start_time": "2025-10-15T10:00:00",
+    "end_time": "2025-10-15T13:00:00",
+    "location": "Dadisi Labs, Nairobi",
+    "description": "A public seminar to introduce citizen science projects in Kenya and inspire participation.",
+    "image": "https://source.unsplash.com/featured/?science,community",
+    "rsvp_required": true
+  },
+  {
+    "id": 2,
+    "title": "Lab Skills Workshop: DNA Extraction",
+    "type": "Lab Activity",
+    "start_time": "2025-10-20T09:00:00",
+    "end_time": "2025-10-20T12:00:00",
+    "location": "Wet Lab Facility",
+    "description": "Hands-on workshop for students and enthusiasts to learn about DNA extraction techniques.",
+    "image": "https://source.unsplash.com/featured/?lab,students",
+    "rsvp_required": true
+  },
+  {
+    "id": 3,
+    "title": "Community Science Expedition",
+    "type": "Expedition",
+    "start_time": "2025-11-05T08:00:00",
+    "end_time": "2025-11-05T17:00:00",
+    "location": "Karura Forest, Nairobi",
+    "description": "Outdoor field trip to collect and analyze environmental samples with guidance from our scientists.",
+    "image": "https://source.unsplash.com/featured/?nature,students",
+    "rsvp_required": false
+  }
+]

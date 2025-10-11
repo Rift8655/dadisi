@@ -1,0 +1,37 @@
+[
+  {
+    "id": 1,
+    "name": "Base Subscription",
+    "price": "Free",
+    "description": "Access to online resources, newsletters, and community updates.",
+    "features": [
+      "Community newsletters",
+      "Access to select online events",
+      "Profile management"
+    ]
+  },
+  {
+    "id": 2,
+    "name": "Individual Subscription",
+    "price": "KES 5,000/year",
+    "description": "For individual learners, researchers, or science enthusiasts.",
+    "features": [
+      "Full lab access (limited hours)",
+      "Discounted event tickets",
+      "Ability to write blog posts",
+      "Invitations to science seminars"
+    ]
+  },
+  {
+    "id": 3,
+    "name": "Community Subscription",
+    "price": "KES 15,000/year",
+    "description": "Ideal for schools, community groups, or organizations.",
+    "features": [
+      "Group access to lab facilities",
+      "Free entry to most events",
+      "Training programs for teachers",
+      "Priority access to mobile labs"
+    ]
+  }
+]

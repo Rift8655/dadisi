@@ -63,6 +63,9 @@ export const viewport: Viewport = {
   ],
 }
 
+import { Navbar } from "@/components/navbar"
+import { Footer } from "@/components/footer"
+
 export default function RootLayout({ children }: RootLayoutProps) {
   return (
     <html lang="en" suppressHydrationWarning>
@@ -79,7 +82,9 @@ export default function RootLayout({ children }: RootLayoutProps) {
           enableSystem
           disableTransitionOnChange
         >
-          {children}
+          <Navbar />
+          <main className="min-h-[calc(100vh-7rem)]">{children}</main>
+          <Footer />
         </ThemeProvider>
       </body>
     </html>

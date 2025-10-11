@@ -1,0 +1,32 @@
+[
+  {
+    "id": 1,
+    "title": "Why Citizen Science Matters in Kenya",
+    "slug": "citizen-science-kenya",
+    "author": "Dr. Achieng Otieno",
+    "published_at": "2025-09-20",
+    "excerpt": "Citizen science is a powerful tool for democratizing research. At Dadisi Labs, we are opening science to everyone.",
+    "content": "Citizen science involves public participation in scientific research. In Kenya, Dadisi Labs is pioneering new ways for schools and communities to engage directly with research and innovation...",
+    "image": "https://source.unsplash.com/featured/?citizen,science"
+  },
+  {
+    "id": 2,
+    "title": "Training Teachers for STEM Education",
+    "slug": "training-teachers-stem",
+    "author": "Jane Wanjiru",
+    "published_at": "2025-09-30",
+    "excerpt": "Teachers are the foundation of future innovation. Our workshops equip them with modern tools for STEM education.",
+    "content": "Dadisi Labs believes in empowering teachers through workshops that provide hands-on training in lab techniques and innovative learning models...",
+    "image": "https://source.unsplash.com/featured/?teacher,science"
+  },
+  {
+    "id": 3,
+    "title": "Inside the Dadisi Mobile Lab",
+    "slug": "inside-mobile-lab",
+    "author": "David Mwangi",
+    "published_at": "2025-10-01",
+    "excerpt": "Our mobile lab brings STEM directly to schools and communities outside Nairobi.",
+    "content": "With equipment like microscopes, incubators, and portable lab kits, the Dadisi mobile lab provides hands-on experience to learners across Kenya...",
+    "image": "https://source.unsplash.com/featured/?mobile,lab"
+  }
+]
