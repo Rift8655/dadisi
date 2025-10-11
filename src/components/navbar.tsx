@@ -3,11 +3,11 @@
 import Link from "next/link"
 import Image from "next/image"
 import { usePathname } from "next/navigation"
+import { useState } from "react"
 import { Menu } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { ModeToggle } from "@/components/mode-toggle"
 import { Button } from "@/components/ui/button"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 
 const links = [
   { href: "/", label: "Home" },
@@ -19,6 +19,7 @@ const links = [
 
 export function Navbar() {
   const pathname = usePathname()
+  const [open, setOpen] = useState(false)
   return (
     <header className="sticky top-0 z-40 w-full border-b bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-14 items-center justify-between gap-2">
@@ -56,23 +57,38 @@ export function Navbar() {
           ))}
         </nav>
         <div className="flex items-center gap-2">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild className="lg:hidden">
-              <Button variant="ghost" size="icon" aria-label="Open menu">
-                <Menu className="h-5 w-5" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-screen max-w-none rounded-none border-0 p-0 divide-y divide-border lg:hidden sm:w-64 sm:rounded-md sm:border sm:p-0">
-              {links.map((l) => (
-                <DropdownMenuItem key={l.href} asChild>
-                  <Link href={l.href} className={cn("w-full text-left px-6 py-3", pathname === l.href ? "text-foreground" : "text-foreground/80")}>{l.label}</Link>
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="Open menu"
+            className="lg:hidden"
+            aria-expanded={open}
+            onClick={() => setOpen((v) => !v)}
+          >
+            <Menu className="h-5 w-5" />
+          </Button>
           <ModeToggle />
         </div>
       </div>
+      {open && (
+        <div className="fixed inset-x-0 top-14 z-50 border-b bg-background lg:hidden">
+          <nav className="divide-y divide-border">
+            {links.map((l) => (
+              <Link
+                key={l.href}
+                href={l.href}
+                onClick={() => setOpen(false)}
+                className={cn(
+                  "block w-full px-6 py-3 text-left",
+                  pathname === l.href ? "text-foreground" : "text-foreground/80"
+                )}
+              >
+                {l.label}
+              </Link>
+            ))}
+          </nav>
+        </div>
+      )}
     </header>
   )
 }
