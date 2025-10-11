@@ -37,12 +37,12 @@ export function AuthDialog({ open, onOpenChange }: AuthDialogProps) {
         className="absolute inset-0 bg-black/60 backdrop-blur-sm"
         onClick={close}
       />
-      <div className="absolute inset-0 flex items-center justify-center p-4">
+      <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[clamp(20rem,92vw,40rem)] p-4">
         <div
           role="dialog"
           aria-modal="true"
           aria-labelledby={titleId}
-          className="relative w-full max-w-md rounded-xl border bg-card text-card-foreground shadow-2xl sm:max-w-lg"
+          className="relative w-full rounded-xl border bg-card text-card-foreground shadow-2xl max-h-[min(90vh,40rem)] overflow-y-auto"
         >
           <button
             onClick={close}
