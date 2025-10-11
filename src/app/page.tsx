@@ -25,7 +25,7 @@ export default function Home() {
             </div>
           </div>
           <div className="relative aspect-video w-full">
-            <Image src="https://source.unsplash.com/featured/?lab,community" alt="Community lab" fill unoptimized className="rounded-lg object-cover" />
+            <Image src="https://images.unsplash.com/photo-1581092795361-7dca6ae60f78?auto=format&fit=crop&w=1600&q=60" alt="Community lab" fill unoptimized className="rounded-lg object-cover" />
           </div>
         </div>
       </section>
@@ -34,10 +34,10 @@ export default function Home() {
         <h2 className="mb-4 text-2xl font-semibold">Facilities</h2>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {[
-            { title: "Wet Lab", img: "https://source.unsplash.com/featured/?wet,lab" },
-            { title: "Dry Lab", img: "https://source.unsplash.com/featured/?computers,lab" },
-            { title: "Greenhouse", img: "https://source.unsplash.com/featured/?greenhouse,plants" },
-            { title: "Mobile Lab", img: "https://source.unsplash.com/featured/?mobile,lab" },
+            { title: "Wet Lab", img: "https://images.unsplash.com/photo-1581091215367-59ab6b26b488?auto=format&fit=crop&w=1200&q=60" },
+            { title: "Dry Lab", img: "https://images.unsplash.com/photo-1461749280684-dccba630e2f6?auto=format&fit=crop&w=1200&q=60" },
+            { title: "Greenhouse", img: "https://images.unsplash.com/photo-1501004318641-b39e6451bec6?auto=format&fit=crop&w=1200&q=60" },
+            { title: "Mobile Lab", img: "https://images.unsplash.com/photo-1556157382-97eda2d62296?auto=format&fit=crop&w=1200&q=60" },
           ].map((f) => (
             <Card key={f.title}>
               <CardHeader>
