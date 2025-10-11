@@ -1,0 +1,5 @@
+{
+  "presetAmounts": [500, 1000, 2500, 5000],
+  "currency": "KES",
+  "thankYouMessage": "Thank you for supporting Dadisi Community Labs! Your contribution helps us expand science access across Kenya."
+}
