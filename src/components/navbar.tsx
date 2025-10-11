@@ -62,10 +62,10 @@ export function Navbar() {
                 <Menu className="h-5 w-5" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-screen max-w-none rounded-none border-0 p-2 lg:hidden sm:w-64 sm:rounded-md sm:border sm:p-1">
+            <DropdownMenuContent align="end" className="w-screen max-w-none rounded-none border-0 p-0 divide-y divide-border lg:hidden sm:w-64 sm:rounded-md sm:border sm:p-0">
               {links.map((l) => (
                 <DropdownMenuItem key={l.href} asChild>
-                  <Link href={l.href} className={cn("w-full justify-end text-right px-2 py-1.5", pathname === l.href ? "text-foreground" : "text-foreground/80")}>{l.label}</Link>
+                  <Link href={l.href} className={cn("w-full text-left px-6 py-3", pathname === l.href ? "text-foreground" : "text-foreground/80")}>{l.label}</Link>
                 </DropdownMenuItem>
               ))}
             </DropdownMenuContent>
