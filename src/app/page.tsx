@@ -25,7 +25,7 @@ export default function Home() {
             </div>
           </div>
           <div className="relative aspect-video w-full">
-            <Image src="https://images.unsplash.com/photo-1581092795361-7dca6ae60f78?auto=format&fit=crop&w=1600&q=60" alt="Community lab" fill unoptimized className="rounded-lg object-cover" />
+            <Image src="https://images.unsplash.com/photo-1583911860367-8b9fa77c6f4c?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" alt="Community lab" fill unoptimized className="rounded-lg object-cover" />
           </div>
         </div>
       </section>
