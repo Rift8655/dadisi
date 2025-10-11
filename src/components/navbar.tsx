@@ -20,11 +20,12 @@ const links = [
 
 export function Navbar() {
   const pathname = usePathname()
-  const [open, setOpen] = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false)
+  const [authOpen, setAuthOpen] = useState(false)
   return (
     <header className="sticky top-0 z-40 w-full border-b bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-14 items-center justify-between gap-2">
-        <AuthDialog open={open} onOpenChange={setOpen} />
+        <AuthDialog open={authOpen} onOpenChange={setAuthOpen} />
         <Link href="/" className="flex items-center gap-2 font-semibold" aria-label="Dadisi home">
           <span className="sr-only">Dadisi</span>
           <Image
@@ -59,28 +60,28 @@ export function Navbar() {
           ))}
         </nav>
         <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={() => setOpen(true)}>Sign in</Button>
+          <Button variant="outline" onClick={() => setAuthOpen(true)}>Sign in</Button>
           <Button
             variant="ghost"
             size="icon"
             aria-label="Open menu"
             className="lg:hidden"
-            aria-expanded={open}
-            onClick={() => setOpen((v) => !v)}
+            aria-expanded={menuOpen}
+            onClick={() => setMenuOpen((v) => !v)}
           >
             <Menu className="h-5 w-5" />
           </Button>
           <ModeToggle />
         </div>
       </div>
-      {open && (
+      {menuOpen && (
         <div className="fixed inset-x-0 top-14 z-40 border-b bg-background lg:hidden">
           <nav className="divide-y divide-border">
             {links.map((l) => (
               <Link
                 key={l.href}
                 href={l.href}
-                onClick={() => setOpen(false)}
+                onClick={() => setMenuOpen(false)}
                 className={cn(
                   "block w-full px-6 py-3 text-left",
                   pathname === l.href ? "text-foreground" : "text-foreground/80"
