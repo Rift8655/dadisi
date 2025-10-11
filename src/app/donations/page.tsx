@@ -1,5 +1,5 @@
-import fs from "node:fs"
-import path from "node:path"
+import fs from "fs"
+import path from "path"
 import { DonationsClient } from "@/components/donations-client"
 
 export const metadata = { title: "Donations", description: "Support Dadisi Community Labs" }
