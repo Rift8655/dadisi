@@ -37,7 +37,7 @@ export default function BlogPage() {
             </CardHeader>
             <CardContent>
               <div className="relative mb-3 aspect-video w-full">
-                <Image src={p.image} alt={p.title} fill className="rounded-md object-cover" />
+                <Image src={p.image} alt={p.title} fill unoptimized className="rounded-md object-cover" />
               </div>
               <p className="mb-3 text-sm text-muted-foreground">{p.excerpt}</p>
               <Link href={`/blog/${p.slug}`} className="text-primary underline-offset-4 hover:underline">
