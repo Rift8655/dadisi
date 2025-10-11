@@ -1,5 +1,5 @@
-import fs from "node:fs"
-import path from "node:path"
+import fs from "fs"
+import path from "path"
 import Image from "next/image"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { buttonVariants } from "@/components/ui/button"
