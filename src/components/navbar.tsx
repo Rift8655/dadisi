@@ -3,8 +3,11 @@
 import Link from "next/link"
 import Image from "next/image"
 import { usePathname } from "next/navigation"
+import { Menu } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { ModeToggle } from "@/components/mode-toggle"
+import { Button } from "@/components/ui/button"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 
 const links = [
   { href: "/", label: "Home" },
@@ -38,7 +41,7 @@ export function Navbar() {
             priority
           />
         </Link>
-        <nav className="hidden items-center gap-4 text-sm font-medium sm:flex">
+        <nav className="hidden items-center gap-4 text-sm font-medium lg:flex">
           {links.map((l) => (
             <Link
               key={l.href}
@@ -53,24 +56,22 @@ export function Navbar() {
           ))}
         </nav>
         <div className="flex items-center gap-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild className="lg:hidden">
+              <Button variant="ghost" size="icon" aria-label="Open menu">
+                <Menu className="h-5 w-5" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48 lg:hidden">
+              {links.map((l) => (
+                <DropdownMenuItem key={l.href} asChild>
+                  <Link href={l.href} className={cn("w-full", pathname === l.href ? "text-foreground" : "text-foreground/80")}>{l.label}</Link>
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
           <ModeToggle />
         </div>
-      </div>
-      <div className="container sm:hidden">
-        <nav className="flex items-center justify-between gap-1 py-2 text-sm">
-          {links.map((l) => (
-            <Link
-              key={l.href}
-              href={l.href}
-              className={cn(
-                "px-2 py-1",
-                pathname === l.href ? "text-foreground" : "text-foreground/60"
-              )}
-            >
-              {l.label}
-            </Link>
-          ))}
-        </nav>
       </div>
     </header>
   )
