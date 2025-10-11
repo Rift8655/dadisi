@@ -31,7 +31,7 @@ export function EventsClient({ events }: { events: Event[] }) {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="relative aspect-video w-full">
-              <Image src={e.image} alt={e.title} fill className="rounded-md object-cover" />
+              <Image src={e.image} alt={e.title} fill unoptimized className="rounded-md object-cover" />
             </div>
             <p className="text-sm text-muted-foreground">{e.description}</p>
             <Button onClick={() => toggle(e.id)} variant={rsvps[e.id] ? "secondary" : "default"}>
