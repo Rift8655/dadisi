@@ -8,6 +8,7 @@ import { Menu } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { ModeToggle } from "@/components/mode-toggle"
 import { Button } from "@/components/ui/button"
+import AuthDialog from "@/components/auth-dialog"
 
 const links = [
   { href: "/", label: "Home" },
@@ -23,6 +24,7 @@ export function Navbar() {
   return (
     <header className="sticky top-0 z-40 w-full border-b bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-14 items-center justify-between gap-2">
+        <AuthDialog open={open} onOpenChange={setOpen} />
         <Link href="/" className="flex items-center gap-2 font-semibold" aria-label="Dadisi home">
           <span className="sr-only">Dadisi</span>
           <Image
@@ -57,6 +59,7 @@ export function Navbar() {
           ))}
         </nav>
         <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={() => setOpen(true)}>Sign in</Button>
           <Button
             variant="ghost"
             size="icon"
@@ -71,7 +74,7 @@ export function Navbar() {
         </div>
       </div>
       {open && (
-        <div className="fixed inset-x-0 top-14 z-50 border-b bg-background lg:hidden">
+        <div className="fixed inset-x-0 top-14 z-40 border-b bg-background lg:hidden">
           <nav className="divide-y divide-border">
             {links.map((l) => (
               <Link
