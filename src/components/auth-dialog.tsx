@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useId, useState } from "react"
+import { createPortal } from "react-dom"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -30,9 +31,11 @@ export function AuthDialog({ open, onOpenChange }: AuthDialogProps) {
   if (!open) return null
 
   const close = () => onOpenChange(false)
+  const target = typeof document !== "undefined" ? document.body : null
+  if (!target) return null
 
-  return (
-    <div className="fixed inset-0 z-50">
+  return createPortal(
+    <div className="fixed inset-0 z-[60]">
       <div
         className="absolute inset-0 bg-black/60 backdrop-blur-sm"
         onClick={close}
@@ -113,7 +116,8 @@ export function AuthDialog({ open, onOpenChange }: AuthDialogProps) {
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    target
   )
 }
 
