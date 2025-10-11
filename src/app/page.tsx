@@ -30,7 +30,7 @@ export default function Home() {
             </p>
             <div className="flex justify-center gap-2 md:justify-start">
               <Link href="/membership" className={cn(buttonVariants())}>Become a member</Link>
-              <Link href="/events" className={cn(buttonVariants({ variant: "outline" }))}>See events</Link>
+              <Link href="/events" className={cn(buttonVariants({ variant: "outline" }), "text-black hover:text-black")}>See events</Link>
             </div>
           </div>
         </div>
