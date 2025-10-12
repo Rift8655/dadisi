@@ -65,6 +65,7 @@ export const viewport: Viewport = {
 
 import { Navbar } from "@/components/navbar"
 import { Footer } from "@/components/footer"
+import Toaster from "@/components/toaster"
 
 export default function RootLayout({ children }: RootLayoutProps) {
   return (
