@@ -85,6 +85,7 @@ export default function RootLayout({ children }: RootLayoutProps) {
           <Navbar />
           <main className="min-h-[calc(100vh-7rem)]">{children}</main>
           <Footer />
+          <Toaster />
         </ThemeProvider>
       </body>
     </html>
