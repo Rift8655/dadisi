@@ -50,7 +50,7 @@ export function EventsClient({ events }: { events: Event[] }) {
             <CardHeader>
               <CardTitle className="flex items-center justify-between gap-2">
                 <span>{e.title}</span>
-                <span className="text-xs font-normal text-muted-foreground">{new Date(e.start_time).toLocaleDateString()} • {e.type}</span>
+                <span className="text-xs font-normal text-muted-foreground">{formatDate(e.start_time)} • {e.type}</span>
               </CardTitle>
               <div className="flex items-center justify-between">
                 <CardDescription>{e.location}</CardDescription>
