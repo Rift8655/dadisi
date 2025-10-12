@@ -27,11 +27,6 @@ export default function EventsPage() {
     <div className="container py-10">
       <div className="mb-6 flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-3xl font-bold">Events</h1>
-        <div className="flex gap-2">
-          <Button variant="outline">Month</Button>
-          <Button variant="outline">Week</Button>
-          <Button variant="outline">Day</Button>
-        </div>
       </div>
       <EventsClient events={events} />
       <div className="mt-10">
