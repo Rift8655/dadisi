@@ -39,6 +39,7 @@ export function RsvpDialog({ open, onOpenChange, onSubmit }: { open: boolean; on
             onSubmit={(e) => {
               e.preventDefault()
               onSubmit({ name, email, guests, note: note || undefined })
+              show("Feature unavailable: system under maintenance.")
               onOpenChange(false)
             }}
           >
