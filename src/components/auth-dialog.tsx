@@ -15,6 +15,7 @@ export type AuthDialogProps = {
 export function AuthDialog({ open, onOpenChange }: AuthDialogProps) {
   const [tab, setTab] = useState<"signin" | "register">("signin")
   const titleId = useId()
+  const show = useToastStore((s) => s.show)
 
   useEffect(() => {
     if (!open) return
