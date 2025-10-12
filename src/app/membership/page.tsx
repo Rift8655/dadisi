@@ -1,9 +1,6 @@
 import path from "path"
 import fs from "fs"
-import Image from "next/image"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { buttonVariants } from "@/components/ui/button"
-import Link from "next/link"
 import SelectMembershipButton from "@/components/select-membership-button"
 
 export const metadata = {
