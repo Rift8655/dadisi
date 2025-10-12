@@ -2,6 +2,7 @@ import path from "path"
 import fs from "fs"
 import Image from "next/image"
 import { CommentsClient } from "@/components/comments-client"
+import { formatDate } from "@/lib/utils"
 
 export async function generateStaticParams() {
   const file = path.join(process.cwd(), "public/data/blog.json")
