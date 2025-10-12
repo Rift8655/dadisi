@@ -65,6 +65,7 @@ export const viewport: Viewport = {
 
 import { Navbar } from "@/components/navbar"
 import { Footer } from "@/components/footer"
+import Toaster from "@/components/toaster"
 
 export default function RootLayout({ children }: RootLayoutProps) {
   return (
@@ -85,6 +86,7 @@ export default function RootLayout({ children }: RootLayoutProps) {
           <Navbar />
           <main className="min-h-[calc(100vh-7rem)]">{children}</main>
           <Footer />
+          <Toaster />
         </ThemeProvider>
       </body>
     </html>

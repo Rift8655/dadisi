@@ -1,8 +1,9 @@
-import fs from "fs"
 import path from "path"
+import fs from "fs"
 import Image from "next/image"
 import Link from "next/link"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { formatDate } from "@/lib/utils"
 
 export const metadata = { title: "Blog", description: "Stories and updates" }
 
@@ -32,7 +33,7 @@ export default function BlogPage() {
             <CardHeader>
               <CardTitle>{p.title}</CardTitle>
               <CardDescription>
-                By {p.author} • {new Date(p.published_at).toLocaleDateString()}
+                By {p.author} • {formatDate(p.published_at)}
               </CardDescription>
             </CardHeader>
             <CardContent>
