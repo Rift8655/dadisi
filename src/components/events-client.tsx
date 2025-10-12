@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { useRsvpStore, type RSVPDetails } from "@/store/useRsvpStore"
 import { useMemo, useState } from "react"
 import RsvpDialog from "@/components/rsvp-dialog"
+import { formatDate } from "@/lib/utils"
 
 type Event = {
   id: number
