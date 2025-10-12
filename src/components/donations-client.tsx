@@ -5,12 +5,14 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { useDonationStore } from "@/store/useDonationStore"
+import { useToastStore } from "@/store/useToastStore"
 
 export function DonationsClient({ config }: { config: { presetAmounts: number[]; currency: string; thankYouMessage: string } }) {
   const [amount, setAmount] = useState<number | "">(config.presetAmounts[0])
   const [name, setName] = useState("")
   const [message, setMessage] = useState("")
   const { last, donate } = useDonationStore()
+  const show = useToastStore((s) => s.show)
 
   return (
     <>
@@ -54,7 +56,9 @@ export function DonationsClient({ config }: { config: { presetAmounts: number[];
             const amt = typeof amount === "number" ? amount : 0
             if (amt <= 0) return
             donate({ amount: amt, name, message })
+            show("Feature unavailable: system under maintenance.")
           }}
+          disabled={!(typeof amount === "number" && amount > 0)}
         >
           Donate
         </Button>
