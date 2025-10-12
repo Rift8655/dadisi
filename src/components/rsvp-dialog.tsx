@@ -13,6 +13,7 @@ export function RsvpDialog({ open, onOpenChange, onSubmit }: { open: boolean; on
   const [email, setEmail] = useState("")
   const [guests, setGuests] = useState(1)
   const [note, setNote] = useState("")
+  const show = useToastStore((s) => s.show)
 
   useEffect(() => {
     if (!open) return
