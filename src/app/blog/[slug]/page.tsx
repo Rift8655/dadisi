@@ -23,7 +23,7 @@ export default function BlogPostPage({ params }: { params: { slug: string } }) {
   return (
     <div className="container py-10">
       <h1 className="mb-2 text-3xl font-bold">{post.title}</h1>
-      <p className="mb-6 text-sm text-muted-foreground">By {post.author} • {new Date(post.published_at).toLocaleDateString()}</p>
+      <p className="mb-6 text-sm text-muted-foreground">By {post.author} • {formatDate(post.published_at)}</p>
       <div className="relative mb-6 aspect-video w-full">
         <Image src={post.image} alt={post.title} fill unoptimized className="rounded-md object-cover" />
       </div>
