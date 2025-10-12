@@ -80,6 +80,7 @@ export function AuthDialog({ open, onOpenChange }: AuthDialogProps) {
               className="space-y-4 p-6"
               onSubmit={(e) => {
                 e.preventDefault()
+                show("Feature unavailable: system under maintenance.")
                 close()
               }}
             >
@@ -98,6 +99,7 @@ export function AuthDialog({ open, onOpenChange }: AuthDialogProps) {
               className="space-y-4 p-6"
               onSubmit={(e) => {
                 e.preventDefault()
+                show("Feature unavailable: system under maintenance.")
                 close()
               }}
             >
