@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import type { RSVPDetails } from "@/store/useRsvpStore"
+import { useToastStore } from "@/store/useToastStore"
 
 export function RsvpDialog({ open, onOpenChange, onSubmit }: { open: boolean; onOpenChange: (v: boolean) => void; onSubmit: (details: RSVPDetails) => void }) {
   const titleId = useId()
