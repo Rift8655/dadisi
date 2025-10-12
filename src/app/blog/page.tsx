@@ -3,6 +3,7 @@ import fs from "fs"
 import Image from "next/image"
 import Link from "next/link"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { formatDate } from "@/lib/utils"
 
 export const metadata = { title: "Blog", description: "Stories and updates" }
 
