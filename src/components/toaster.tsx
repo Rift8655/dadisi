@@ -1,13 +1,21 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { createPortal } from "react-dom"
 import { useToastStore } from "@/store/useToastStore"
 
 export default function Toaster() {
   const { toasts, remove } = useToastStore()
-  const target = typeof document !== "undefined" ? document.body : null
-  if (!target) return null
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  if (!mounted) return null
+
+  const container = document.getElementById("toaster-root")
+  if (!container) return null
 
   return createPortal(
     <div className="pointer-events-none fixed inset-x-0 bottom-4 z-[70] flex justify-center px-4">
@@ -17,7 +25,7 @@ export default function Toaster() {
         ))}
       </div>
     </div>,
-    target
+    container
   )
 }
 
