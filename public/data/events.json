@@ -7,7 +7,7 @@
     "end_time": "2025-10-15T13:00:00",
     "location": "Dadisi Labs, Nairobi",
     "description": "A public seminar to introduce citizen science projects in Kenya and inspire participation.",
-    "image": "https://images.unsplash.com/photo-1515657241610-a6b33f0f6c5a?fm=jpg&q=60&w=2000&ixlib=rb-4.1.0",
+    "image": "/Seminar.jpg",
     "rsvp_required": true
   },
   {
@@ -18,7 +18,7 @@
     "end_time": "2025-10-20T12:00:00",
     "location": "Wet Lab Facility",
     "description": "Hands-on workshop for students and enthusiasts to learn about DNA extraction techniques.",
-    "image": "https://images.unsplash.com/photo-1679134015810-9695e7519f57?fm=jpg&q=60&w=2000&ixlib=rb-4.1.0",
+    "image": "/Lab_Skills.jpg",
     "rsvp_required": true
   },
   {
