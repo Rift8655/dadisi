@@ -2,13 +2,21 @@
 
 import Link from "next/link"
 import Image from "next/image"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import { useState } from "react"
-import { Menu } from "lucide-react"
+import { Menu, LogOut, User } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { ModeToggle } from "@/components/mode-toggle"
 import { Button } from "@/components/ui/button"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import AuthDialog from "@/components/auth-dialog"
+import { useAuth } from "@/store/auth"
 
 const links = [
   { href: "/", label: "Home" },
@@ -20,8 +28,20 @@ const links = [
 
 export function Navbar() {
   const pathname = usePathname()
+  const router = useRouter()
   const [menuOpen, setMenuOpen] = useState(false)
   const [authOpen, setAuthOpen] = useState(false)
+  const { user, logout } = useAuth()
+
+  const handleLogout = async () => {
+    try {
+      await logout()
+      router.push("/")
+    } catch (error) {
+      console.error("Logout failed:", error)
+    }
+  }
+
   return (
     <header className="sticky top-0 z-40 w-full border-b bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-14 items-center justify-between gap-2">
@@ -60,7 +80,30 @@ export function Navbar() {
           ))}
         </nav>
         <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={() => setAuthOpen(true)}>Sign in</Button>
+          {user ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline">
+                  <User className="mr-2 h-4 w-4" />
+                  {user.name}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem asChild>
+                  <Link href="/profile">Profile</Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleLogout}>
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Sign out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <Button variant="outline" onClick={() => setAuthOpen(true)}>
+              Sign in
+            </Button>
+          )}
           <Button
             variant="ghost"
             size="icon"
@@ -90,6 +133,29 @@ export function Navbar() {
                 {l.label}
               </Link>
             ))}
+            {user && (
+              <>
+                <Link
+                  href="/profile"
+                  onClick={() => setMenuOpen(false)}
+                  className={cn(
+                    "block w-full px-6 py-3 text-left",
+                    pathname === "/profile" ? "text-foreground" : "text-foreground/80"
+                  )}
+                >
+                  Profile
+                </Link>
+                <button
+                  onClick={() => {
+                    handleLogout()
+                    setMenuOpen(false)
+                  }}
+                  className="block w-full px-6 py-3 text-left text-foreground/80 hover:text-foreground"
+                >
+                  Sign out
+                </button>
+              </>
+            )}
           </nav>
         </div>
       )}

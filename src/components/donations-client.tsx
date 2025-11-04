@@ -4,13 +4,12 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { useToastStore } from "@/store/useToastStore"
+import { showInfo } from "@/lib/sweetalert"
 
 export function DonationsClient({ config }: { config: { presetAmounts: number[]; currency: string; thankYouMessage: string } }) {
   const [amount, setAmount] = useState<number | "">(config.presetAmounts[0])
   const [name, setName] = useState("")
   const [message, setMessage] = useState("")
-  const show = useToastStore((s) => s.show)
 
   return (
     <div>
@@ -44,7 +43,7 @@ export function DonationsClient({ config }: { config: { presetAmounts: number[];
           onClick={() => {
             const amt = typeof amount === "number" ? amount : 0
             if (amt <= 0) return
-            show("Feature unavailable: system under maintenance.")
+            showInfo("Feature unavailable: system under maintenance.")
           }}
           disabled={!(typeof amount === "number" && amount > 0)}
         >

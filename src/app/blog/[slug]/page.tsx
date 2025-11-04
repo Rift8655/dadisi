@@ -18,8 +18,9 @@ function getPost(slug: string) {
   return posts.find((p) => p.slug === slug)
 }
 
-export default function BlogPostPage({ params }: { params: { slug: string } }) {
-  const post = getPost(params.slug)
+export default async function BlogPostPage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params
+  const post = getPost(slug)
   if (!post) return <div className="container py-10">Post not found.</div>
   return (
     <div className="container py-10">
@@ -29,7 +30,7 @@ export default function BlogPostPage({ params }: { params: { slug: string } }) {
         <Image src={post.image} alt={post.title} fill unoptimized className="rounded-md object-cover" />
       </div>
       <p className="mb-10 leading-7 text-muted-foreground">{post.content}</p>
-      <CommentsClient slug={params.slug} />
+      <CommentsClient slug={slug} />
     </div>
   )
 }

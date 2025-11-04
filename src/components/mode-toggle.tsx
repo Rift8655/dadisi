@@ -8,8 +8,18 @@ import { Icons } from "@/components/icons"
 
 export function ModeToggle() {
   const { resolvedTheme, setTheme } = useTheme()
+  const [mounted, setMounted] = React.useState(false)
   const isDark = resolvedTheme === "dark"
   const toggle = () => setTheme(isDark ? "light" : "dark")
+
+  React.useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  // Don't render theme-dependent attributes until mounted to prevent hydration mismatch
+  if (!mounted) {
+    return null
+  }
 
   return (
     <Button variant="outline" size="icon" onClick={toggle} aria-pressed={isDark} aria-label="Toggle theme">

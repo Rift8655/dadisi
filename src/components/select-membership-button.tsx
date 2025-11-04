@@ -1,13 +1,12 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { useToastStore } from "@/store/useToastStore"
+import { showWarning } from "@/lib/sweetalert"
 
 export function SelectMembershipButton() {
-  const show = useToastStore((s) => s.show)
   return (
     <Button
-      onClick={() => show("Please sign in to subscribe.")}
+      onClick={() => showWarning("Please sign in to subscribe.")}
     >
       Select
     </Button>
