@@ -1,12 +1,14 @@
 "use client"
 
-import Link from "next/link"
+import { useEffect, useState } from "react"
 import Image from "next/image"
+import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
-import { useState } from "react"
-import { Menu, LogOut, User } from "lucide-react"
+import { useAuth } from "@/store/auth"
+import { useLogout } from "@/hooks/useAuth"
+import { LayoutDashboard, LogOut, Menu, Shield, User } from "lucide-react"
+
 import { cn } from "@/lib/utils"
-import { ModeToggle } from "@/components/mode-toggle"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -16,7 +18,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import AuthDialog from "@/components/auth-dialog"
-import { useAuth } from "@/store/auth"
+import { ModeToggle } from "@/components/mode-toggle"
 
 const links = [
   { href: "/", label: "Home" },
@@ -29,9 +31,18 @@ const links = [
 export function Navbar() {
   const pathname = usePathname()
   const router = useRouter()
-  const [menuOpen, setMenuOpen] = useState(false)
+  const { mutate: logout } = useLogout()
+  
+  // Clean up unused selectors and state
+  // const storeMember and useMemberProfileQuery are no longer needed for auth/staff check logic
+  // if they are used elsewhere in navbar, keep them, but looking at usage:
+  // member was used for isStaff check (deleted)
+  // storeMember used for isStaff check (deleted)
+  // So likely safe to remove deeply.
+  
   const [authOpen, setAuthOpen] = useState(false)
-  const { user, logout } = useAuth()
+  const [menuOpen, setMenuOpen] = useState(false)
+  const user = useAuth((s) => s.user)
 
   const handleLogout = async () => {
     try {
@@ -46,7 +57,11 @@ export function Navbar() {
     <header className="sticky top-0 z-40 w-full border-b bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-14 items-center justify-between gap-2">
         <AuthDialog open={authOpen} onOpenChange={setAuthOpen} />
-        <Link href="/" className="flex items-center gap-2 font-semibold" aria-label="Dadisi home">
+        <Link
+          href="/"
+          className="flex items-center gap-2 font-semibold"
+          aria-label="Dadisi home"
+        >
           <span className="sr-only">Dadisi</span>
           <Image
             src="https://cdn.builder.io/api/v1/image/assets%2F18afee9d3b294226ab5e0dde6ffaa839%2Ff43e3876c5154de6b73c20c6853ecf82?format=webp&width=240"
@@ -85,12 +100,34 @@ export function Navbar() {
               <DropdownMenuTrigger asChild>
                 <Button variant="outline">
                   <User className="mr-2 h-4 w-4" />
-                  {user.name}
+                  {user.username}
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
+                {/* Show Admin Dashboard first if user has admin access */}
+                {user.admin_access?.can_access_admin && (
+                  <>
+                    <DropdownMenuItem asChild>
+                      <Link href="/admin">
+                        <Shield className="mr-2 h-4 w-4 text-amber-600" />
+                        Admin Dashboard
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                  </>
+                )}
+                {/* Always show User Dashboard and Profile for all logged-in users */}
                 <DropdownMenuItem asChild>
-                  <Link href="/profile">Profile</Link>
+                  <Link href="/dashboard">
+                    <LayoutDashboard className="mr-2 h-4 w-4" />
+                    User Dashboard
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/profile">
+                    <User className="mr-2 h-4 w-4" />
+                    Profile
+                  </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleLogout}>
@@ -134,27 +171,15 @@ export function Navbar() {
               </Link>
             ))}
             {user && (
-              <>
-                <Link
-                  href="/profile"
-                  onClick={() => setMenuOpen(false)}
-                  className={cn(
-                    "block w-full px-6 py-3 text-left",
-                    pathname === "/profile" ? "text-foreground" : "text-foreground/80"
-                  )}
-                >
-                  Profile
-                </Link>
-                <button
-                  onClick={() => {
-                    handleLogout()
-                    setMenuOpen(false)
-                  }}
-                  className="block w-full px-6 py-3 text-left text-foreground/80 hover:text-foreground"
-                >
-                  Sign out
-                </button>
-              </>
+              <button
+                onClick={() => {
+                  handleLogout()
+                  setMenuOpen(false)
+                }}
+                className="block w-full px-6 py-3 text-left text-foreground/80 hover:text-foreground"
+              >
+                Sign out
+              </button>
             )}
           </nav>
         </div>

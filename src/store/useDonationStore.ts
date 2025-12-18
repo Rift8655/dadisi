@@ -1,4 +1,5 @@
 "use client"
+
 import { create } from "zustand"
 
 type Donation = { amount: number; name?: string; message?: string }

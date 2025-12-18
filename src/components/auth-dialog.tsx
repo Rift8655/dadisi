@@ -1,14 +1,15 @@
 "use client"
 
-import { useEffect, useId, useState, useRef } from "react"
+import { useEffect, useId, useRef, useState } from "react"
+import { useLogin, useSignup } from "@/hooks/useAuth"
 import { createPortal } from "react-dom"
+import { z } from "zod"
+
+import { showError, showSuccess } from "@/lib/sweetalert"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { showSuccess, showError } from "@/lib/sweetalert"
-import { useAuth } from "@/store/auth"
 import { GoogleIcon } from "@/components/icons"
-import { z } from "zod"
 
 export type AuthDialogProps = {
   open: boolean
@@ -20,26 +21,36 @@ export function AuthDialog({ open, onOpenChange }: AuthDialogProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [formErrors, setFormErrors] = useState<Record<string, string>>({})
   const [showVerificationDialog, setShowVerificationDialog] = useState(false)
-  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({})
+  const [validationErrors, setValidationErrors] = useState<
+    Record<string, string>
+  >({})
   const signinFormRef = useRef<HTMLFormElement>(null)
   const signupFormRef = useRef<HTMLFormElement>(null)
   const titleId = useId()
-  const { signup, login } = useAuth()
+  const signupMut = useSignup()
+  const loginMut = useLogin()
 
   const signinSchema = z.object({
     email: z.string().email("Invalid email address"),
     password: z.string().min(1, "Password is required"),
   })
 
-  const signupSchema = z.object({
-    name: z.string().min(2, "Name must be at least 2 characters"),
-    email: z.string().email("Invalid email address"),
-    password: z.string().min(8, "Password must be at least 8 characters"),
-    "reg-password-confirm": z.string().min(8, "Password confirmation is required"),
-  }).refine((data) => data.password === data["reg-password-confirm"], {
-    message: "Passwords do not match",
-    path: ["reg-password-confirm"],
-  })
+  const signupSchema = z
+    .object({
+      username: z
+        .string()
+        .min(2, "Username must be at least 2 characters")
+        .regex(/^[a-zA-Z0-9_]+$/, "Username can only contain letters, numbers and underscores"),
+      email: z.string().email("Invalid email address"),
+      password: z.string().min(8, "Password must be at least 8 characters"),
+      "reg-password-confirm": z
+        .string()
+        .min(8, "Password confirmation is required"),
+    })
+    .refine((data) => data.password === data["reg-password-confirm"], {
+      message: "Passwords do not match",
+      path: ["reg-password-confirm"],
+    })
 
   useEffect(() => {
     if (!open) return
@@ -55,7 +66,8 @@ export function AuthDialog({ open, onOpenChange }: AuthDialogProps) {
   }, [open, onOpenChange])
 
   const handleGoogleSignin = () => {
-    window.location.href = process.env.NEXT_PUBLIC_BACKEND_APP_URL + '/auth/google'
+    window.location.href =
+      process.env.NEXT_PUBLIC_BACKEND_APP_URL + "/auth/google"
   }
 
   if (!open && !showVerificationDialog) return null
@@ -76,13 +88,13 @@ export function AuthDialog({ open, onOpenChange }: AuthDialogProps) {
     setIsLoading(true)
 
     const formData = new FormData(e.currentTarget)
-    const name = formData.get("name") as string
+    const username = formData.get("username") as string
     const email = formData.get("reg-email") as string
     const password = formData.get("reg-password") as string
     const passwordConfirm = formData.get("reg-password-confirm") as string
 
     const validation = signupSchema.safeParse({
-      name,
+      username,
       email,
       password,
       "reg-password-confirm": passwordConfirm,
@@ -99,8 +111,8 @@ export function AuthDialog({ open, onOpenChange }: AuthDialogProps) {
     }
 
     try {
-      await signup({
-        name,
+      await signupMut.mutateAsync({
+        username,
         email,
         password,
         password_confirmation: passwordConfirm,
@@ -118,7 +130,8 @@ export function AuthDialog({ open, onOpenChange }: AuthDialogProps) {
       close()
       setTab("signin")
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Registration failed"
+      const message =
+        error instanceof Error ? error.message : "Registration failed"
       setFormErrors({ submit: message })
       await showError("Registration failed", message)
     } finally {
@@ -152,10 +165,9 @@ export function AuthDialog({ open, onOpenChange }: AuthDialogProps) {
     }
 
     try {
-      const { user, needsVerification } = await login({
-        email,
-        password,
-      })
+      const res = await loginMut.mutateAsync({ email, password })
+      // login mutation delegates to auth store and returns { user, needsVerification }
+      const { user, needsVerification } = res
 
       if (signinFormRef.current) {
         signinFormRef.current.reset()
@@ -165,7 +177,7 @@ export function AuthDialog({ open, onOpenChange }: AuthDialogProps) {
         close()
         setShowVerificationDialog(true)
       } else {
-        await showSuccess("Signed in", `Welcome back, ${user.name}!`)
+        await showSuccess("Signed in", `Welcome back, ${user.username}!`)
         close()
       }
     } catch (error) {
@@ -187,7 +199,7 @@ export function AuthDialog({ open, onOpenChange }: AuthDialogProps) {
           className="absolute inset-0 bg-black/60 backdrop-blur-sm"
           onClick={closeVerificationDialog}
         />
-        <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[clamp(20rem,92vw,40rem)] p-4">
+        <div className="fixed left-1/2 top-1/2 w-[clamp(20rem,92vw,40rem)] -translate-x-1/2 -translate-y-1/2 p-4">
           <div
             role="dialog"
             aria-modal="true"
@@ -220,7 +232,9 @@ export function AuthDialog({ open, onOpenChange }: AuthDialogProps) {
               </div>
               <h2 className="mb-2 text-xl font-semibold">Verify your email</h2>
               <p className="mb-6 text-sm text-muted-foreground">
-                {"We've sent a verification link to your email address. Please check your inbox and click the link to verify your account and unlock all features."}
+                {
+                  "We've sent a verification link to your email address. Please check your inbox and click the link to verify your account and unlock all features."
+                }
               </p>
               <Button onClick={closeVerificationDialog} className="w-full">
                 Got it
@@ -239,12 +253,12 @@ export function AuthDialog({ open, onOpenChange }: AuthDialogProps) {
         className="absolute inset-0 bg-black/60 backdrop-blur-sm"
         onClick={close}
       />
-      <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[clamp(20rem,92vw,40rem)] p-4">
+      <div className="fixed left-1/2 top-1/2 w-[clamp(20rem,92vw,40rem)] -translate-x-1/2 -translate-y-1/2 p-4">
         <div
           role="dialog"
           aria-modal="true"
           aria-labelledby={titleId}
-          className="relative w-full rounded-xl border bg-card text-card-foreground shadow-2xl max-h-[min(90vh,40rem)] overflow-y-auto"
+          className="relative max-h-[min(90vh,40rem)] w-full overflow-y-auto rounded-xl border bg-card text-card-foreground shadow-2xl"
         >
           <button
             onClick={close}
@@ -256,7 +270,9 @@ export function AuthDialog({ open, onOpenChange }: AuthDialogProps) {
           <div className="grid grid-cols-2 border-b">
             <button
               className={`px-4 py-3 text-sm font-medium transition ${
-                tab === "signin" ? "border-b-2 border-primary text-foreground" : "text-foreground/60 hover:text-foreground"
+                tab === "signin"
+                  ? "border-b-2 border-primary text-foreground"
+                  : "text-foreground/60 hover:text-foreground"
               }`}
               onClick={() => setTab("signin")}
             >
@@ -264,7 +280,9 @@ export function AuthDialog({ open, onOpenChange }: AuthDialogProps) {
             </button>
             <button
               className={`px-4 py-3 text-sm font-medium transition ${
-                tab === "register" ? "border-b-2 border-primary text-foreground" : "text-foreground/60 hover:text-foreground"
+                tab === "register"
+                  ? "border-b-2 border-primary text-foreground"
+                  : "text-foreground/60 hover:text-foreground"
               }`}
               onClick={() => setTab("register")}
             >
@@ -274,8 +292,12 @@ export function AuthDialog({ open, onOpenChange }: AuthDialogProps) {
 
           {tab === "signin" ? (
             <div className="space-y-4 p-6">
-              <Button variant="outline" className="w-full" onClick={handleGoogleSignin}>
-                <GoogleIcon className="w-4 h-4 mr-2" />
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={handleGoogleSignin}
+              >
+                <GoogleIcon className="mr-2 h-4 w-4" />
                 Continue with Google
               </Button>
               <div className="relative">
@@ -288,50 +310,75 @@ export function AuthDialog({ open, onOpenChange }: AuthDialogProps) {
                   </span>
                 </div>
               </div>
-              <form ref={signinFormRef} className="space-y-4" onSubmit={handleSignin}>
+              <form
+                ref={signinFormRef}
+                className="space-y-4"
+                onSubmit={handleSignin}
+              >
                 {formErrors.submit && (
                   <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
                     {formErrors.submit}
                   </div>
                 )}
-              <div>
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  name="email"
-                  type="email"
-                  autoComplete="email"
-                  required
-                  placeholder="you@example.com"
-                  disabled={isLoading}
-                />
-                {validationErrors.email && (
-                  <p className="mt-1 text-sm text-destructive">{validationErrors.email}</p>
-                )}
-              </div>
-              <div>
-                <Label htmlFor="password">Password</Label>
-                <Input
-                  id="password"
-                  name="password"
-                  type="password"
-                  autoComplete="current-password"
-                  required
-                  disabled={isLoading}
-                />
-                {validationErrors.password && (
-                  <p className="mt-1 text-sm text-destructive">{validationErrors.password}</p>
-                )}
-              </div>
-              <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? "Signing in..." : "Sign in"}
-              </Button>
-            </form>
+                <div>
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    name="email"
+                    type="email"
+                    autoComplete="email"
+                    required
+                    placeholder="you@example.com"
+                    disabled={isLoading}
+                  />
+                  {validationErrors.email && (
+                    <p className="mt-1 text-sm text-destructive">
+                      {validationErrors.email}
+                    </p>
+                  )}
+                </div>
+                <div>
+                  <Label htmlFor="password">Password</Label>
+                  <Input
+                    id="password"
+                    name="password"
+                    type="password"
+                    autoComplete="current-password"
+                    required
+                    disabled={isLoading}
+                  />
+                  {validationErrors.password && (
+                    <p className="mt-1 text-sm text-destructive">
+                      {validationErrors.password}
+                    </p>
+                  )}
+                  <div className="flex justify-end">
+                    <a 
+                      href="/forgot-password" 
+                      onClick={(e) => {
+                         e.preventDefault();
+                         close();
+                         window.location.href = "/forgot-password";
+                      }}
+                      className="text-xs text-muted-foreground hover:underline"
+                    >
+                      Forgot password?
+                    </a>
+                  </div>
+                </div>
+                <Button type="submit" className="w-full" disabled={isLoading}>
+                  {isLoading ? "Signing in..." : "Sign in"}
+                </Button>
+              </form>
             </div>
           ) : (
             <div className="space-y-4 p-6">
-              <Button variant="outline" className="w-full" onClick={handleGoogleSignin}>
-                <GoogleIcon className="w-4 h-4 mr-2" />
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={handleGoogleSignin}
+              >
+                <GoogleIcon className="mr-2 h-4 w-4" />
                 Sign Up with Google
               </Button>
               <div className="relative">
@@ -344,73 +391,85 @@ export function AuthDialog({ open, onOpenChange }: AuthDialogProps) {
                   </span>
                 </div>
               </div>
-              <form ref={signupFormRef} className="space-y-4" onSubmit={handleSignup}>
-              {formErrors.submit && (
-                <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
-                  {formErrors.submit}
+              <form
+                ref={signupFormRef}
+                className="space-y-4"
+                onSubmit={handleSignup}
+              >
+                {formErrors.submit && (
+                  <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+                    {formErrors.submit}
+                  </div>
+                )}
+                <div>
+                  <Label htmlFor="username">Username</Label>
+                  <Input
+                    id="username"
+                    name="username"
+                    type="text"
+                    autoComplete="username"
+                    required
+                    disabled={isLoading}
+                  />
+                  {validationErrors.username && (
+                    <p className="mt-1 text-sm text-destructive">
+                      {validationErrors.username}
+                    </p>
+                  )}
                 </div>
-              )}
-              <div>
-                <Label htmlFor="name">Full name</Label>
-                <Input
-                  id="name"
-                  name="name"
-                  type="text"
-                  autoComplete="name"
-                  required
-                  disabled={isLoading}
-                />
-                {validationErrors.name && (
-                  <p className="mt-1 text-sm text-destructive">{validationErrors.name}</p>
-                )}
-              </div>
-              <div>
-                <Label htmlFor="reg-email">Email</Label>
-                <Input
-                  id="reg-email"
-                  name="reg-email"
-                  type="email"
-                  autoComplete="email"
-                  required
-                  disabled={isLoading}
-                />
-                {validationErrors.email && (
-                  <p className="mt-1 text-sm text-destructive">{validationErrors.email}</p>
-                )}
-              </div>
-              <div>
-                <Label htmlFor="reg-password">Password</Label>
-                <Input
-                  id="reg-password"
-                  name="reg-password"
-                  type="password"
-                  autoComplete="new-password"
-                  required
-                  disabled={isLoading}
-                  placeholder="Must be 8+ chars with letters, numbers & special chars"
-                />
-                {validationErrors.password && (
-                  <p className="mt-1 text-sm text-destructive">{validationErrors.password}</p>
-                )}
-              </div>
-              <div>
-                <Label htmlFor="reg-password-confirm">Confirm password</Label>
-                <Input
-                  id="reg-password-confirm"
-                  name="reg-password-confirm"
-                  type="password"
-                  autoComplete="new-password"
-                  required
-                  disabled={isLoading}
-                />
-                {validationErrors["reg-password-confirm"] && (
-                  <p className="mt-1 text-sm text-destructive">{validationErrors["reg-password-confirm"]}</p>
-                )}
-              </div>
-              <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? "Creating account..." : "Create account"}
-              </Button>
-            </form>
+                <div>
+                  <Label htmlFor="reg-email">Email</Label>
+                  <Input
+                    id="reg-email"
+                    name="reg-email"
+                    type="email"
+                    autoComplete="email"
+                    required
+                    disabled={isLoading}
+                  />
+                  {validationErrors.email && (
+                    <p className="mt-1 text-sm text-destructive">
+                      {validationErrors.email}
+                    </p>
+                  )}
+                </div>
+                <div>
+                  <Label htmlFor="reg-password">Password</Label>
+                  <Input
+                    id="reg-password"
+                    name="reg-password"
+                    type="password"
+                    autoComplete="new-password"
+                    required
+                    disabled={isLoading}
+                    placeholder="Must be 8+ chars with letters, numbers & special chars"
+                  />
+                  {validationErrors.password && (
+                    <p className="mt-1 text-sm text-destructive">
+                      {validationErrors.password}
+                    </p>
+                  )}
+                </div>
+                <div>
+                  <Label htmlFor="reg-password-confirm">Confirm password</Label>
+                  <Input
+                    id="reg-password-confirm"
+                    name="reg-password-confirm"
+                    type="password"
+                    autoComplete="new-password"
+                    required
+                    disabled={isLoading}
+                  />
+                  {validationErrors["reg-password-confirm"] && (
+                    <p className="mt-1 text-sm text-destructive">
+                      {validationErrors["reg-password-confirm"]}
+                    </p>
+                  )}
+                </div>
+                <Button type="submit" className="w-full" disabled={isLoading}>
+                  {isLoading ? "Creating account..." : "Create account"}
+                </Button>
+              </form>
             </div>
           )}
         </div>

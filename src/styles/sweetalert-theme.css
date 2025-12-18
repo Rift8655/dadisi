@@ -2,16 +2,16 @@
 
 :root {
   /* Extracted from CSS variables and converted to hex for SweetAlert2 */
-  --swal-theme-purple: #6D28D9;
-  --swal-theme-purple-light: #A78BFA;
-  --swal-theme-cyan: #22D3EE;
-  --swal-theme-cyan-dark: #0891B2;
-  --swal-theme-red: #EF4444;
-  --swal-theme-red-dark: #DC2626;
-  --swal-theme-gray-100: #F3F4F6;
-  --swal-theme-gray-600: #4B5563;
+  --swal-theme-purple: #6d28d9;
+  --swal-theme-purple-light: #a78bfa;
+  --swal-theme-cyan: #22d3ee;
+  --swal-theme-cyan-dark: #0891b2;
+  --swal-theme-red: #ef4444;
+  --swal-theme-red-dark: #dc2626;
+  --swal-theme-gray-100: #f3f4f6;
+  --swal-theme-gray-600: #4b5563;
   --swal-theme-gray-900: #111827;
-  --swal-theme-white: #FFFFFF;
+  --swal-theme-white: #ffffff;
   --swal-theme-black: #000000;
 }
 
@@ -19,7 +19,16 @@
 .swal2-popup {
   border-radius: 0.5rem;
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+  font-family:
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    Roboto,
+    "Helvetica Neue",
+    Arial,
+    "Noto Sans",
+    sans-serif;
   background: var(--swal-theme-white);
   color: var(--swal-theme-gray-900);
 }
@@ -29,7 +38,7 @@
   border-color: var(--swal-theme-purple);
 }
 
-.swal2-icon.swal2-success [class^=swal2-success-line] {
+.swal2-icon.swal2-success [class^="swal2-success-line"] {
   background-color: var(--swal-theme-purple);
 }
 
@@ -69,13 +78,17 @@
   font-weight: 600;
   padding: 0.5rem 1rem;
   transition: all 0.15s ease-in-out;
-  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+  box-shadow:
+    0 1px 3px 0 rgba(0, 0, 0, 0.1),
+    0 1px 2px 0 rgba(0, 0, 0, 0.06);
 }
 
 .swal2-styled.swal2-confirm:hover {
   background-color: var(--swal-theme-purple-light) !important;
   transform: translateY(-0.5px);
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  box-shadow:
+    0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -1px rgba(0, 0, 0, 0.06);
 }
 
 .swal2-styled.swal2-confirm:focus {
@@ -138,7 +151,11 @@
 
 /* Timer progress bar styling */
 .swal2-timer-progress-bar {
-  background: linear-gradient(to right, var(--swal-theme-purple), var(--swal-theme-cyan));
+  background: linear-gradient(
+    to right,
+    var(--swal-theme-purple),
+    var(--swal-theme-cyan)
+  );
 }
 
 /* Backdrop styling */

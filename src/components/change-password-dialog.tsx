@@ -1,74 +1,84 @@
-'use client';
+"use client"
 
-import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { showSuccess, showError } from '@/lib/sweetalert';
-import { api } from '@/lib/api';
-import { createPortal } from 'react-dom';
+import { useState } from "react"
+import { createPortal } from "react-dom"
+
+import { useAuth } from "@/store/auth"
+import { showError, showSuccess } from "@/lib/sweetalert"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 
 interface ChangePasswordDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
+  open: boolean
+  onOpenChange: (open: boolean) => void
 }
 
-export function ChangePasswordDialog({ open, onOpenChange }: ChangePasswordDialogProps) {
-  const [isLoading, setIsLoading] = useState(false);
-  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
-  const [currentPassword, setCurrentPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+export function ChangePasswordDialog({
+  open,
+  onOpenChange,
+}: ChangePasswordDialogProps) {
+  const [isLoading, setIsLoading] = useState(false)
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({})
+  const [currentPassword, setCurrentPassword] = useState("")
+  const [newPassword, setNewPassword] = useState("")
+  const [confirmPassword, setConfirmPassword] = useState("")
+
+  const changePassword = useAuth((s) => s.changePassword)
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setFormErrors({});
+    e.preventDefault()
+    setFormErrors({})
 
     // Client-side validation
     if (!currentPassword || !newPassword || !confirmPassword) {
-      setFormErrors({ submit: 'All fields are required' });
-      return;
+      setFormErrors({ submit: "All fields are required" })
+      return
     }
 
     if (newPassword !== confirmPassword) {
-      setFormErrors({ confirmPassword: 'Passwords do not match' });
-      return;
+      setFormErrors({ confirmPassword: "Passwords do not match" })
+      return
     }
 
     if (newPassword.length < 8) {
-      setFormErrors({ newPassword: 'Password must be at least 8 characters' });
-      return;
+      setFormErrors({ newPassword: "Password must be at least 8 characters" })
+      return
     }
 
-    setIsLoading(true);
+    setIsLoading(true)
 
     try {
-      await api.post<{ message: string }>('/api/auth/password/change', {
+      await changePassword({
         current_password: currentPassword,
         new_password: newPassword,
         new_password_confirmation: confirmPassword,
-      });
+      })
 
-      await showSuccess('Password changed', 'Your password has been successfully updated.');
+      await showSuccess(
+        "Password changed",
+        "Your password has been successfully updated."
+      )
 
       // Reset form and close
-      setCurrentPassword('');
-      setNewPassword('');
-      setConfirmPassword('');
-      onOpenChange(false);
+      setCurrentPassword("")
+      setNewPassword("")
+      setConfirmPassword("")
+      onOpenChange(false)
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to change password';
-      setFormErrors({ submit: message });
-      await showError('Error', message);
+      const message =
+        err instanceof Error ? err.message : "Failed to change password"
+      setFormErrors({ submit: message })
+      await showError("Error", message)
     } finally {
-      setIsLoading(false);
+      setIsLoading(false)
     }
-  };
+  }
 
-  if (!open) return null;
+  if (!open) return null
 
-  const target = typeof document !== 'undefined' ? document.body : null;
-  if (!target) return null;
+  const target = typeof document !== "undefined" ? document.body : null
+  if (!target) return null
 
   return createPortal(
     <div className="fixed inset-0 z-[60]">
@@ -76,7 +86,7 @@ export function ChangePasswordDialog({ open, onOpenChange }: ChangePasswordDialo
         className="absolute inset-0 bg-black/60 backdrop-blur-sm"
         onClick={() => onOpenChange(false)}
       />
-      <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[clamp(20rem,92vw,40rem)] p-4">
+      <div className="fixed left-1/2 top-1/2 w-[clamp(20rem,92vw,40rem)] -translate-x-1/2 -translate-y-1/2 p-4">
         <div
           role="dialog"
           aria-modal="true"
@@ -131,7 +141,9 @@ export function ChangePasswordDialog({ open, onOpenChange }: ChangePasswordDialo
                   placeholder="Must be 8+ chars with letters, numbers & special chars"
                 />
                 {formErrors.newPassword && (
-                  <p className="mt-1 text-sm text-destructive">{formErrors.newPassword}</p>
+                  <p className="mt-1 text-sm text-destructive">
+                    {formErrors.newPassword}
+                  </p>
                 )}
               </div>
 
@@ -148,7 +160,9 @@ export function ChangePasswordDialog({ open, onOpenChange }: ChangePasswordDialo
                   disabled={isLoading}
                 />
                 {formErrors.confirmPassword && (
-                  <p className="mt-1 text-sm text-destructive">{formErrors.confirmPassword}</p>
+                  <p className="mt-1 text-sm text-destructive">
+                    {formErrors.confirmPassword}
+                  </p>
                 )}
               </div>
 
@@ -163,7 +177,7 @@ export function ChangePasswordDialog({ open, onOpenChange }: ChangePasswordDialo
                   Cancel
                 </Button>
                 <Button type="submit" className="flex-1" disabled={isLoading}>
-                  {isLoading ? 'Changing...' : 'Change Password'}
+                  {isLoading ? "Changing..." : "Change Password"}
                 </Button>
               </div>
             </form>
@@ -172,5 +186,5 @@ export function ChangePasswordDialog({ open, onOpenChange }: ChangePasswordDialo
       </div>
     </div>,
     target
-  );
+  )
 }

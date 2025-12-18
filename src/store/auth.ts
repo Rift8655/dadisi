@@ -1,123 +1,96 @@
-import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
-import { api } from '@/lib/api';
-
-interface User {
-  id: number;
-  name: string;
-  email: string;
-  email_verified_at: string | null;
-}
-
-interface SignupPayload {
-  name: string;
-  email: string;
-  password: string;
-  password_confirmation: string;
-}
-
-interface LoginPayload {
-  email: string;
-  password: string;
-  remember_me?: boolean;
-}
+import { create } from "zustand";
+import { devtools, persist } from "zustand/middleware";
+import type { AuthUser, UiPermissions, AdminAccess } from "@/contracts/auth.contract";
 
 interface AuthState {
+  user: AuthUser | null;
   token: string | null;
-  user: User | null;
+  isAuthenticated: boolean;
   isLoading: boolean;
-  error: string | null;
-  signup: (data: SignupPayload) => Promise<void>;
-  login: (data: LoginPayload) => Promise<{ user: User; needsVerification: boolean }>;
-  logout: () => Promise<void>;
-  setToken: (token: string) => Promise<void>;
-  updateUser: (user: User) => void;
-  clearError: () => void;
+  
+  // UI Permissions & Admin Access (derived from user)
+  uiPermissions: UiPermissions | null;
+  adminAccess: AdminAccess | null;
+  
+  // Actions
+  setUser: (user: AuthUser | null) => void;
+  updateUser: (user: Partial<AuthUser>) => void;
+  setToken: (token: string | null) => void;
+  setAuth: (user: AuthUser | null, token: string | null) => void;
+  setIsLoading: (loading: boolean) => void;
+  logout: () => void;
+  
+  // Helpers
+  hasUIPermission: (permission: keyof UiPermissions) => boolean;
+  canAccessAdmin: () => boolean;
 }
 
 export const useAuth = create<AuthState>()(
-  persist(
-    (set, get) => ({
-      token: null,
-      user: null,
-      isLoading: false,
-      error: null,
+  devtools(
+    persist(
+      (set, get) => ({
+        user: null,
+        token: null,
+        isAuthenticated: false,
+        isLoading: false, // Don't persist loading state - always start as false
+        uiPermissions: null,
+        adminAccess: null,
+        
+        setUser: (user) => set({ 
+          user, 
+          isAuthenticated: !!user,
+          isLoading: false,
+          uiPermissions: user?.ui_permissions || null,
+          adminAccess: user?.admin_access || null
+        }),
 
-      signup: async (data: SignupPayload) => {
-        set({ isLoading: true, error: null });
-        try {
-          await api.post('/api/auth/signup', data);
-          set({ isLoading: false });
-        } catch (error) {
-          const errorMessage = error instanceof Error ? error.message : 'Signup failed';
-          set({ isLoading: false, error: errorMessage });
-          throw error;
+        updateUser: (partialUser) => set((state) => ({
+             user: state.user ? { ...state.user, ...partialUser } : null
+        })),
+        
+        setToken: (token) => set({ token }),
+        
+        setAuth: (user, token) => set({
+          user,
+          token,
+          isAuthenticated: !!user && !!token,
+          isLoading: false,
+          uiPermissions: user?.ui_permissions || null,
+          adminAccess: user?.admin_access || null
+        }),
+        
+        setIsLoading: (loading) => set({ isLoading: loading }),
+        
+        logout: () => set({
+          user: null,
+          token: null,
+          isAuthenticated: false,
+          isLoading: false,
+          uiPermissions: null,
+          adminAccess: null
+        }),
+        
+        hasUIPermission: (permission) => {
+          const perms = get().uiPermissions;
+          return perms ? perms[permission] === true : false;
+        },
+        
+        canAccessAdmin: () => {
+          const access = get().adminAccess;
+          return access ? access.can_access_admin === true : false;
         }
-      },
-
-      login: async (data: LoginPayload) => {
-        set({ isLoading: true, error: null });
-        try {
-          const response = await api.post<{
-            user: User;
-            access_token: string;
-            email_verified: boolean;
-          }>('/api/auth/login', data);
-
-          const token = response.access_token;
-          const user = response.user;
-
-          set({ token, user, isLoading: false });
-
-          return {
-            user,
-            needsVerification: !user.email_verified_at,
-          };
-        } catch (error) {
-          const errorMessage = error instanceof Error ? error.message : 'Login failed';
-          set({ isLoading: false, error: errorMessage });
-          throw error;
-        }
-      },
-
-      logout: async () => {
-        set({ isLoading: true, error: null });
-        try {
-          await api.post('/api/auth/logout');
-          set({ token: null, user: null, isLoading: false });
-        } catch (error) {
-          const errorMessage = error instanceof Error ? error.message : 'Logout failed';
-          set({ isLoading: false, error: errorMessage });
-          throw error;
-        }
-      },
-
-      setToken: async (token: string) => {
-        set({ token, isLoading: true, error: null });
-        try {
-          const user = await api.get<User>('/api/auth/user');
-          set({ user, isLoading: false });
-        } catch (error) {
-          const errorMessage = error instanceof Error ? error.message : 'Failed to fetch user';
-          set({ token: null, user: null, isLoading: false, error: errorMessage });
-          throw error;
-        }
-      },
-
-      updateUser: (user: User) => {
-        set({ user });
-      },
-
-      clearError: () => {
-        set({ error: null });
-      },
-    }),
-    {
-      name: 'auth-storage',
-      partialize: (state) => ({
-        token: state.token,
-        user: state.user,
       }),
-    }
+      {
+        name: "auth-storage",
+        partialize: (state) => ({
+          user: state.user,
+          token: state.token,
+          // NEVER persist isLoading - it should reset on page load
+          uiPermissions: state.uiPermissions,
+          adminAccess: state.adminAccess
+        })
+      }
+    ),
+    { name: "auth-store" }
   )
 );

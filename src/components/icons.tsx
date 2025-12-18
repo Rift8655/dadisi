@@ -1,4 +1,4 @@
-import { Command, Moon, SunMedium } from "lucide-react"
+import { Command, Moon, SunMedium, ChevronLeft, Loader2, Plus } from "lucide-react"
 
 export type IconKeys = keyof typeof icons
 
@@ -10,6 +10,9 @@ const icons = {
   logo: Command,
   sun: SunMedium,
   moon: Moon,
+  chevronLeft: ChevronLeft,
+  spinner: Loader2,
+  add: Plus,
 }
 
 // Custom Google icon SVG component

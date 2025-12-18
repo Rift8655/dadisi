@@ -1,0 +1,66 @@
+import { z } from "zod"
+
+export const CountySchema = z.object({ id: z.number(), name: z.string() })
+export const CountiesResponseSchema = z.object({ data: z.array(CountySchema) })
+
+export const MemberProfileSchema = z.object({
+  id: z.number(),
+  user_id: z.number(),
+  first_name: z.string(),
+  last_name: z.string(),
+  phone_number: z.string().nullable(),
+  date_of_birth: z.string().nullable(),
+  gender: z.string().nullable(),
+  county_id: z.number().nullable(),
+  bio: z.string().nullable(),
+  avatar_url: z.string().nullable(),
+  created_at: z.string(),
+  updated_at: z.string(),
+})
+
+export const MemberProfileResponseSchema = z.object({ data: MemberProfileSchema })
+
+export const PostSchema = z.object({
+  id: z.number(),
+  title: z.string(),
+  slug: z.string(),
+  body: z.string().optional(),
+  published_at: z.string().nullable().optional(),
+})
+
+export const PostsListSchema = z.object({ data: z.array(PostSchema) })
+
+export const EventSchema = z.object({ id: z.number(), title: z.string(), starts_at: z.string().optional() })
+
+export const EventsListSchema = z.object({ data: z.array(EventSchema) })
+
+export const DonationSchema = z.object({ id: z.number(), amount: z.number(), redirect_url: z.string().optional() })
+
+export const MediaSchema = z.object({ id: z.number(), url: z.string(), type: z.string().optional() })
+export const MediaListSchema = z.object({ data: z.array(MediaSchema) })
+
+export const PlanSchema = z.object({ id: z.number(), name: z.string(), amount: z.number().optional() })
+export const PlansListSchema = z.object({ data: z.array(PlanSchema) })
+
+export const LoginResponseSchema = z.object({
+  user: z.any(),
+  access_token: z.string(),
+  email_verified: z.boolean().optional(),
+})
+
+export default {
+  CountySchema,
+  CountiesResponseSchema,
+  MemberProfileSchema,
+  MemberProfileResponseSchema,
+  PostSchema,
+  PostsListSchema,
+  EventSchema,
+  EventsListSchema,
+  DonationSchema,
+  MediaSchema,
+  MediaListSchema,
+  PlanSchema,
+  PlansListSchema,
+  LoginResponseSchema,
+}

@@ -5,7 +5,10 @@ import { Inter } from "next/font/google"
 
 import { siteConfig } from "@/config/site"
 import { cn } from "@/lib/utils"
+import { Footer } from "@/components/footer"
+import { Navbar } from "@/components/navbar"
 import { ThemeProvider } from "@/components/theme-provider"
+import { QueryProvider } from "@/components/QueryProvider"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -63,9 +66,6 @@ export const viewport: Viewport = {
   ],
 }
 
-import { Navbar } from "@/components/navbar"
-import { Footer } from "@/components/footer"
-
 export default function RootLayout({ children }: RootLayoutProps) {
   return (
     <html lang="en" suppressHydrationWarning>
@@ -82,9 +82,11 @@ export default function RootLayout({ children }: RootLayoutProps) {
           enableSystem
           disableTransitionOnChange
         >
-          <Navbar />
-          <main className="min-h-[calc(100vh-7rem)]">{children}</main>
-          <Footer />
+          <QueryProvider>
+            <Navbar />
+            <main className="min-h-[calc(100vh-7rem)]">{children}</main>
+            <Footer />
+          </QueryProvider>
         </ThemeProvider>
       </body>
     </html>

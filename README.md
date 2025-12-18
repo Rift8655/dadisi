@@ -80,7 +80,7 @@ notepad .env.local
 In `.env.local` set:
 
 ```
-NEXT_PUBLIC_API_BASE_URL=http://localhost:8000/api
+NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
 ```
 
 4. Start the dev server

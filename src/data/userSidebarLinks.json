@@ -1,0 +1,10 @@
+[
+  { "title": "Overview", "href": "/dashboard/overview", "icon": "dashboard", "badge": null },
+  { "title": "Chat", "href": "/dashboard/chat", "icon": "messagecircle", "badge": null },
+  { "title": "Media Library", "href": "/dashboard/media", "icon": "image", "badge": null },
+  { "title": "Blog", "href": "/dashboard/blog", "icon": "file-text", "badge": "Premium" },
+  { "title": "Donations", "href": "/dashboard/donations", "icon": "creditcard", "badge": null },
+  { "title": "Events", "href": "/dashboard/events", "icon": "calendar", "badge": null },
+  { "title": "Subscription", "href": "/dashboard/subscription", "icon": "dollar-sign", "badge": null },
+  { "title": "Support", "href": "/dashboard/support", "icon": "helpcircle", "badge": null }
+]
