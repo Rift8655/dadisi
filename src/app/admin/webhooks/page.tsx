@@ -1,20 +1,19 @@
 "use client"
 
-import { useEffect } from "react"
-import { useAdmin } from "@/store/admin"
+import { useAdminWebhooks } from "@/hooks/useAdminWebhooks"
 import { AdminDashboardShell } from "@/components/admin-dashboard-shell"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { RefreshCw, CheckCircle, XCircle, AlertCircle } from "lucide-react"
+import { RefreshCw, CheckCircle, XCircle, AlertCircle, Loader2 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { format } from "date-fns"
 
 export default function WebhooksPage() {
-  const { webhookEvents, webhookEventsLoading, fetchWebhookEvents } = useAdmin()
+  const { data: webhookEvents = [], isLoading, isRefetching, refetch } = useAdminWebhooks()
 
-  useEffect(() => {
-    fetchWebhookEvents()
-  }, [])
+  const handleRefresh = () => {
+    refetch()
+  }
 
   return (
     <AdminDashboardShell title="Webhooks Debugger">
@@ -26,8 +25,8 @@ export default function WebhooksPage() {
                 <CardTitle>Recent Webhook Events</CardTitle>
                 <CardDescription>Monitor incoming webhooks from payment providers</CardDescription>
               </div>
-              <Button onClick={() => fetchWebhookEvents()} disabled={webhookEventsLoading}>
-                <RefreshCw className={`w-4 h-4 mr-2 ${webhookEventsLoading ? 'animate-spin' : ''}`} />
+              <Button onClick={handleRefresh} disabled={isLoading || isRefetching}>
+                <RefreshCw className={`w-4 h-4 mr-2 ${isLoading || isRefetching ? 'animate-spin' : ''}`} />
                 Refresh
               </Button>
             </div>
@@ -45,41 +44,46 @@ export default function WebhooksPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {webhookEventsLoading && (!webhookEvents || webhookEvents.length === 0) ? (
+                  {isLoading && (!webhookEvents || webhookEvents.length === 0) ? (
                     <tr>
-                      <td colSpan={5} className="p-8 text-center text-gray-500">Loading webhooks...</td>
+                      <td colSpan={5} className="p-8 text-center text-gray-500">
+                        <div className="flex flex-col items-center gap-2">
+                           <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                           <span>Loading webhooks...</span>
+                        </div>
+                      </td>
                     </tr>
                   ) : !webhookEvents || webhookEvents.length === 0 ? (
                     <tr>
                       <td colSpan={5} className="p-8 text-center text-gray-500">No webhook events found</td>
                     </tr>
                   ) : (
-                    webhookEvents.map((event) => (
+                    (webhookEvents as any[]).map((event) => (
                       <tr key={event.id} className="border-b hover:bg-gray-50 dark:hover:bg-gray-900">
                         <td className="p-4 font-mono text-xs">{event.id}</td>
                         <td className="p-4">
-                          <div className="font-semibold">{event.provider}</div>
-                          <div className="text-xs text-gray-500">{event.event_type}</div>
+                           <div className="font-semibold">{event.provider}</div>
+                           <div className="text-xs text-gray-500">{event.event_type}</div>
                         </td>
                         <td className="p-4">
-                          {event.status === 'processed' ? (
-                            <Badge variant="success"><CheckCircle className="w-3 h-3 mr-1" /> Processed</Badge>
-                          ) : event.status === 'failed' ? (
-                            <Badge variant="danger"><XCircle className="w-3 h-3 mr-1" /> Failed</Badge>
-                          ) : (
-                            <Badge variant="default"><AlertCircle className="w-3 h-3 mr-1" /> Ignored</Badge>
-                          )}
+                           {event.status === 'processed' ? (
+                             <Badge variant="success"><CheckCircle className="w-3 h-3 mr-1" /> Processed</Badge>
+                           ) : event.status === 'failed' ? (
+                             <Badge variant="danger"><XCircle className="w-3 h-3 mr-1" /> Failed</Badge>
+                           ) : (
+                             <Badge variant="default"><AlertCircle className="w-3 h-3 mr-1" /> Ignored</Badge>
+                           )}
                         </td>
                         <td className="p-4">
-                          <code className="text-xs bg-gray-100 dark:bg-gray-800 p-1 rounded max-w-[200px] block truncate">
-                            {JSON.stringify(event.payload)}
-                          </code>
-                          {event.error && (
-                            <div className="text-xs text-red-500 mt-1 truncate max-w-[200px]">{event.error}</div>
-                          )}
+                           <code className="text-xs bg-gray-100 dark:bg-gray-800 p-1 rounded max-w-[200px] block truncate text-muted-foreground" title={JSON.stringify(event.payload)}>
+                             {JSON.stringify(event.payload)}
+                           </code>
+                           {event.error && (
+                             <div className="text-xs text-red-500 mt-1 truncate max-w-[200px]" title={event.error}>{event.error}</div>
+                           )}
                         </td>
-                        <td className="p-4 text-right text-gray-500">
-                          {format(new Date(event.created_at), "MMM d, HH:mm:ss")}
+                        <td className="p-4 text-right text-gray-500 whitespace-nowrap">
+                           {format(new Date(event.created_at), "MMM d, HH:mm:ss")}
                         </td>
                       </tr>
                     ))

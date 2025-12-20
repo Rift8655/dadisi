@@ -274,3 +274,72 @@ export interface AdminPost {
   } | null
 }
 
+export interface AdminPlan {
+  id: number
+  name: string | Record<string, string>
+  slug?: string
+  description?: string | Record<string, string> | null
+  is_active?: boolean
+  price?: string | number
+  base_monthly_price?: string | number
+  currency?: string
+  pricing?: {
+    kes: {
+      base_monthly: number
+      discounted_monthly: number
+      base_yearly: number
+      discounted_yearly: number
+    }
+    usd: {
+      base_monthly: number
+      discounted_monthly: number
+      base_yearly: number
+      discounted_yearly: number
+    }
+    exchange_rate: number
+    last_updated: string
+  }
+  promotions?: {
+    monthly: {
+      discount_percent: number
+      expires_at: string
+      active: boolean
+      time_remaining?: string | null
+    } | null
+    yearly: {
+      discount_percent: number
+      expires_at: string
+      active: boolean
+      time_remaining?: string | null
+    } | null
+  }
+  features?: Array<{
+    id: number
+    name: string | Record<string, string>
+    limit?: number | null
+  }>
+}
+export interface ReconciliationRun {
+  id: number
+  status: string
+  created_at: string
+  total_items: number
+  matched_items: number
+  unmatched_items: number
+}
+
+export interface ReconciliationStats {
+  total_runs: number
+  total_items: number
+  matched_items: number
+  unmatched_items: number
+  last_run: string | null
+}
+
+export interface PesapalSettings {
+  environment: string
+  consumer_key: string
+  consumer_secret: string
+  callback_url: string
+  webhook_url: string
+}

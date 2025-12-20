@@ -1,6 +1,7 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
+import { useQuery } from "@tanstack/react-query"
 import Link from "next/link"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -27,56 +28,44 @@ interface UserEvent {
 
 export default function EventsPage() {
   const { user } = useAuth()
-  const [events, setEvents] = useState<UserEvent[]>([])
-  const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<"all" | "upcoming" | "past">("all")
 
-  useEffect(() => {
-    const loadEvents = async () => {
-      setLoading(true)
-      try {
-        const eventsData = await eventsApi.list({ page: 1 })
-        const eventsList = Array.isArray(eventsData) ? eventsData : []
+  const { data: events = [], isLoading: loading } = useQuery({
+    queryKey: ["user-events"],
+    queryFn: async () => {
+      const eventsData = await eventsApi.list({ page: 1 })
+      const eventsList = Array.isArray(eventsData) ? eventsData : []
+      
+      const now = new Date()
+      return eventsList.map((e: any) => {
+        const startsAt = new Date(e.starts_at)
+        const endsAt = e.ends_at ? new Date(e.ends_at) : null
         
-        const now = new Date()
-        const mappedEvents = eventsList.map((e: any) => {
-          const startsAt = new Date(e.starts_at)
-          const endsAt = e.ends_at ? new Date(e.ends_at) : null
-          
-          let status: "upcoming" | "ongoing" | "past" = "upcoming"
-          if (endsAt && now > endsAt) {
-            status = "past"
-          } else if (now >= startsAt && (!endsAt || now <= endsAt)) {
-            status = "ongoing"
-          }
-          
-          return {
-            id: e.id,
-            title: e.title,
-            description: e.description,
-            starts_at: e.starts_at,
-            ends_at: e.ends_at,
-            venue: e.venue,
-            is_online: e.is_online || false,
-            status,
-            rsvp_status: "confirmed" as const, // Would come from user's RSVP data
-            ticket_url: e.ticket_url,
-            is_paid: e.price && e.price > 0,
-            price: e.price,
-            currency: e.currency || "KES",
-          }
-        })
+        let status: "upcoming" | "ongoing" | "past" = "upcoming"
+        if (endsAt && now > endsAt) {
+          status = "past"
+        } else if (now >= startsAt && (!endsAt || now <= endsAt)) {
+          status = "ongoing"
+        }
         
-        setEvents(mappedEvents)
-      } catch (error) {
-        console.error("Failed to load events:", error)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    loadEvents()
-  }, [])
+        return {
+          id: e.id,
+          title: e.title,
+          description: e.description,
+          starts_at: e.starts_at,
+          ends_at: e.ends_at,
+          venue: e.venue,
+          is_online: e.is_online || false,
+          status,
+          rsvp_status: "confirmed" as const, // Would come from user's RSVP data
+          ticket_url: e.ticket_url,
+          is_paid: e.price && e.price > 0,
+          price: e.price,
+          currency: e.currency || "KES",
+        } as UserEvent
+      })
+    },
+  })
 
   const formatDate = (dateStr: string) => {
     try {

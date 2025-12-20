@@ -89,3 +89,16 @@ export function useCreatePermission() {
     },
   })
 }
+
+export function useAssignRolePermissions() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, permissionNames }: { id: number; permissionNames: string[] }) => {
+      return await roleApi.assignPermissions(id, permissionNames)
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["admin-roles"] })
+      queryClient.invalidateQueries({ queryKey: ["admin-role", variables.id] })
+    },
+  })
+}

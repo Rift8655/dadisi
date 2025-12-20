@@ -1,13 +1,14 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import Link from "next/link"
 import { useAuth } from "@/store/auth"
-import { ArrowLeft, Mail, Upload } from "lucide-react"
+import { ArrowLeft, Mail, Upload, Loader2 } from "lucide-react"
 import Swal from "sweetalert2"
 
-import { AdminRole, AdminUser, BulkUser } from "@/types/admin"
-import { useAdmin } from "@/store/admin"
+import { AdminRole, BulkUser } from "@/types/admin"
+import { useRoles } from "@/hooks/useRoles"
+import { useInviteUser, useBulkInviteUsers } from "@/hooks/useUsers"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -23,12 +24,18 @@ import { RoleSelector } from "@/components/admin/role-selector"
 import { Unauthorized } from "@/components/unauthorized"
 
 export default function InviteUsersPage() {
-  const currentUser = useAuth((s) => s.user)
   const logout = useAuth((s) => s.logout)
   const [activeTab, setActiveTab] = useState<"single" | "bulk">("single")
-  const [roles, setRoles] = useState<AdminRole[]>([])
-  const [loading, setLoading] = useState(false)
-  const [authorizationError, setAuthorizationError] = useState(false)
+  
+  const { data: rolesData, isLoading: rolesLoading, error: rolesError } = useRoles({
+    include_permissions: false,
+    per_page: 100
+  })
+  
+  const roles = Array.isArray(rolesData) ? rolesData : (rolesData as any)?.data || []
+  
+  const inviteUserMutation = useInviteUser()
+  const bulkInviteMutation = useBulkInviteUsers()
 
   const [singleFormData, setSingleFormData] = useState({
     email: "",
@@ -40,24 +47,6 @@ export default function InviteUsersPage() {
   const [csvInput, setCsvInput] = useState("")
   const [parsedUsers, setParsedUsers] = useState<BulkUser[]>([])
   const [bulkStage, setBulkStage] = useState<"input" | "preview">("input")
-
-  const loadRoles = async () => {
-    try {
-      await useAdmin.getState().loadRoles()
-      const rolesFromStore = useAdmin.getState().roles
-      setRoles(rolesFromStore || [])
-    } catch (error) {
-      const status = (error as any).status
-
-      if (status === 403) {
-        setAuthorizationError(true)
-      } else if (status === 401) {
-        logout()
-      } else {
-        console.error("Failed to load roles:", error)
-      }
-    }
-  }
 
   const validateEmail = (email: string) => {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
@@ -75,9 +64,8 @@ export default function InviteUsersPage() {
       return
     }
 
-    setLoading(true)
     try {
-      await useAdmin.getState().inviteUser({
+      await inviteUserMutation.mutateAsync({
         email: singleFormData.email,
         name: singleFormData.name || undefined,
         roles: selectedRoles.map((r) => r.name),
@@ -91,8 +79,6 @@ export default function InviteUsersPage() {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Failed to send invitation"
       Swal.fire({ icon: "error", title: "Error", text: errorMessage })
-    } finally {
-      setLoading(false)
     }
   }
 
@@ -170,9 +156,8 @@ export default function InviteUsersPage() {
   }
 
   const handleBulkInvite = async () => {
-    setLoading(true)
     try {
-      await useAdmin.getState().bulkInviteUsers({
+      await bulkInviteMutation.mutateAsync({
         users: parsedUsers.map((u) => ({
           email: u.email,
           name: u.name,
@@ -189,18 +174,19 @@ export default function InviteUsersPage() {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Failed to send invitations"
       Swal.fire({ icon: "error", title: "Error", text: errorMessage })
-    } finally {
-      setLoading(false)
     }
   }
 
-  useEffect(() => {
-    loadRoles()
-  }, [])
-
-  if (authorizationError) {
+  if (rolesError && (rolesError as any).status === 403) {
     return <Unauthorized actionHref="/admin/users" />
   }
+  
+  if (rolesError && (rolesError as any).status === 401) {
+    logout()
+    return null
+  }
+
+  const isLoading = inviteUserMutation.isPending || bulkInviteMutation.isPending || rolesLoading
 
   return (
     <AdminDashboardShell title="Invite Users">
@@ -269,7 +255,7 @@ export default function InviteUsersPage() {
                       })
                     }
                     placeholder="user@example.com"
-                    disabled={loading}
+                    disabled={isLoading}
                     required
                   />
                 </div>
@@ -288,7 +274,7 @@ export default function InviteUsersPage() {
                       })
                     }
                     placeholder="John Doe"
-                    disabled={loading}
+                    disabled={isLoading}
                   />
                 </div>
 
@@ -300,7 +286,7 @@ export default function InviteUsersPage() {
                     roles={roles}
                     selectedRoles={selectedRoles}
                     onSelectionChange={setSelectedRoles}
-                    disabled={loading}
+                    disabled={isLoading}
                   />
                 </div>
 
@@ -315,7 +301,7 @@ export default function InviteUsersPage() {
                         sendNotification: e.target.checked,
                       })
                     }
-                    disabled={loading}
+                    disabled={isLoading}
                     className="h-4 w-4 rounded border-gray-300"
                   />
                   <label htmlFor="sendNotification" className="text-sm">
@@ -323,8 +309,9 @@ export default function InviteUsersPage() {
                   </label>
                 </div>
 
-                <Button type="submit" disabled={loading}>
-                  {loading ? "Sending..." : "Send Invitation"}
+                <Button type="submit" disabled={isLoading}>
+                  {inviteUserMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  {inviteUserMutation.isPending ? "Sending..." : "Send Invitation"}
                 </Button>
               </form>
             ) : bulkStage === "input" ? (
@@ -349,7 +336,7 @@ export default function InviteUsersPage() {
                     placeholder="email1@example.com, John Doe, admin
 email2@example.com, Jane Smith, finance"
                     rows={6}
-                    disabled={loading}
+                    disabled={isLoading}
                   />
                 </div>
 
@@ -360,7 +347,7 @@ email2@example.com, Jane Smith, finance"
                       type="button"
                       variant="outline"
                       size="sm"
-                      disabled={loading}
+                      disabled={isLoading}
                       asChild
                     >
                       <span>
@@ -372,7 +359,7 @@ email2@example.com, Jane Smith, finance"
                       type="file"
                       accept=".csv,.txt"
                       onChange={handleFileUpload}
-                      disabled={loading}
+                      disabled={isLoading}
                       className="hidden"
                     />
                   </label>
@@ -380,7 +367,7 @@ email2@example.com, Jane Smith, finance"
 
                 <Button
                   onClick={handleBulkParse}
-                  disabled={loading || !csvInput.trim()}
+                  disabled={isLoading || !csvInput.trim()}
                 >
                   Preview
                 </Button>
@@ -426,15 +413,16 @@ email2@example.com, Jane Smith, finance"
                   <Button
                     variant="outline"
                     onClick={() => setBulkStage("input")}
-                    disabled={loading}
+                    disabled={isLoading}
                   >
                     Back
                   </Button>
                   <Button
                     onClick={handleBulkInvite}
-                    disabled={loading || parsedUsers.length === 0}
+                    disabled={isLoading || parsedUsers.length === 0}
                   >
-                    {loading ? "Sending..." : "Send Invitations"}
+                    {bulkInviteMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    {bulkInviteMutation.isPending ? "Sending..." : "Send Invitations"}
                   </Button>
                 </div>
               </div>

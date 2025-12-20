@@ -3,8 +3,7 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/store/auth"
-import useMemberProfile from "@/store/memberProfile"
-import { useMemberProfileQuery, useCountiesQuery } from "@/hooks/useMemberProfileQuery"
+import { useMemberProfileQuery, useCountiesQuery, useUpdateProfileMutation } from "@/hooks/useMemberProfileQuery"
 import { AlertCircle, Check, Edit2, Loader2, Save, X } from "lucide-react"
 
 import type { County, MemberProfile } from "@/types/index"
@@ -38,11 +37,9 @@ export default function ProfilePage() {
   const logout = useAuth((s) => s.logout)
   const [changePasswordOpen, setChangePasswordOpen] = useState(false)
 
-  // Data: use React Query for server-state, keep store for mutations/UI
-  const storeProfile = useMemberProfile((s) => s.member)
-  const updateMemberProfile = useMemberProfile((s) => s.updateMemberProfile)
-  const setMemberProfile = useMemberProfile((s) => s.setMemberProfile)
-  const [saving, setSaving] = useState(false)
+  // Data: use React Query for server-state
+  const updateMutation = useUpdateProfileMutation()
+
 
   const { data: profile, isLoading: profileLoading, error: profileError, refetch: refetchProfile } =
     useMemberProfileQuery()
@@ -56,11 +53,8 @@ export default function ProfilePage() {
   useEffect(() => {
     if (!user) {
       router.push("/")
-      return
     }
-    // keep the zustand store in sync with the query cache
-    if (profile) setMemberProfile(profile)
-  }, [user, router, profile, setMemberProfile])
+  }, [user, router])
 
   const loading = profileLoading || countiesLoading
 
@@ -240,8 +234,6 @@ export default function ProfilePage() {
     }
 
     try {
-      setSaving(true)
-
       const updateData: Partial<MemberProfile> = {}
       if (section === "personal") {
         updateData.first_name = editingData.first_name
@@ -265,7 +257,7 @@ export default function ProfilePage() {
         updateData.marketing_consent = editingData.marketing_consent
       }
 
-      await updateMemberProfile(profile.id, updateData)
+      await updateMutation.mutateAsync({ id: profile.id, data: updateData })
       // store already updated; reflect UI
       setEditingSection(null)
       setEditingData({})
@@ -282,7 +274,7 @@ export default function ProfilePage() {
         showError(message)
       }
     } finally {
-      setSaving(false)
+      // Handled by updateMutation.isPending
     }
   }
 
@@ -398,6 +390,47 @@ export default function ProfilePage() {
           </CardContent>
         </Card>
 
+        {/* Security & Privacy Section */}
+        <Card className="border-purple-200 bg-purple-50 dark:border-purple-900 dark:bg-purple-950/30">
+          <CardHeader>
+            <CardTitle className="flex items-center justify-between">
+              <span>Security & Privacy</span>
+              {(user as any)?.two_factor_enabled ? (
+                <span className="inline-block rounded bg-green-100 px-2 py-1 text-xs font-semibold text-green-700 dark:bg-green-900/50 dark:text-green-300">
+                  2FA Enabled
+                </span>
+              ) : (
+                <span className="inline-block rounded bg-amber-100 px-2 py-1 text-xs font-semibold text-amber-700 dark:bg-amber-900/50 dark:text-amber-300">
+                  2FA Not Configured
+                </span>
+              )}
+            </CardTitle>
+            <CardDescription>
+              Manage your account security and two-factor authentication
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Protect your account with two-factor authentication using an
+              authenticator app or passkeys. You can also manage your password
+              and view active sessions.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant="default"
+                onClick={() => router.push("/dashboard/security")}
+              >
+                Configure MFA
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setChangePasswordOpen(true)}
+              >
+                Change Password
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
         {/* Email Verification Section */}
         {!user.email_verified_at && (
           <Card className="border-amber-200 dark:border-amber-900">
@@ -469,7 +502,7 @@ export default function ProfilePage() {
                     <Button
                       size="sm"
                       onClick={() => handleSaveSection("personal")}
-                      disabled={Object.keys(errors).length > 0 || saving}
+                      disabled={Object.keys(errors).length > 0 || updateMutation.isPending}
                     >
                       <Save className="mr-1 h-4 w-4" />
                       Save
@@ -478,7 +511,7 @@ export default function ProfilePage() {
                       size="sm"
                       variant="outline"
                       onClick={cancelEditing}
-                      disabled={saving}
+                      disabled={updateMutation.isPending}
                     >
                       <X className="h-4 w-4" />
                     </Button>
@@ -506,7 +539,7 @@ export default function ProfilePage() {
                           onChange={(e) =>
                             handleFieldChange("first_name", e.target.value)
                           }
-                          disabled={saving}
+                          disabled={updateMutation.isPending}
                         />
                         {errors.first_name && (
                           <p className="mt-1 text-sm text-red-600">
@@ -522,7 +555,7 @@ export default function ProfilePage() {
                           onChange={(e) =>
                             handleFieldChange("last_name", e.target.value)
                           }
-                          disabled={saving}
+                          disabled={updateMutation.isPending}
                         />
                         {errors.last_name && (
                           <p className="mt-1 text-sm text-red-600">
@@ -543,7 +576,7 @@ export default function ProfilePage() {
                             handleFieldChange("phone_number", e.target.value)
                           }
                           placeholder="+254 XXX XXX XXX"
-                          disabled={saving}
+                          disabled={updateMutation.isPending}
                         />
                         {errors.phone_number && (
                           <p className="mt-1 text-sm text-red-600">
@@ -560,7 +593,7 @@ export default function ProfilePage() {
                           onChange={(e) =>
                             handleFieldChange("date_of_birth", e.target.value)
                           }
-                          disabled={saving}
+                          disabled={updateMutation.isPending}
                         />
                         {errors.date_of_birth && (
                           <p className="mt-1 text-sm text-red-600">
@@ -578,7 +611,7 @@ export default function ProfilePage() {
                         onChange={(e) =>
                           handleFieldChange("gender", e.target.value || null)
                         }
-                        disabled={saving}
+                        disabled={updateMutation.isPending}
                         className="w-full rounded-md border px-3 py-2 dark:bg-gray-950"
                       >
                         <option value="">Select gender</option>
@@ -650,7 +683,7 @@ export default function ProfilePage() {
                     <Button
                       size="sm"
                       onClick={() => handleSaveSection("location")}
-                      disabled={Object.keys(errors).length > 0 || saving}
+                      disabled={Object.keys(errors).length > 0 || updateMutation.isPending}
                     >
                       <Save className="mr-1 h-4 w-4" />
                       Save
@@ -659,7 +692,7 @@ export default function ProfilePage() {
                       size="sm"
                       variant="outline"
                       onClick={cancelEditing}
-                      disabled={saving}
+                      disabled={updateMutation.isPending}
                     >
                       <X className="h-4 w-4" />
                     </Button>
@@ -689,7 +722,7 @@ export default function ProfilePage() {
                             e.target.value ? Number(e.target.value) : null
                           )
                         }
-                        disabled={saving}
+                        disabled={updateMutation.isPending}
                         className="w-full rounded-md border px-3 py-2 dark:bg-gray-950"
                       >
                         <option value="">Select county</option>
@@ -715,7 +748,7 @@ export default function ProfilePage() {
                           onChange={(e) =>
                             handleFieldChange("sub_county", e.target.value)
                           }
-                          disabled={saving}
+                          disabled={updateMutation.isPending}
                         />
                       </div>
                       <div>
@@ -726,7 +759,7 @@ export default function ProfilePage() {
                           onChange={(e) =>
                             handleFieldChange("ward", e.target.value)
                           }
-                          disabled={saving}
+                          disabled={updateMutation.isPending}
                         />
                       </div>
                     </div>
@@ -740,7 +773,7 @@ export default function ProfilePage() {
                           handleFieldChange("occupation", e.target.value)
                         }
                         placeholder="e.g., Software Engineer, Teacher, Farmer"
-                        disabled={saving}
+                        disabled={updateMutation.isPending}
                       />
                     </div>
                   </div>
@@ -797,7 +830,7 @@ export default function ProfilePage() {
                     <Button
                       size="sm"
                       onClick={() => handleSaveSection("profile-details")}
-                      disabled={Object.keys(errors).length > 0 || saving}
+                      disabled={Object.keys(errors).length > 0 || updateMutation.isPending}
                     >
                       <Save className="mr-1 h-4 w-4" />
                       Save
@@ -806,7 +839,7 @@ export default function ProfilePage() {
                       size="sm"
                       variant="outline"
                       onClick={cancelEditing}
-                      disabled={saving}
+                      disabled={updateMutation.isPending}
                     >
                       <X className="h-4 w-4" />
                     </Button>
@@ -835,7 +868,7 @@ export default function ProfilePage() {
                         }
                         placeholder="Tell us about yourself (max 500 characters)"
                         rows={4}
-                        disabled={saving}
+                        disabled={updateMutation.isPending}
                       />
                       <p className="mt-1 text-xs text-muted-foreground">
                         {(editingData.bio || "").length} / 1000 characters
@@ -861,7 +894,7 @@ export default function ProfilePage() {
                           )
                         }
                         placeholder="e.g., Technology, Music, Sports (comma-separated)"
-                        disabled={saving}
+                        disabled={updateMutation.isPending}
                       />
                       <p className="mt-1 text-xs text-muted-foreground">
                         Separate interests with commas
@@ -914,7 +947,7 @@ export default function ProfilePage() {
                     <Button
                       size="sm"
                       onClick={() => handleSaveSection("emergency")}
-                      disabled={Object.keys(errors).length > 0 || saving}
+                      disabled={Object.keys(errors).length > 0 || updateMutation.isPending}
                     >
                       <Save className="mr-1 h-4 w-4" />
                       Save
@@ -923,7 +956,7 @@ export default function ProfilePage() {
                       size="sm"
                       variant="outline"
                       onClick={cancelEditing}
-                      disabled={saving}
+                      disabled={updateMutation.isPending}
                     >
                       <X className="h-4 w-4" />
                     </Button>
@@ -956,7 +989,7 @@ export default function ProfilePage() {
                           )
                         }
                         placeholder="Full name of emergency contact"
-                        disabled={saving}
+                        disabled={updateMutation.isPending}
                       />
                     </div>
 
@@ -975,7 +1008,7 @@ export default function ProfilePage() {
                           )
                         }
                         placeholder="+254 XXX XXX XXX"
-                        disabled={saving}
+                        disabled={updateMutation.isPending}
                       />
                       {errors.emergency_contact_phone && (
                         <p className="mt-1 text-sm text-red-600">
@@ -1026,7 +1059,7 @@ export default function ProfilePage() {
                     <Button
                       size="sm"
                       onClick={() => handleSaveSection("preferences")}
-                      disabled={saving}
+                      disabled={updateMutation.isPending}
                     >
                       <Save className="mr-1 h-4 w-4" />
                       Save
@@ -1035,7 +1068,7 @@ export default function ProfilePage() {
                       size="sm"
                       variant="outline"
                       onClick={cancelEditing}
-                      disabled={saving}
+                      disabled={updateMutation.isPending}
                     >
                       <X className="h-4 w-4" />
                     </Button>
@@ -1069,7 +1102,7 @@ export default function ProfilePage() {
                         onCheckedChange={(checked) =>
                           handleFieldChange("terms_accepted", checked)
                         }
-                        disabled={saving}
+                        disabled={updateMutation.isPending}
                       />
                     </div>
 
@@ -1091,7 +1124,7 @@ export default function ProfilePage() {
                         onCheckedChange={(checked) =>
                           handleFieldChange("marketing_consent", checked)
                         }
-                        disabled={saving}
+                        disabled={updateMutation.isPending}
                       />
                     </div>
                   </div>

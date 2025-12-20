@@ -114,29 +114,135 @@ export interface Subscription {
   updated_at: string
 }
 
+export interface EventCategory {
+  id: number
+  name: string
+  slug: string
+  description: string | null
+  parent_id: number | null
+  image_path?: string | null
+  image_url: string | null
+  is_active: boolean
+  sort_order: number
+  parent?: EventCategory
+  children?: EventCategory[]
+}
+
+export interface EventTag {
+  id: number
+  name: string
+  slug: string
+}
+
+export interface Ticket {
+  id: number
+  event_id: number
+  name: string
+  description: string | null
+  price: number
+  currency: string
+  capacity: number | null
+  is_active: boolean
+  is_sold_out: boolean
+  available_until: string | null
+}
+
+export interface Speaker {
+  id: number
+  event_id: number
+  name: string
+  company: string | null
+  designation: string | null
+  bio: string | null
+  photo_url: string | null
+  photo_path?: string | null
+  website_url?: string | null
+  linkedin_url?: string | null
+  is_featured: boolean
+}
+
+export interface Registration {
+  id: number
+  event_id: number
+  user_id: number
+  ticket_id: number
+  confirmation_code: string
+  status: "pending" | "confirmed" | "attended" | "cancelled" | "waitlisted"
+  check_in_at: string | null
+  waitlist_position: number | null
+  qr_code_token?: string
+  qr_code_url: string | null
+  created_at: string
+  event?: Event
+  user?: {
+    id: number
+    username: string
+    email: string
+    profile_picture_url?: string | null
+  }
+  ticket?: Ticket
+}
+
+export interface PromoCode {
+  id: number
+  event_id: number | null
+  code: string
+  discount_type: "percentage" | "fixed"
+  discount_value: number
+  usage_limit: number | null
+  used_count: number
+  valid_from: string | null
+  valid_until: string | null
+  is_active: boolean
+}
+
+export interface Payout {
+  id: number
+  event_id: number
+  organizer_id: number
+  total_revenue: number
+  commission_amount: number
+  net_payout: number
+  currency: string
+  status: "pending" | "processing" | "completed" | "failed"
+  hold_until: string
+  reference: string
+  admin_notes?: string
+  created_at: string
+}
+
 export interface Event {
   id: number
   title: string
   slug: string
   description: string
-  content: string | null
-  cover_image: string | null
-  starts_at: string
-  ends_at: string | null
-  location: string | null
-  is_virtual: boolean
-  meeting_link: string | null
+  category?: EventCategory
+  venue: string | null
+  is_online: boolean
+  online_link: string | null
   capacity: number | null
+  waitlist_enabled: boolean
+  waitlist_capacity: number | null
+  county?: County
+  image_url: string | null
   price: number
   currency: string
-  is_published: boolean
-  organizer_id: number
+  status: "draft" | "published" | "suspended"
+  featured: boolean
+  featured_until: string | null
+  registration_deadline: string | null
+  starts_at: string
+  ends_at: string | null
+  organizer?: {
+    id: number
+    username: string
+    email: string
+  }
+  tickets?: Ticket[]
+  speakers?: Speaker[]
+  tags?: EventTag[]
   created_at: string
   updated_at: string
-  attendees_count?: number
-  is_attending?: boolean
-  county?: County
-  county_id: number
 }
 
 export interface Post {

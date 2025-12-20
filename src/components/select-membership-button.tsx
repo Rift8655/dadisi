@@ -23,8 +23,6 @@ export function SelectMembershipButton({ membership }: SelectMembershipButtonPro
   const [loading, setLoading] = useState(false)
   const [billingInterval, setBillingInterval] = useState<'monthly' | 'yearly'>('monthly')
   const user = useAuth((s) => s.user)
-
-  const createSubscriptionFromStore = useMembership((s) => s.createSubscription)
   const mutation = useCreateSubscription()
 
   const handleSelect = async () => {
@@ -37,12 +35,12 @@ export function SelectMembershipButton({ membership }: SelectMembershipButtonPro
     setLoading(true)
 
     try {
-      // prefer React Query mutation but fall back to store action if needed
-      const { data } = await (mutation.mutateAsync
-        ? mutation.mutateAsync({ plan_id: membership.id, billing_interval: billingInterval })
-        : createSubscriptionFromStore({ plan_id: membership.id, billing_interval: billingInterval }))
+      const { data } = await mutation.mutateAsync({ 
+        plan_id: membership.id, 
+        billing_interval: billingInterval 
+      })
 
-      const payload = data ?? data
+      const payload = data
       if (payload?.message?.includes("Please complete payment")) {
         if (payload.next_url) {
           window.location.href = payload.next_url

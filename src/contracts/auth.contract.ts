@@ -69,6 +69,9 @@ export const AuthUserSchema = z.object({
   // New UI permissions
   ui_permissions: UiPermissionsSchema,
   
+  // Consolidate roles from backend
+  roles: z.array(z.object({ name: z.string() })).optional(),
+  
   // Admin access
   admin_access: AdminAccessSchema,
   

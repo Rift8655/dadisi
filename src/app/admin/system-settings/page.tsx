@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from "react"
 import { useAuth } from "@/store/auth"
-import { useAdmin } from "@/store/admin"
+import { useAdminSystemSettings, useUpdateSystemSettings } from "@/hooks/useAdminSettings"
+import { useAdminMockPayment, MockPaymentTestPayload } from "@/hooks/useAdminMockPayment"
 
 import { AdminDashboardShell } from "@/components/admin-dashboard-shell"
 import { Unauthorized } from "@/components/unauthorized"
@@ -11,61 +12,59 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { showSuccess, showError } from "@/lib/sweetalert"
-
-interface PesapalSettings {
-  environment: string
-  consumer_key: string
-  consumer_secret: string
-  callback_url: string
-  webhook_url: string
-}
-
-interface MockPaymentTest {
-  amount: string
-  description: string
-  user_email: string
-}
+import { Loader2 } from "lucide-react"
 
 export default function AdminSystemSettingsPage() {
   const user = useAuth((s) => s.user)
-  const isLoading = useAuth((s) => s.isLoading)
   const logout = useAuth((s) => s.logout)
-  const [authorizationError, setAuthorizationError] = useState(false)
-  const [savingLocal, setSavingLocal] = useState(false)
-  const [activeTab, setActiveTab] = useState<'pesapal' | 'testing'>('pesapal')
+  const [activeTab, setActiveTab] = useState<'gateway' | 'pesapal' | 'testing'>('gateway')
 
-  // Pesapal Settings (from store)
-  const systemSettings = useAdmin((s) => s.systemSettings)
-  const systemLoading = useAdmin((s) => s.systemLoading)
-  const systemSaving = useAdmin((s) => s.systemSaving)
-  const setSystemSettings = useAdmin((s) => s.setSystemSettings)
-  const fetchSystemSettings = useAdmin((s) => s.fetchSystemSettings)
-  const saveSystemSettings = useAdmin((s) => s.saveSystemSettings)
+  // Hooks
+  const { data: settingsData, isLoading: systemLoading, error: fetchError } = useAdminSystemSettings("pesapal")
+  const updateSettingsMutation = useUpdateSystemSettings()
+  const { results: testResults, isPending: mockPaymentLoading, mutateAsync: testMockPaymentAction } = useAdminMockPayment()
 
-  // Mock Payment Testing (local form, store-driven results)
-  const [mockPayment, setMockPayment] = useState<MockPaymentTest>({
+  // Local form state
+  const [formSettings, setFormSettings] = useState<Record<string, any>>({})
+
+  useEffect(() => {
+    if (settingsData) {
+      setFormSettings(settingsData)
+    }
+  }, [settingsData])
+
+  useEffect(() => {
+    if (fetchError) {
+      const status = (fetchError as any).status
+      if (status === 403) {
+        // Handled by unauthorized check if needed
+      } else if (status === 401) {
+        logout()
+      } else {
+        showError("Failed to fetch settings")
+      }
+    }
+  }, [fetchError, logout])
+
+  // Mock Payment Testing state
+  const [mockPayment, setMockPayment] = useState<MockPaymentTestPayload>({
     amount: '2500',
     description: 'Test payment from admin dashboard',
     user_email: user?.email || '',
+    payment_type: 'test',
   })
-  const testResults = useAdmin((s) => s.testResults)
-  const mockPaymentLoading = useAdmin((s) => s.mockPaymentLoading)
-  const testMockPaymentAction = useAdmin((s) => s.testMockPayment)
 
-  useEffect(() => {
-    fetchSystemSettings().catch((err) => console.error('Failed to fetch system settings', err))
-  }, [fetchSystemSettings])
+  const handleUpdateField = (key: string, value: any) => {
+    setFormSettings(prev => ({ ...prev, [key]: value }))
+  }
 
   const saveSettings = async () => {
     try {
-      setSavingLocal(true)
-      await saveSystemSettings()
+      await updateSettingsMutation.mutateAsync(formSettings)
       showSuccess('Settings saved successfully!')
     } catch (error) {
       console.error('Failed to save settings:', error)
       showError('Failed to save settings')
-    } finally {
-      setSavingLocal(false)
     }
   }
 
@@ -79,48 +78,104 @@ export default function AdminSystemSettingsPage() {
     }
   }
 
-  if (isLoading || systemLoading) {
+  if (systemLoading) {
     return (
       <AdminDashboardShell title="System Settings">
-        <div className="flex items-center justify-center p-6">
-          <p className="text-sm text-muted-foreground">Loading settings...</p>
+        <div className="flex items-center justify-center p-12">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <span className="ml-2">Loading settings...</span>
         </div>
       </AdminDashboardShell>
     )
   }
 
-  if (authorizationError) {
-    return <Unauthorized actionHref="/admin" />
+  const pesapalSettings = {
+    environment: formSettings['pesapal.environment'] || 'sandbox',
+    consumer_key: formSettings['pesapal.consumer_key'] || '',
+    consumer_secret: formSettings['pesapal.consumer_secret'] || '',
+    callback_url: formSettings['pesapal.callback_url'] || '',
+    webhook_url: formSettings['pesapal.webhook_url'] || '',
   }
 
   return (
     <AdminDashboardShell title="System Settings">
       <div className="space-y-6">
         {/* Tab Navigation */}
-        <div className="border-b border-gray-200">
+        <div className="border-b border-border">
           <nav className="-mb-px flex space-x-8">
-            <button
-              onClick={() => setActiveTab('pesapal')}
-              className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'pesapal'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              Pesapal Configuration
-            </button>
-            <button
-              onClick={() => setActiveTab('testing')}
-              className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'testing'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              Payment Testing
-            </button>
+            {(['gateway', 'pesapal', 'testing'] as const).map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors capitalize ${
+                  activeTab === tab
+                    ? 'border-primary text-primary'
+                    : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
+                }`}
+              >
+                {tab === 'gateway' ? 'Payment Gateway' : tab === 'pesapal' ? 'Pesapal Configuration' : 'Payment Testing'}
+              </button>
+            ))}
           </nav>
         </div>
+
+        {/* Payment Gateway Selection Tab */}
+        {activeTab === 'gateway' && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Active Payment Gateway</CardTitle>
+              <CardDescription>
+                Select which payment gateway to use for processing subscription payments.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="payment_gateway">Payment Gateway</Label>
+                  <select
+                    id="payment_gateway"
+                    value={formSettings['payment.gateway'] || 'mock'}
+                    onChange={(e) => handleUpdateField('payment.gateway', e.target.value)}
+                    className="block w-full rounded-md border border-border bg-background text-foreground px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                  >
+                    <option value="mock">Mock (Development/Testing)</option>
+                    <option value="pesapal">Pesapal (Production)</option>
+                  </select>
+                  <p className="text-xs text-muted-foreground">
+                    {formSettings['payment.gateway'] === 'pesapal'
+                      ? '⚠️ Using Pesapal for real payments. Make sure your Pesapal credentials are configured.'
+                      : '🧪 Using mock payment gateway for testing. No real transactions will be processed.'}
+                  </p>
+                </div>
+
+                {formSettings['payment.gateway'] === 'mock' && (
+                  <div className="space-y-2">
+                    <Label htmlFor="mock_success_rate">Mock Success Rate (%)</Label>
+                    <Input
+                      id="mock_success_rate"
+                      type="number"
+                      min="0"
+                      max="100"
+                      value={formSettings['payment.mock_success_rate'] || '100'}
+                      onChange={(e) => handleUpdateField('payment.mock_success_rate', e.target.value)}
+                      placeholder="100"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Percentage of mock payments that will succeed. Set to 100 for all success, lower values to test failure scenarios.
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex gap-4 pt-4">
+                <Button onClick={saveSettings} disabled={updateSettingsMutation.isPending}>
+                  {updateSettingsMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Save Gateway Settings
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Pesapal Configuration Tab */}
         {activeTab === 'pesapal' && (
@@ -129,11 +184,11 @@ export default function AdminSystemSettingsPage() {
               <CardTitle className="flex items-center gap-2">
                 Pesapal Payment Gateway Settings
                   <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                  systemSettings.environment === 'live'
-                    ? 'bg-red-100 text-red-800'
-                    : 'bg-yellow-100 text-yellow-800'
+                  pesapalSettings.environment === 'live'
+                    ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
+                    : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'
                 }`}>
-                  {systemSettings.environment.toUpperCase()}
+                  {pesapalSettings.environment.toUpperCase()}
                 </span>
               </CardTitle>
               <CardDescription>
@@ -146,9 +201,9 @@ export default function AdminSystemSettingsPage() {
                   <Label htmlFor="environment">Environment</Label>
                   <select
                     id="environment"
-                    value={systemSettings.environment}
-                    onChange={(e) => setSystemSettings({ environment: e.target.value })}
-                    className="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    value={pesapalSettings.environment}
+                    onChange={(e) => handleUpdateField('pesapal.environment', e.target.value)}
+                    className="block w-full rounded-md border border-border bg-background text-foreground px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                   >
                     <option value="sandbox">Sandbox (Testing)</option>
                     <option value="live">Live (Production)</option>
@@ -160,8 +215,8 @@ export default function AdminSystemSettingsPage() {
                   <Input
                     id="consumer_key"
                     type="password"
-                    value={systemSettings.consumer_key}
-                    onChange={(e) => setSystemSettings({ consumer_key: e.target.value })}
+                    value={pesapalSettings.consumer_key}
+                    onChange={(e) => handleUpdateField('pesapal.consumer_key', e.target.value)}
                     placeholder="Enter your Pesapal Consumer Key"
                   />
                 </div>
@@ -171,8 +226,8 @@ export default function AdminSystemSettingsPage() {
                   <Input
                     id="consumer_secret"
                     type="password"
-                    value={systemSettings.consumer_secret}
-                    onChange={(e) => setSystemSettings({ consumer_secret: e.target.value })}
+                    value={pesapalSettings.consumer_secret}
+                    onChange={(e) => handleUpdateField('pesapal.consumer_secret', e.target.value)}
                     placeholder="Enter your Pesapal Consumer Secret"
                   />
                 </div>
@@ -181,8 +236,8 @@ export default function AdminSystemSettingsPage() {
                   <Label htmlFor="callback_url">Callback URL</Label>
                   <Input
                     id="callback_url"
-                    value={systemSettings.callback_url}
-                    onChange={(e) => setSystemSettings({ callback_url: e.target.value })}
+                    value={pesapalSettings.callback_url}
+                    onChange={(e) => handleUpdateField('pesapal.callback_url', e.target.value)}
                     placeholder="Frontend callback URL"
                   />
                   <p className="text-xs text-muted-foreground">
@@ -194,8 +249,8 @@ export default function AdminSystemSettingsPage() {
                   <Label htmlFor="webhook_url">Webhook URL</Label>
                   <Input
                     id="webhook_url"
-                    value={systemSettings.webhook_url}
-                    onChange={(e) => setSystemSettings({ webhook_url: e.target.value })}
+                    value={pesapalSettings.webhook_url}
+                    onChange={(e) => handleUpdateField('pesapal.webhook_url', e.target.value)}
                     placeholder="Webhook receiver URL"
                   />
                   <p className="text-xs text-muted-foreground">
@@ -205,10 +260,11 @@ export default function AdminSystemSettingsPage() {
               </div>
 
               <div className="flex gap-4 pt-4">
-                <Button onClick={saveSettings} disabled={savingLocal || systemSaving}>
-                  {savingLocal || systemSaving ? 'Saving...' : 'Save Settings'}
+                <Button onClick={saveSettings} disabled={updateSettingsMutation.isPending}>
+                  {updateSettingsMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Save Settings
                 </Button>
-                <Button variant="outline" onClick={() => fetchSystemSettings()}>
+                <Button variant="outline" onClick={() => setFormSettings(settingsData || {})}>
                   Reset Changes
                 </Button>
               </div>
@@ -228,7 +284,22 @@ export default function AdminSystemSettingsPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="payment_type">Payment Type</Label>
+                    <select
+                      id="payment_type"
+                      value={mockPayment.payment_type}
+                      onChange={(e) => setMockPayment(prev => ({ ...prev, payment_type: e.target.value as MockPaymentTestPayload['payment_type'] }))}
+                      className="block w-full rounded-md border border-border bg-background text-foreground px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                    >
+                      <option value="test">🧪 Test</option>
+                      <option value="subscription">💳 Subscription</option>
+                      <option value="donation">❤️ Donation</option>
+                      <option value="event">🎫 Event Ticket</option>
+                    </select>
+                  </div>
+
                   <div className="space-y-2">
                     <Label htmlFor="test_amount">Amount (KES)</Label>
                     <Input
@@ -266,7 +337,14 @@ export default function AdminSystemSettingsPage() {
                   disabled={mockPaymentLoading}
                   className="mt-4"
                 >
-                  {mockPaymentLoading ? 'Running Test...' : '🧪 Start Mock Payment Test'}
+                  {mockPaymentLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Running Test...
+                    </>
+                  ) : (
+                    '🧪 Start Mock Payment Test'
+                  )}
                 </Button>
               </CardContent>
             </Card>
@@ -277,7 +355,7 @@ export default function AdminSystemSettingsPage() {
                   <CardTitle className="text-lg">Test Results</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="bg-gray-50 p-4 rounded-md font-mono text-sm space-y-1">
+                  <div className="bg-muted p-4 rounded-md font-mono text-sm space-y-1 text-foreground">
                     {testResults.map((result, index) => (
                       <div key={index} className="whitespace-pre-wrap">
                         {result}

@@ -1,14 +1,13 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import Link from "next/link"
 import { useAuth } from "@/store/auth"
-import { ArrowLeft, Edit2, Plus, Search, Trash2 } from "lucide-react"
+import { useAdminUI } from "@/store/adminUI"
+import { Edit2, Plus, Search, Trash2, Loader2 } from "lucide-react"
 import Swal from "sweetalert2"
+import Link from "next/link"
 
-import { AdminRole, AdminUser, PaginatedResponse } from "@/types/admin"
+import { AdminRole } from "@/types/admin"
 import { useRoles, useDeleteRole } from "@/hooks/useRoles"
-import { useAdmin } from "@/store/admin"
 import { isBuiltInRole } from "@/lib/rbac"
 import { Button } from "@/components/ui/button"
 import {
@@ -22,36 +21,20 @@ import { Input } from "@/components/ui/input"
 import { AdminDashboardShell } from "@/components/admin-dashboard-shell"
 import { Unauthorized } from "@/components/unauthorized"
 import { RoleCreateDialog } from "@/components/admin/role-create-dialog"
+import { useState } from "react"
 
 export default function RolesPage() {
-  const currentUser = useAuth((s) => s.user)
   const logout = useAuth((s) => s.logout)
-  const [searchTerm, setSearchTerm] = useState("")
-  const [authorizationError, setAuthorizationError] = useState(false)
+  const { filters, setRoleSearch } = useAdminUI()
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   
   const { data: rolesData, isLoading: rolesLoading, error: rolesError } = useRoles({
-    search: searchTerm || undefined,
+    search: filters.roleSearch || undefined,
     include_permissions: true,
   })
   
   const deleteRoleMutation = useDeleteRole()
-
-  const roles = Array.isArray(rolesData) ? rolesData : rolesData?.data || []
-
-  useEffect(() => {
-    if (rolesError) {
-      const status = (rolesError as any).status
-      if (status === 403) {
-        setAuthorizationError(true)
-      } else if (status === 401) {
-        logout()
-      } else {
-        const errorMessage = rolesError instanceof Error ? rolesError.message : "Failed to load roles"
-        Swal.fire({ icon: "error", title: "Error", text: errorMessage })
-      }
-    }
-  }, [rolesError, logout])
+  const roles = Array.isArray(rolesData) ? rolesData : (rolesData as any)?.data || []
 
   const handleDelete = async (role: AdminRole) => {
     const confirmed = await Swal.fire({
@@ -77,9 +60,13 @@ export default function RolesPage() {
     }
   }
 
-
-  if (authorizationError) {
+  if (rolesError && (rolesError as any).status === 403) {
     return <Unauthorized actionHref="/admin" />
+  }
+
+  if (rolesError && (rolesError as any).status === 401) {
+    logout()
+    return null
   }
 
   return (
@@ -110,8 +97,8 @@ export default function RolesPage() {
                 <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-400" />
                 <Input
                   placeholder="Search roles..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  value={filters.roleSearch}
+                  onChange={(e) => setRoleSearch(e.target.value)}
                   className="pl-8"
                 />
               </div>
@@ -137,18 +124,26 @@ export default function RolesPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {roles.length === 0 ? (
-                              <tr>
-                                <td
-                                  colSpan={5}
-                                  className="px-4 py-8 text-center text-gray-500"
-                                >
-                                  {rolesLoading ? "Loading roles..." : "No roles found"}
-                                </td>
-                              </tr>
-                            ) : (
-                              roles.map((role) => {
+                  {rolesLoading && roles.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="px-4 py-8 text-center text-gray-500">
+                        <div className="flex flex-col items-center gap-2">
+                           <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                           <span>Loading roles...</span>
+                        </div>
+                      </td>
+                    </tr>
+                  ) : roles.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="px-4 py-8 text-center text-gray-500">
+                        No roles found
+                      </td>
+                    </tr>
+                  ) : (
+                    roles.map((role: AdminRole) => {
                       const isBuiltIn = isBuiltInRole(role.name)
+                      const isDeleting = deleteRoleMutation.isPending && deleteRoleMutation.variables === role.id
+                      
                       return (
                         <tr
                           key={role.id}
@@ -186,7 +181,7 @@ export default function RolesPage() {
                                 <Button
                                   size="sm"
                                   variant="ghost"
-                                  disabled={rolesLoading}
+                                  disabled={isDeleting}
                                 >
                                   <Edit2 className="h-4 w-4" />
                                 </Button>
@@ -195,10 +190,14 @@ export default function RolesPage() {
                                 <Button
                                   size="sm"
                                   variant="ghost"
-                                  disabled={rolesLoading}
+                                  disabled={isDeleting}
                                   onClick={() => handleDelete(role)}
                                 >
-                                  <Trash2 className="h-4 w-4 text-red-600" />
+                                  {isDeleting ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                  ) : (
+                                    <Trash2 className="h-4 w-4 text-red-600" />
+                                  )}
                                 </Button>
                               )}
                             </div>

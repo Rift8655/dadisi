@@ -40,8 +40,8 @@ export const handlers = [
     return res(ctx.status(200), ctx.json({ data: parsed }))
   }),
 
-  // Retention settings
-  rest.get("/api/retention-settings", (req, res, ctx) => {
+  // Retention settings (Admin only)
+  rest.get("/api/admin/retention-settings", (req, res, ctx) => {
     const payload = [
       {
         id: 1,
@@ -58,7 +58,7 @@ export const handlers = [
     return res(ctx.status(200), ctx.json({ data: payload }))
   }),
 
-  rest.get("/api/retention-settings/:id", (req, res, ctx) => {
+  rest.get("/api/admin/retention-settings/:id", (req, res, ctx) => {
     const { id } = req.params as { id: string }
     const payload = {
       id: Number(id) || 1,
@@ -74,7 +74,7 @@ export const handlers = [
     return res(ctx.status(200), ctx.json({ data: payload }))
   }),
 
-  rest.put("/api/retention-settings/:id", async (req, res, ctx) => {
+  rest.put("/api/admin/retention-settings/:id", async (req, res, ctx) => {
     const { id } = req.params as { id: string }
     const body = await req.json()
     const payload = {

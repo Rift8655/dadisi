@@ -19,14 +19,14 @@ import {
 import {
   PostsArraySchema,
   PostSchema,
+  PaginatedPostsResponseSchema,
+  PublicCategoriesResponseSchema,
+  PublicTagsResponseSchema,
 } from "@/schemas/post"
 import {
   EventsListSchema,
   EventSchema,
-} from "@/schemas/common" // Check event.ts content? I didn't read event.ts. Let's stick to common for events if I'm unsure, or better, read event.ts quickly? 
-// The user said "Import schemas from specific files". I'll assume standard naming or correct headers.
-// Let's use the ones I'm sure of from my read: plan.ts, post.ts, auth.ts, memberProfile.ts.
-// For others, I'll stick to what was there or what I can reasonably infer.
+} from "@/schemas/event"
 import {
   PlansArraySchema,
   PlanSchema,
@@ -150,10 +150,17 @@ async function apiRequest<T = unknown>(
 
     if (response.status === 401) {
       errorMessage = "Your session has expired. Please log in again."
-      // Automatically logout on 401
+      // Automatically logout on 401 and redirect to login
       if (typeof window !== "undefined") {
         import("@/store/auth")
           .then((mod) => mod.useAuth.getState().logout())
+          .then(() => {
+            // Only redirect if not already on auth pages
+            if (!window.location.pathname.startsWith('/auth')) {
+              const returnUrl = encodeURIComponent(window.location.pathname + window.location.search);
+              window.location.href = `/auth/login?expired=true&redirect=${returnUrl}`;
+            }
+          })
           .catch((err) => console.error("Failed to auto-logout:", err))
       }
     } else if (response.status === 403) {
@@ -271,6 +278,86 @@ export const authApi = {
     
   verifyEmail: (data: { code: string }) =>
     api.post<{ message: string; token: string; user: unknown }>("/api/auth/verify-email", data),
+
+  // Token refresh for silent token rotation
+  refresh: () =>
+    api.post<{ user: unknown; access_token: string; expires_at: string }>("/api/auth/refresh"),
+
+  // ========================================
+  // Two-Factor Authentication (TOTP)
+  // ========================================
+  twoFactor: {
+    // Enable TOTP - returns secret and QR code URL
+    enable: () =>
+      api.post<{ secret: string; qr_code_url: string }>("/api/auth/2fa/totp/enable"),
+
+    // Verify TOTP code and fully enable 2FA
+    verify: (code: string) =>
+      api.post<{ message: string; recovery_codes: string[] }>("/api/auth/2fa/totp/verify", { code }),
+
+    // Disable TOTP (requires password)
+    disable: (password: string) =>
+      api.post<{ message: string }>("/api/auth/2fa/totp/disable", { password }),
+
+    // Validate TOTP code at login (no auth required)
+    validateCode: (data: { email: string; code: string }) =>
+      api.post<{ user: unknown; access_token: string }>("/api/auth/2fa/totp/validate", data),
+
+    // Get recovery codes (requires password)
+    recoveryCodes: (password: string) =>
+      api.post<{ recovery_codes: string[] }>("/api/auth/2fa/totp/recovery-codes", { password }),
+
+    // Regenerate recovery codes (requires password)
+    regenerateRecoveryCodes: (password: string) =>
+      api.post<{ recovery_codes: string[] }>("/api/auth/2fa/totp/regenerate-recovery-codes", { password }),
+  },
+
+  // ========================================
+  // Passkeys (WebAuthn)
+  // ========================================
+  passkeys: {
+    // Get registration options (authenticated)
+    registerOptions: () =>
+      api.post<{
+        challenge: string
+        rp: { id: string; name: string }
+        user: { id: string; name: string; displayName: string }
+        pubKeyCredParams: Array<{ type: string; alg: number }>
+        timeout: number
+        attestation: string
+        authenticatorSelection: { residentKey: string; userVerification: string }
+      }>("/api/auth/passkeys/register/options"),
+
+    // Register a new passkey
+    register: (data: { name: string; credential: unknown }) =>
+      api.post<{ message: string; passkey: { id: number; name: string; created_at: string } }>(
+        "/api/auth/passkeys/register",
+        data
+      ),
+
+    // List user's passkeys
+    list: () =>
+      api.get<{
+        passkeys: Array<{ id: number; name: string; created_at: string; last_used_at: string | null }>
+      }>("/api/auth/passkeys"),
+
+    // Delete a passkey
+    delete: (id: number) =>
+      api.delete<{ message: string }>(`/api/auth/passkeys/${id}`),
+
+    // Get authentication options (for login - no auth required)
+    authenticateOptions: (email?: string) =>
+      api.post<{
+        challenge: string
+        timeout: number
+        rpId: string
+        allowCredentials: Array<{ type: string; id: string }>
+      }>("/api/auth/passkeys/authenticate/options", email ? { email } : {}),
+
+    // Authenticate with passkey (login)
+    authenticate: (data: { id: string; response: unknown }) =>
+      api.post<{ user: unknown; access_token: string }>("/api/auth/passkeys/authenticate", data),
+  },
 }
 
 export const userApi = {
@@ -342,54 +429,169 @@ export const memberProfileApi = {
 }
 
 // Posts API
-const PostsResponseSchema = z.object({ data: PostsArraySchema })
-const PostResponseSchema = z.object({ data: PostSchema })
+
+export interface PostsListParams {
+  page?: number
+  per_page?: number
+  category_id?: number
+  tag_id?: number
+  search?: string
+  sort?: "latest" | "oldest" | "views"
+  [key: string]: string | number | boolean | undefined
+}
 
 export const postsApi = {
-  list: async (params?: { page?: number; tag?: string; search?: string }) => {
-    const res = await apiRequestWithSchema("/api/blog/posts", PostsResponseSchema, { params })
-    return res.data
+  list: async (params?: PostsListParams) => {
+    const res = await apiRequestWithSchema("/api/blog/posts", PaginatedPostsResponseSchema, { 
+      params: params as Record<string, string | number | boolean> 
+    })
+    return res
   },
 
   getBySlug: async (slug: string) => {
-    const res = await apiRequestWithSchema(`/api/blog/posts/${slug}`, PostResponseSchema)
+    const res = await apiRequestWithSchema(`/api/blog/posts/${slug}`, z.object({ success: z.literal(true), data: PostSchema }))
+    return res.data
+  },
+
+  getCategories: async () => {
+    const res = await apiRequestWithSchema("/api/blog/categories", PublicCategoriesResponseSchema)
+    return res.data
+  },
+
+  getTags: async () => {
+    const res = await apiRequestWithSchema("/api/blog/tags", PublicTagsResponseSchema)
     return res.data
   },
 }
 
 // Events API
 export const eventsApi = {
-  list: async (params?: { page?: number; search?: string }) => {
+  list: async (params?: any) => {
     const res = await apiRequestWithSchema("/api/events", EventsListSchema, { params })
+    return res
+  },
+
+  get: async (slugOrId: string | number) => {
+    const res = await api.get<{ data: any }>(`/api/events/${slugOrId}`)
+    return res.data || res
+  },
+
+  // Get event categories
+  getCategories: async () => {
+    const res = await api.get<{ data: Array<{ id: number; name: string; slug: string }> }>("/api/event-categories")
+    return res.data || []
+  },
+
+  // Get event tags
+  getTags: async () => {
+    const res = await api.get<{ data: Array<{ id: number; name: string; slug: string }> }>("/api/event-tags")
+    return res.data || []
+  },
+
+  // Validate promo code
+  validatePromo: async (eventId: number, data: { code: string; ticket_id: number }) => {
+    return api.post<{ valid: boolean; discount_percent?: number; discount_amount?: number; message?: string }>(
+      `/api/events/${eventId}/validate-promo`,
+      data
+    )
+  },
+
+  // Get organizer's own events
+  my: async (params?: { status?: string; page?: number }) => {
+    const res = await api.get<{ data: any[] }>("/api/events/my", { params })
+    return res.data || []
+  },
+
+  // Create new event
+  create: async (data: any) => {
+    const res = await api.post<{ data: any }>("/api/events", data)
     return res.data
   },
 
-  get: async (id: number) => {
-    const res = await apiRequestWithSchema(`/api/events/${id}`, z.object({ data: EventSchema }))
+  // Update existing event
+  update: async (id: number, data: any) => {
+    const res = await api.put<{ data: any }>(`/api/events/${id}`, data)
     return res.data
   },
+
+  // Delete event
+  delete: async (id: number) => {
+    return api.delete(`/api/events/${id}`)
+  },
+
+  // Register for event
+  register: (eventId: number, data: { ticket_id: number; additional_data?: any }) =>
+    api.post<any>(`/api/events/${eventId}/register`, data),
 
   rsvp: (id: number, data: unknown) => api.post(`/api/events/${id}/rsvp`, data),
 }
 
 // Donations API
 export const donationsApi = {
-  create: async (data: unknown) => {
-    const res = await api.post<{ donation: unknown }>("/api/donations", data)
-    // Keep custom validation if structure is unique or use valid schema
-    if (res?.donation) {
-       return DonationSchema.parse(res.donation)
-    }
-    return res
+  create: async (data: {
+    amount: number
+    currency?: string
+    first_name: string
+    last_name: string
+    email: string
+    phone_number?: string
+    message?: string
+    county_id?: number
+  }) => {
+    return api.post<{
+      success: boolean
+      message: string
+      data: {
+        donation_id: number
+        reference: string
+        amount: number
+        currency: string
+        redirect_url: string
+      }
+    }>("/api/donations", data)
   },
 
-  list: async (params?: { page?: number; search?: string }) => {
-    // If strict is needed:
-    // return apiRequestWithSchema("/api/donations", z.object({ data: z.array(DonationSchema) }), { params })
-    return api.get("/api/donations", { params })
+  list: async (params?: { page?: number; per_page?: number }) => {
+    return api.get<{
+      success: boolean
+      data: Array<{
+        id: number
+        reference: string
+        donor_name: string
+        amount: number
+        currency: string
+        status: string
+        campaign?: { id: number; title: string; slug: string }
+        created_at: string
+      }>
+      pagination: {
+        total: number
+        per_page: number
+        current_page: number
+        last_page: number
+      }
+    }>("/api/donations", { params })
   },
 
-  get: async (id: number) => api.get(`/api/donations/${id}`),
+  getByReference: async (reference: string) => {
+    return api.get<{
+      success: boolean
+      data: {
+        id: number
+        reference: string
+        donor_name: string
+        donor_email: string
+        donor_phone?: string
+        amount: number
+        currency: string
+        status: string
+        notes?: string
+        county?: { id: number; name: string }
+        campaign?: { id: number; title: string; slug: string }
+        created_at: string
+      }
+    }>(`/api/donations/ref/${reference}`)
+  },
 }
 
 // Media API
@@ -407,6 +609,263 @@ export const mediaApi = {
   },
 
   delete: (id: number) => api.delete(`/api/media/${id}`),
+}
+
+// Author Posts API (for user dashboard blog management)
+export const authorPostsApi = {
+  list: (params?: { page?: number; status?: string; search?: string }) =>
+    api.get<unknown>("/api/user/blog/posts", { params }),
+  
+  getCreateMetadata: () =>
+    api.get<unknown>("/api/user/blog/posts/create"),
+  
+  get: async (slug: string) => {
+    const res = await api.get<any>(`/api/user/blog/posts/${slug}`)
+    return res.data
+  },
+  
+  getEditMetadata: (slug: string) =>
+    api.get<unknown>(`/api/user/blog/posts/${slug}/edit`),
+  
+  create: (data: unknown) =>
+    api.post<unknown>("/api/user/blog/posts", data),
+  
+  update: (slug: string, data: unknown) =>
+    api.put<unknown>(`/api/user/blog/posts/${slug}`, data),
+  
+  delete: (slug: string) =>
+    api.delete<unknown>(`/api/user/blog/posts/${slug}`),
+  
+  restore: (slug: string) =>
+    api.post<unknown>(`/api/user/blog/posts/${slug}/restore`),
+  
+  publish: (slug: string) =>
+    api.post<unknown>(`/api/user/blog/posts/${slug}/publish`),
+  
+  unpublish: (slug: string) =>
+    api.post<unknown>(`/api/user/blog/posts/${slug}/unpublish`),
+}
+
+// Donation Campaigns API (public)
+import {
+  CampaignListResponseSchema,
+  CampaignResponseSchema,
+  type CampaignDonationInput,
+} from "@/schemas/campaign"
+
+export const campaignsApi = {
+  list: async (params?: { page?: number; county_id?: number }) => {
+    const res = await apiRequestWithSchema(
+      "/api/donation-campaigns",
+      CampaignListResponseSchema,
+      { params }
+    )
+    return res
+  },
+
+  getBySlug: async (slug: string) => {
+    const res = await apiRequestWithSchema(
+      `/api/donation-campaigns/${slug}`,
+      CampaignResponseSchema
+    )
+    return res.data
+  },
+
+  donate: (slug: string, data: CampaignDonationInput) =>
+    api.post<{
+      success: boolean
+      message: string
+      data: {
+        donation_id: number
+        reference: string
+        amount: number
+        currency: string
+        campaign: { id: number; title: string; slug: string }
+        redirect_url: string
+      }
+    }>(`/api/donation-campaigns/${slug}/donate`, data),
+}
+
+// Author Blog Management - categories and tags
+export const authorBlogApi = {
+  categories: {
+    list: () => api.get<any>("/api/user/blog/categories"),
+    create: (data: { name: string; description?: string }) =>
+      api.post<any>("/api/user/blog/categories", data),
+    update: (id: number, data: { name: string; description?: string }) =>
+      api.put<any>(`/api/user/blog/categories/${id}`, data),
+    requestDelete: (id: number) =>
+      api.post<any>(`/api/user/blog/categories/${id}/request-delete`),
+  },
+  tags: {
+    list: () => api.get<any>("/api/user/blog/tags"),
+    create: (data: { name: string }) =>
+      api.post<any>("/api/user/blog/tags", data),
+    update: (id: number, data: { name: string }) =>
+      api.put<any>(`/api/user/blog/tags/${id}`, data),
+    requestDelete: (id: number) =>
+      api.post<any>(`/api/user/blog/tags/${id}/request-delete`),
+  },
+}
+
+// Messaging API
+export interface PrivateMessage {
+  id: string
+  sender_id: number
+  sender_username: string
+  recipient_id: number
+  created_at: string
+}
+
+export interface Conversation {
+  partner: {
+    id: number
+    username: string
+    profile_picture_path: string | null
+  }
+  last_message_at: string | null
+  unread_count: number
+}
+
+export const messageApi = {
+  conversations: () => api.get<Conversation[]>("/api/messages/conversations"),
+  
+  getConversation: (partnerId: number) => 
+    api.get<{ data: PrivateMessage[] }>(`/api/messages/conversation/${partnerId}`),
+  
+  send: (data: {
+    recipient_id: number
+    r2_object_key: string
+    encrypted_key_package: string
+    nonce: string
+  }) => api.post("/api/messages/send", data),
+  
+  getVaultUrl: (messageId: string) =>
+    api.get<{ download_url: string; encrypted_key_package: string; nonce: string }>(
+      `/api/messages/${messageId}/vault`
+    ),
+    
+  getUploadUrl: () => 
+    api.get<{ upload_url: string; object_key: string }>("/api/messages/upload-url"),
+    
+  keys: {
+    get: (userId: number) => 
+      api.get<{ public_key: string }>(`/api/messages/keys/${userId}`),
+    store: (publicKeyJwk: string) => 
+      api.post("/api/messages/keys", { public_key: publicKeyJwk }),
+  },
+}
+
+// Forum API
+export interface ForumCategory {
+  id: number
+  name: string
+  slug: string
+  description: string | null
+  icon: string | null
+  color: string | null
+  threads_count: number
+  posts_count: number
+  is_active: boolean
+  order: number
+  parent_id?: number | null
+  children?: ForumCategory[]
+  threads?: ForumThread[]
+}
+
+export interface ForumThread {
+  id: number
+  title: string
+  slug: string
+  content: string
+  user_id: number
+  category_id: number
+  county_id: number | null
+  is_pinned: boolean
+  is_locked: boolean
+  reply_count: number
+  view_count: number
+  created_at: string
+  updated_at: string
+  user?: { id: number; username: string; profile_picture_path: string | null }
+  category?: ForumCategory
+  county?: { id: number; name: string }
+}
+
+export interface ForumPost {
+  id: number
+  content: string
+  thread_id: number
+  user_id: number
+  parent_id: number | null
+  created_at: string
+  updated_at: string
+  user?: { id: number; username: string }
+}
+
+export const forumApi = {
+  // Categories
+  categories: {
+    list: () => api.get<{ data: ForumCategory[] }>("/api/forum/categories"),
+    get: (slug: string) => api.get<{ data: ForumCategory }>(`/api/forum/categories/${slug}`),
+  },
+
+  // Threads
+  threads: {
+    list: (categorySlug: string, params?: { page?: number }) =>
+      api.get<{ data: ForumThread[]; meta?: any }>(`/api/forum/categories/${categorySlug}/threads`, { params }),
+    get: (slug: string) => api.get<{ data: ForumThread }>(`/api/forum/threads/${slug}`),
+    create: (categorySlug: string, data: { title: string; content: string; county_id?: number }) =>
+      api.post<{ data: ForumThread }>(`/api/forum/categories/${categorySlug}/threads`, data),
+    update: (slug: string, data: { title?: string; content?: string }) =>
+      api.put<{ data: ForumThread }>(`/api/forum/threads/${slug}`, data),
+    delete: (slug: string) => api.delete(`/api/forum/threads/${slug}`),
+    pin: (slug: string) => api.post(`/api/forum/threads/${slug}/pin`),
+    unpin: (slug: string) => api.post(`/api/forum/threads/${slug}/unpin`),
+    lock: (slug: string) => api.post(`/api/forum/threads/${slug}/lock`),
+    unlock: (slug: string) => api.post(`/api/forum/threads/${slug}/unlock`),
+  },
+
+  // Posts (replies)
+  posts: {
+    list: (threadSlug: string, params?: { page?: number }) =>
+      api.get<{ data: ForumPost[]; meta?: any }>(`/api/forum/threads/${threadSlug}/posts`, { params }),
+    create: (threadSlug: string, data: { content: string; parent_id?: number }) =>
+      api.post<{ data: ForumPost }>(`/api/forum/threads/${threadSlug}/posts`, data),
+    update: (id: number, data: { content: string }) =>
+      api.put<{ data: ForumPost }>(`/api/forum/posts/${id}`, data),
+    delete: (id: number) => api.delete(`/api/forum/posts/${id}`),
+  },
+}
+
+// Groups API (county-based networking hubs)
+export interface Group {
+  id: number
+  name: string
+  slug: string
+  description: string | null
+  county_id: number | null
+  county?: { id: number; name: string }
+  image_path: string | null
+  member_count: number
+  is_member?: boolean
+}
+
+export const groupsApi = {
+  list: (params?: { county_id?: number; search?: string; per_page?: number }) =>
+    api.get<{ data: Group[]; meta?: { total: number } }>("/api/groups", { params }),
+  
+  show: (slug: string) =>
+    api.get<{ data: Group & { members: any[]; recent_discussions: any[] } }>(`/api/groups/${slug}`),
+  
+  members: (slug: string, params?: { per_page?: number }) =>
+    api.get<{ data: any[]; meta?: any }>(`/api/groups/${slug}/members`, { params }),
+  
+  join: (slug: string) =>
+    api.post<{ message: string }>(`/api/groups/${slug}/join`),
+  
+  leave: (slug: string) =>
+    api.post<{ message: string }>(`/api/groups/${slug}/leave`),
 }
 
 export default api

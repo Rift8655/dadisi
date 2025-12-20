@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { useAuth } from "@/store/auth"
 import { RetentionSetting } from "@/types"
-import { useAdmin } from "@/store/admin"
+import { useAdminRetentionSettings, useUpdateRetentionSetting } from "@/hooks/useAdminRetention"
 import {
   AlertCircle,
   CheckCircle2,
@@ -14,7 +14,6 @@ import {
   X,
 } from "lucide-react"
 
-// retentionApi moved into `useAdmin` store
 import { showError, showSuccess } from "@/lib/sweetalert"
 import { Button } from "@/components/ui/button"
 import {
@@ -33,13 +32,12 @@ import { Unauthorized } from "@/components/unauthorized"
 
 export default function AdminRetentionSettingsPage() {
   const user = useAuth((s) => s.user)
-  const isLoading = useAuth((s) => s.isLoading)
   const logout = useAuth((s) => s.logout)
-  const [authorizationError, setAuthorizationError] = useState(false)
-  const settings = useAdmin((s) => s.retentionSettings)
-  const loading = useAdmin((s) => s.retentionLoading)
-  const fetchRetentionSettings = useAdmin((s) => s.fetchRetentionSettings)
-  const updateRetentionSetting = useAdmin((s) => s.updateRetentionSetting)
+  
+  // Hooks
+  const { data: settings = [], isLoading: loading, error: fetchError } = useAdminRetentionSettings()
+  const updateMutation = useUpdateRetentionSetting()
+
   const [editingId, setEditingId] = useState<number | null>(null)
   const [editingError, setEditingError] = useState<string | null>(null)
   const [editingData, setEditingData] = useState<{
@@ -52,9 +50,18 @@ export default function AdminRetentionSettingsPage() {
     description: "",
   })
 
-  const loadRetentionSettings = async () => {
-    // replaced by store action
-  }
+  useEffect(() => {
+    if (fetchError) {
+      const status = (fetchError as any).status
+      if (status === 403) {
+        // Handled by unauthorized check below if cumulative
+      } else if (status === 401) {
+        logout()
+      } else {
+        showError("Failed to fetch retention settings")
+      }
+    }
+  }, [fetchError, logout])
 
   const calculateStatistics = () => {
     return {
@@ -117,16 +124,12 @@ export default function AdminRetentionSettingsPage() {
 
     try {
       setEditingError(null)
-      await updateRetentionSetting(id, editingData)
+      await updateMutation.mutateAsync({ id, data: editingData })
       showSuccess("Retention setting updated successfully")
       setEditingId(null)
     } catch (error: unknown) {
       console.error("Failed to update retention setting:", error)
-      let message = "Failed to update retention setting"
-      if (typeof error === "object" && error !== null) {
-        const e = error as { message?: string }
-        message = e.message ?? message
-      }
+      const message = error instanceof Error ? error.message : "Failed to update retention setting"
       setEditingError(message)
       showError(message)
     }
@@ -134,27 +137,19 @@ export default function AdminRetentionSettingsPage() {
 
   const stats = calculateStatistics()
 
-  useEffect(() => {
-    fetchRetentionSettings().catch((err: unknown) => {
-      const status = (typeof err === "object" && err !== null) ? (err as { status?: number }).status : undefined
-      if (status === 403) setAuthorizationError(true)
-      else if (status === 401) logout()
-      else console.error("Failed to fetch retention settings", err)
-    })
-  }, [fetchRetentionSettings, logout])
+  if ((fetchError as any)?.status === 403) {
+    return <Unauthorized actionHref="/admin" />
+  }
 
-  if (isLoading || !user) {
+  if (!user) {
     return (
       <AdminDashboardShell title="Data Retention">
-        <div className="flex items-center justify-center p-6">
-          <p className="text-sm text-muted-foreground">Loading user...</p>
+        <div className="flex items-center justify-center p-12">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <span className="ml-2 text-sm text-muted-foreground">Loading environment...</span>
         </div>
       </AdminDashboardShell>
     )
-  }
-
-  if (authorizationError) {
-    return <Unauthorized actionHref="/admin" />
   }
 
   return (
@@ -225,7 +220,7 @@ export default function AdminRetentionSettingsPage() {
         {loading ? (
           <Card>
             <CardContent className="flex items-center justify-center py-12">
-              <Loader2 className="mr-3 h-6 w-6 animate-spin" />
+              <Loader2 className="mr-3 h-6 w-6 animate-spin text-primary" />
               <span>Loading retention settings...</span>
             </CardContent>
           </Card>
@@ -275,9 +270,13 @@ export default function AdminRetentionSettingsPage() {
                         <Button
                           size="sm"
                           onClick={() => saveSetting(setting.id)}
-                          disabled={!!editingError}
+                          disabled={!!editingError || updateMutation.isPending}
                         >
-                          <Save className="mr-1 h-4 w-4" />
+                          {updateMutation.isPending ? (
+                            <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+                          ) : (
+                            <Save className="mr-1 h-4 w-4" />
+                          )}
                           Save
                         </Button>
                         <Button

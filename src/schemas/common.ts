@@ -20,27 +20,11 @@ export const MemberProfileSchema = z.object({
 
 export const MemberProfileResponseSchema = z.object({ data: MemberProfileSchema })
 
-export const PostSchema = z.object({
-  id: z.number(),
-  title: z.string(),
-  slug: z.string(),
-  body: z.string().optional(),
-  published_at: z.string().nullable().optional(),
-})
-
-export const PostsListSchema = z.object({ data: z.array(PostSchema) })
-
-export const EventSchema = z.object({ id: z.number(), title: z.string(), starts_at: z.string().optional() })
-
-export const EventsListSchema = z.object({ data: z.array(EventSchema) })
-
 export const DonationSchema = z.object({ id: z.number(), amount: z.number(), redirect_url: z.string().optional() })
 
 export const MediaSchema = z.object({ id: z.number(), url: z.string(), type: z.string().optional() })
 export const MediaListSchema = z.object({ data: z.array(MediaSchema) })
 
-export const PlanSchema = z.object({ id: z.number(), name: z.string(), amount: z.number().optional() })
-export const PlansListSchema = z.object({ data: z.array(PlanSchema) })
 
 export const LoginResponseSchema = z.object({
   user: z.any(),
@@ -53,14 +37,8 @@ export default {
   CountiesResponseSchema,
   MemberProfileSchema,
   MemberProfileResponseSchema,
-  PostSchema,
-  PostsListSchema,
-  EventSchema,
-  EventsListSchema,
   DonationSchema,
   MediaSchema,
   MediaListSchema,
-  PlanSchema,
-  PlansListSchema,
   LoginResponseSchema,
 }

@@ -3,7 +3,7 @@ import { z } from "zod"
 export const CountySchema = z.object({
   id: z.number(),
   name: z.string(),
-})
+}).passthrough()
 
 export const MemberProfileSchema = z.object({
   id: z.number(),
@@ -31,23 +31,26 @@ export const MemberProfileSchema = z.object({
   created_at: z.string().optional(),
   updated_at: z.string().optional(),
   deleted_at: z.string().nullable().optional(),
-  county: CountySchema.optional(),
+  county: CountySchema.nullable().optional(),
   subscription_plan: z.object({
     id: z.number(),
-    name: z.string(),
-    slug: z.string(),
+    name: z.string().nullable().optional(),
+    slug: z.string().nullable().optional(),
     description: z.string().nullable().optional(),
-    price: z.number().optional(),
-  }).passthrough().optional(),
+    price: z.number().nullable().optional(),
+  }).passthrough().nullable().optional(),
   user: z
     .object({
       id: z.number(),
-      username: z.string(),
-      email: z.string(),
+      name: z.string().nullable().optional(),
+      username: z.string().nullable().optional(),
+      email: z.string().nullable().optional(),
+      phone: z.string().nullable().optional(),
       email_verified_at: z.string().nullable().optional(),
       profile_picture_url: z.string().nullable().optional(),
     })
     .passthrough()
+    .nullable()
     .optional(),
 }).passthrough()
 

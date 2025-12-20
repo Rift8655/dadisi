@@ -120,3 +120,65 @@ export function useBulkRemoveRole() {
     },
   })
 }
+
+export function useForceDeleteUser() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (id: number) => {
+      return await userApi.forceDelete(id)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-users"] })
+    },
+  })
+}
+
+export function useSyncUserRoles() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, roleNames }: { id: number; roleNames: string[] }) => {
+      return await userApi.syncRoles(id, roleNames)
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["admin-users"] })
+      queryClient.invalidateQueries({ queryKey: ["admin-user", variables.id] })
+    },
+  })
+}
+
+export function useAssignUserRole() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, roleName }: { id: number; roleName: string }) => {
+      return await userApi.assignRole(id, roleName)
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["admin-users"] })
+      queryClient.invalidateQueries({ queryKey: ["admin-user", variables.id] })
+    },
+  })
+}
+
+export function useRemoveUserRole() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, roleName }: { id: number; roleName: string }) => {
+      return await userApi.removeRole(id, roleName)
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["admin-users"] })
+      queryClient.invalidateQueries({ queryKey: ["admin-user", variables.id] })
+    },
+  })
+}
+export function useBulkInviteUsers() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (payload: any) => {
+      return await userApi.bulkInvite(payload)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-users"] })
+    },
+  })
+}

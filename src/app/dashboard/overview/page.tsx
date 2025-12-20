@@ -1,22 +1,13 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useQuery } from "@tanstack/react-query"
 import Link from "next/link"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { UserDashboardShell } from "@/components/user-dashboard-shell"
 import { useAuth } from "@/store/auth"
-import { useMemberProfile } from "@/store/memberProfile"
+import { useMemberProfileQuery } from "@/hooks/useMemberProfileQuery"
 import { eventsApi, donationsApi, postsApi } from "@/lib/api"
-
-interface DashboardStats {
-  membershipStatus: string
-  membershipRenewal: string | null
-  eventsRsvpCount: number
-  messagesCount: number
-  donationsTotal: number
-  donationsCurrency: string
-}
 
 interface UpcomingEvent {
   id: number
@@ -67,82 +58,71 @@ function StatCard({
 
 export default function OverviewPage() {
   const { user, isAuthenticated } = useAuth()
-  const { memberProfile, fetchMemberProfile, isLoading: profileLoading } = useMemberProfile()
-  
-  const [stats, setStats] = useState<DashboardStats>({
-    membershipStatus: "Loading...",
-    membershipRenewal: null,
-    eventsRsvpCount: 0,
-    messagesCount: 0,
-    donationsTotal: 0,
-    donationsCurrency: "KES",
+  const { data: memberProfile, isLoading: profileLoading } = useMemberProfileQuery(isAuthenticated)
+
+  // Fetch events
+  const { data: eventsData, isLoading: eventsLoading } = useQuery({
+    queryKey: ["dashboard-events"],
+    queryFn: async () => {
+      const data = await eventsApi.list({ page: 1 })
+      const events = Array.isArray(data) ? data : []
+      return events.slice(0, 3).map((e: any) => ({
+        id: e.id,
+        title: e.title,
+        starts_at: e.starts_at,
+      })) as UpcomingEvent[]
+    },
+    enabled: isAuthenticated,
   })
-  const [upcomingEvents, setUpcomingEvents] = useState<UpcomingEvent[]>([])
-  const [recentDonations, setRecentDonations] = useState<RecentDonation[]>([])
-  const [recentPosts, setRecentPosts] = useState<RecentPost[]>([])
-  const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    if (!isAuthenticated) return
-
-    const loadDashboardData = async () => {
-      setLoading(true)
-      try {
-        // Fetch member profile if not loaded
-        if (!memberProfile) {
-          await fetchMemberProfile()
-        }
-
-        // Fetch events (user's RSVPs would come from a dedicated endpoint)
-        const eventsData = await eventsApi.list({ page: 1 })
-        const events = Array.isArray(eventsData) ? eventsData : []
-        setUpcomingEvents(events.slice(0, 3).map((e: any) => ({
-          id: e.id,
-          title: e.title,
-          starts_at: e.starts_at,
-        })))
-
-        // Fetch donations
-        const donationsData = await donationsApi.list({ page: 1 })
-        const donations = (donationsData as any)?.data || []
-        setRecentDonations(donations.slice(0, 3).map((d: any) => ({
+  // Fetch donations
+  const { data: donationsData, isLoading: donationsLoading } = useQuery({
+    queryKey: ["dashboard-donations"],
+    queryFn: async () => {
+      const data = await donationsApi.list({ page: 1 })
+      const donations = (data as any)?.data || []
+      return {
+        recent: donations.slice(0, 3).map((d: any) => ({
           id: d.id,
           amount: d.amount,
           currency: d.currency || "KES",
           created_at: d.created_at,
-        })))
-
-        // Calculate total donations
-        const totalDonations = donations.reduce((sum: number, d: any) => sum + (d.amount || 0), 0)
-
-        // Fetch posts
-        const postsData = await postsApi.list({ page: 1 })
-        const posts = Array.isArray(postsData) ? postsData : []
-        setRecentPosts(posts.slice(0, 3).map((p: any) => ({
-          id: p.id,
-          title: p.title,
-          slug: p.slug,
-          created_at: p.created_at,
-        })))
-
-        // Update stats
-        setStats({
-          membershipStatus: memberProfile?.membership_status || "Active",
-          membershipRenewal: memberProfile?.membership_expiry || null,
-          eventsRsvpCount: events.length, // This would be replaced with actual RSVP count
-          messagesCount: 0, // Placeholder - would come from notifications API
-          donationsTotal: totalDonations,
-          donationsCurrency: "KES",
-        })
-      } catch (error) {
-        console.error("Failed to load dashboard data:", error)
-      } finally {
-        setLoading(false)
+        })) as RecentDonation[],
+        total: donations.reduce((sum: number, d: any) => sum + (d.amount || 0), 0),
       }
-    }
+    },
+    enabled: isAuthenticated,
+  })
 
-    loadDashboardData()
-  }, [isAuthenticated, memberProfile, fetchMemberProfile])
+  // Fetch posts
+  const { data: postsData, isLoading: postsLoading } = useQuery({
+    queryKey: ["dashboard-posts"],
+    queryFn: async () => {
+      const data = await postsApi.list({ page: 1 })
+      const posts = Array.isArray(data) ? data : []
+      return posts.slice(0, 3).map((p: any) => ({
+        id: p.id,
+        title: p.title,
+        slug: p.slug,
+        created_at: p.created_at,
+      })) as RecentPost[]
+    },
+    enabled: isAuthenticated,
+  })
+
+  const loading = eventsLoading || donationsLoading || postsLoading
+  const upcomingEvents = eventsData ?? []
+  const recentDonations = donationsData?.recent ?? []
+  const recentPosts = postsData ?? []
+
+  const stats = {
+    membershipStatus: memberProfile?.plan_type || "Member",
+    membershipRenewal: memberProfile?.plan_expires_at || null,
+    eventsRsvpCount: upcomingEvents.length,
+    messagesCount: 0,
+    donationsTotal: donationsData?.total ?? 0,
+    donationsCurrency: "KES",
+  }
 
   const formatDate = (dateStr: string) => {
     try {

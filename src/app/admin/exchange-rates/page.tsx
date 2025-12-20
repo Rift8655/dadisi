@@ -1,48 +1,39 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { exchangeRatesApi } from "@/lib/api-admin"
+import { 
+  useAdminExchangeRatesInfo, 
+  useRefreshExchangeRates, 
+  useUpdateManualExchangeRate, 
+  useUpdateExchangeRateCache 
+} from "@/hooks/useAdminExchangeRates"
 import { AdminDashboardShell } from "@/components/admin-dashboard-shell"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { RefreshCw, Save, Clock, Info, CheckCircle, AlertCircle } from "lucide-react"
+import { RefreshCw, Save, Clock, Info, CheckCircle, Loader2 } from "lucide-react"
 import Swal from "sweetalert2"
-import { useCurrency } from "@/store/currency"
 
 export default function ExchangeRatesPage() {
-  const [info, setInfo] = useState<any>(null)
-  const [loading, setLoading] = useState(true)
-  const [refreshing, setRefreshing] = useState(false)
   const [manualRate, setManualRate] = useState<string>("")
   const [cacheMinutes, setCacheMinutes] = useState<string>("10080")
-  const { fetchRate } = useCurrency()
 
-  const loadInfo = async () => {
-    setLoading(true)
-    try {
-      const data = await exchangeRatesApi.getInfo()
-      setInfo(data)
-      setManualRate(data.usd_to_kes_rate.toString())
-      setCacheMinutes(data.cache_minutes.toString())
-    } catch (error) {
-      console.error("Failed to fetch exchange info:", error)
-    } finally {
-      setLoading(false)
-    }
-  }
+  const { data: info, isLoading: infoLoading } = useAdminExchangeRatesInfo()
+  const refreshMutation = useRefreshExchangeRates()
+  const manualUpdateMutation = useUpdateManualExchangeRate()
+  const cacheUpdateMutation = useUpdateExchangeRateCache()
 
   useEffect(() => {
-    loadInfo()
-  }, [])
+    if (info) {
+      setManualRate(info.usd_to_kes_rate.toString())
+      setCacheMinutes(info.cache_minutes.toString())
+    }
+  }, [info])
 
   const handleRefresh = async () => {
-    setRefreshing(true)
     try {
-      await exchangeRatesApi.refresh()
-      await loadInfo()
-      await fetchRate() // Update global switcher rate
+      await refreshMutation.mutateAsync()
       Swal.fire({
         icon: "success",
         title: "Refreshed",
@@ -52,8 +43,6 @@ export default function ExchangeRatesPage() {
       })
     } catch (error: any) {
       Swal.fire("Error", error.message || "Failed to refresh from API", "error")
-    } finally {
-      setRefreshing(false)
     }
   }
 
@@ -64,11 +53,9 @@ export default function ExchangeRatesPage() {
       Swal.fire("Invalid Rate", "Please enter a valid positive number", "warning")
       return
     }
-
+    
     try {
-      await exchangeRatesApi.updateManual(rate)
-      await loadInfo()
-      await fetchRate() // Update global switcher rate
+      await manualUpdateMutation.mutateAsync(rate)
       Swal.fire({
         icon: "success",
         title: "Updated",
@@ -84,8 +71,7 @@ export default function ExchangeRatesPage() {
   const handleCacheUpdate = async () => {
     const minutes = parseInt(cacheMinutes)
     try {
-      await exchangeRatesApi.updateCache(minutes)
-      await loadInfo()
+      await cacheUpdateMutation.mutateAsync(minutes)
       Swal.fire({
         icon: "success",
         title: "Saved",
@@ -98,11 +84,11 @@ export default function ExchangeRatesPage() {
     }
   }
 
-  if (loading && !info) {
+  if (infoLoading && !info) {
     return (
       <AdminDashboardShell title="Exchange Rates">
         <div className="flex items-center justify-center p-12">
-          <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground" />
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
       </AdminDashboardShell>
     )
@@ -123,9 +109,9 @@ export default function ExchangeRatesPage() {
                   variant="outline" 
                   size="sm" 
                   onClick={handleRefresh} 
-                  disabled={refreshing}
+                  disabled={refreshMutation.isPending}
                 >
-                  <RefreshCw className={`mr-2 h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
+                  <RefreshCw className={`mr-2 h-4 w-4 ${refreshMutation.isPending ? "animate-spin" : ""}`} />
                   API Refresh
                 </Button>
               </div>
@@ -143,8 +129,8 @@ export default function ExchangeRatesPage() {
                       onChange={(e) => setManualRate(e.target.value)}
                       placeholder="e.g. 145.50"
                     />
-                    <Button type="submit">
-                      <Save className="mr-2 h-4 w-4" />
+                    <Button type="submit" disabled={manualUpdateMutation.isPending}>
+                      {manualUpdateMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
                       Save
                     </Button>
                   </div>
@@ -179,8 +165,8 @@ export default function ExchangeRatesPage() {
                       <option value="7200">5 Days (Balanced)</option>
                       <option value="10080">7 Days (Standard)</option>
                     </select>
-                    <Button variant="outline" onClick={handleCacheUpdate}>
-                      Update
+                    <Button variant="outline" onClick={handleCacheUpdate} disabled={cacheUpdateMutation.isPending}>
+                      {cacheUpdateMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Update"}
                     </Button>
                   </div>
                 </div>
@@ -196,7 +182,7 @@ export default function ExchangeRatesPage() {
         <div className="space-y-6">
           <Card className="h-full">
             <CardHeader>
-              <CardTitle>Rate Health & status</CardTitle>
+              <CardTitle>Rate Health & Status</CardTitle>
               <CardDescription>Current system state and conversion verification</CardDescription>
             </CardHeader>
             <CardContent>
@@ -204,12 +190,12 @@ export default function ExchangeRatesPage() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="rounded-lg border p-4">
                     <div className="text-xs font-medium text-muted-foreground uppercase mb-1">USD to KES</div>
-                    <div className="text-2xl font-bold">145.00</div>
+                    <div className="text-2xl font-bold">{info?.usd_to_kes_rate?.toFixed(2) || "145.00"}</div>
                     <div className="text-xs text-muted-foreground mt-1">Live base rate</div>
                   </div>
                   <div className="rounded-lg border p-4">
                     <div className="text-xs font-medium text-muted-foreground uppercase mb-1">KES to USD</div>
-                    <div className="text-2xl font-bold font-mono">0.006897</div>
+                    <div className="text-2xl font-bold font-mono">{info?.kes_to_usd_rate?.toFixed(6) || "0.006897"}</div>
                     <div className="text-xs text-muted-foreground mt-1">Inverse rate</div>
                   </div>
                 </div>

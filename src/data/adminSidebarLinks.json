@@ -1,17 +1,91 @@
 [
   { "title": "Overview", "href": "/admin", "icon": "dashboard", "badge": null },
-  { "title": "Analytics", "href": "/admin/analytics", "icon": "dashboard", "badge": null },
+  {
+    "title": "Analytics",
+    "href": "/admin/analytics",
+    "icon": "dashboard",
+    "badge": null
+  },
   { "title": "Users", "href": "/admin/users", "icon": "users", "badge": null },
   { "title": "Roles", "href": "/admin/roles", "icon": "shield", "badge": null },
-  { "title": "Events", "href": "/admin/events", "icon": "calendar", "badge": null },
-  { "title": "Blog", "href": "/admin/blog", "icon": "file-text", "badge": null },
-  { "title": "Donations", "href": "/admin/donations", "icon": "creditcard", "badge": null },
-  { "title": "Plans", "href": "/admin/plans", "icon": "dollar-sign", "badge": null },
-  { "title": "Subscriptions", "href": "/admin/subscriptions/renewals", "icon": "dollar-sign", "badge": null },
-  { "title": "Reconciliation", "href": "/admin/reconciliation", "icon": "creditcard", "badge": null },
-  { "title": "Exchange Rates", "href": "/admin/exchange-rates", "icon": "dollar-sign", "badge": null },
-  { "title": "Webhooks", "href": "/admin/webhooks", "icon": "settings", "badge": null },
-  { "title": "Audit Logs", "href": "/admin/audit-logs", "icon": "shield", "badge": null },
-  { "title": "Retention Settings", "href": "/admin/retention-settings", "icon": "settings", "badge": null },
-  { "title": "System Settings", "href": "/admin/system-settings", "icon": "settings", "badge": null }
+  {
+    "title": "Events",
+    "href": "/admin/events",
+    "icon": "calendar",
+    "badge": null
+  },
+  {
+    "title": "Blog Management",
+    "icon": "file-text",
+    "children": [
+      { "title": "Posts", "href": "/admin/blog", "icon": "file-text" },
+      { "title": "Categories", "href": "/admin/categories", "icon": "folder" },
+      { "title": "Tags", "href": "/admin/tags", "icon": "tag" },
+      {
+        "title": "Deletion Reviews",
+        "href": "/admin/blog/reviews",
+        "icon": "shield"
+      }
+    ]
+  },
+  {
+    "title": "Campaigns",
+    "href": "/admin/campaigns",
+    "icon": "target",
+    "badge": null
+  },
+  {
+    "title": "Donations",
+    "href": "/admin/donations",
+    "icon": "creditcard",
+    "badge": null
+  },
+  {
+    "title": "Plans",
+    "href": "/admin/plans",
+    "icon": "dollar-sign",
+    "badge": null
+  },
+  {
+    "title": "Subscriptions",
+    "href": "/admin/subscriptions/renewals",
+    "icon": "dollar-sign",
+    "badge": null
+  },
+  {
+    "title": "Reconciliation",
+    "href": "/admin/reconciliation",
+    "icon": "creditcard",
+    "badge": null
+  },
+  {
+    "title": "Exchange Rates",
+    "href": "/admin/exchange-rates",
+    "icon": "dollar-sign",
+    "badge": null
+  },
+  {
+    "title": "Webhooks",
+    "href": "/admin/webhooks",
+    "icon": "settings",
+    "badge": null
+  },
+  {
+    "title": "Audit Logs",
+    "href": "/admin/audit-logs",
+    "icon": "shield",
+    "badge": null
+  },
+  {
+    "title": "Retention Settings",
+    "href": "/admin/retention-settings",
+    "icon": "settings",
+    "badge": null
+  },
+  {
+    "title": "System Settings",
+    "href": "/admin/system-settings",
+    "icon": "settings",
+    "badge": null
+  }
 ]

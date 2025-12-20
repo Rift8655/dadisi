@@ -4,31 +4,49 @@ import { useEffect, useId, useRef, useState } from "react"
 import { useLogin, useSignup } from "@/hooks/useAuth"
 import { createPortal } from "react-dom"
 import { z } from "zod"
+import { Shield } from "lucide-react"
 
+import { authApi } from "@/lib/api"
 import { showError, showSuccess } from "@/lib/sweetalert"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { GoogleIcon } from "@/components/icons"
+import { useAuth } from "@/store/auth"
 
 export type AuthDialogProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
+  defaultTab?: "signin" | "register"
 }
 
-export function AuthDialog({ open, onOpenChange }: AuthDialogProps) {
-  const [tab, setTab] = useState<"signin" | "register">("signin")
+export function AuthDialog({ open, onOpenChange, defaultTab = "signin" }: AuthDialogProps) {
+  const [tab, setTab] = useState<"signin" | "register">(defaultTab)
+
+  useEffect(() => {
+    if (open) {
+      setTab(defaultTab)
+    }
+  }, [open, defaultTab])
   const [isLoading, setIsLoading] = useState(false)
   const [formErrors, setFormErrors] = useState<Record<string, string>>({})
   const [showVerificationDialog, setShowVerificationDialog] = useState(false)
   const [validationErrors, setValidationErrors] = useState<
     Record<string, string>
   >({})
+  
+  // 2FA State
+  const [show2faDialog, setShow2faDialog] = useState(false)
+  const [twoFactorEmail, setTwoFactorEmail] = useState("")
+  const [twoFactorCode, setTwoFactorCode] = useState("")
+  const [is2faLoading, setIs2faLoading] = useState(false)
+  
   const signinFormRef = useRef<HTMLFormElement>(null)
   const signupFormRef = useRef<HTMLFormElement>(null)
   const titleId = useId()
   const signupMut = useSignup()
   const loginMut = useLogin()
+  const { setAuth } = useAuth()
 
   const signinSchema = z.object({
     email: z.string().email("Invalid email address"),
@@ -166,7 +184,16 @@ export function AuthDialog({ open, onOpenChange }: AuthDialogProps) {
 
     try {
       const res = await loginMut.mutateAsync({ email, password })
-      // login mutation delegates to auth store and returns { user, needsVerification }
+      
+      // Check if 2FA is required
+      if (res.requires2fa) {
+        setTwoFactorEmail(res.email || email)
+        setShow2faDialog(true)
+        close()
+        return
+      }
+
+      // Normal login flow
       const { user, needsVerification } = res
 
       if (signinFormRef.current) {
@@ -189,8 +216,117 @@ export function AuthDialog({ open, onOpenChange }: AuthDialogProps) {
     }
   }
 
+  // Handle 2FA code submission
+  const handle2FASubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (twoFactorCode.length !== 6) return
+
+    setIs2faLoading(true)
+    try {
+      const res = await authApi.twoFactor.validateCode({
+        email: twoFactorEmail,
+        code: twoFactorCode,
+      })
+
+      // Complete login with the returned user and token
+      const authUser = res.user as unknown as import("@/contracts/auth.contract").AuthUser
+      setAuth(authUser, res.access_token)
+
+      await showSuccess("Signed in", `Welcome back, ${authUser.username}!`)
+      setShow2faDialog(false)
+      setTwoFactorCode("")
+      setTwoFactorEmail("")
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Invalid code"
+      await showError("Verification failed", message)
+    } finally {
+      setIs2faLoading(false)
+    }
+  }
+
+  const close2faDialog = () => {
+    setShow2faDialog(false)
+    setTwoFactorCode("")
+    setTwoFactorEmail("")
+  }
+
   const target = typeof document !== "undefined" ? document.body : null
   if (!target) return null
+
+  // 2FA Dialog
+  if (show2faDialog) {
+    return createPortal(
+      <div className="fixed inset-0 z-[60]">
+        <div
+          className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+          onClick={close2faDialog}
+        />
+        <div className="fixed left-1/2 top-1/2 w-[clamp(20rem,92vw,28rem)] -translate-x-1/2 -translate-y-1/2 p-4">
+          <div
+            role="dialog"
+            aria-modal="true"
+            className="relative w-full rounded-xl border bg-card text-card-foreground shadow-2xl"
+          >
+            <button
+              onClick={close2faDialog}
+              aria-label="Close dialog"
+              className="absolute right-3 top-3 rounded-md p-2 text-foreground/70 transition hover:bg-accent hover:text-accent-foreground"
+            >
+              ✕
+            </button>
+            <div className="p-6">
+              <div className="mb-4 flex justify-center">
+                <div className="rounded-full bg-primary/10 p-3">
+                  <Shield className="h-6 w-6 text-primary" />
+                </div>
+              </div>
+              <h2 className="mb-2 text-xl font-semibold text-center">
+                Two-Factor Authentication
+              </h2>
+              <p className="mb-6 text-sm text-muted-foreground text-center">
+                Enter the 6-digit code from your authenticator app.
+              </p>
+              <form onSubmit={handle2FASubmit} className="space-y-4">
+                <Input
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  maxLength={6}
+                  value={twoFactorCode}
+                  onChange={(e) => setTwoFactorCode(e.target.value.replace(/\D/g, ""))}
+                  placeholder="000000"
+                  className="text-center text-2xl tracking-widest font-mono"
+                  autoFocus
+                  disabled={is2faLoading}
+                />
+                <Button
+                  type="submit"
+                  className="w-full"
+                  disabled={twoFactorCode.length !== 6 || is2faLoading}
+                >
+                  {is2faLoading ? "Verifying..." : "Verify Code"}
+                </Button>
+              </form>
+              <p className="mt-4 text-xs text-muted-foreground text-center">
+                Can&apos;t access your authenticator app?{" "}
+                <button
+                  type="button"
+                  className="text-primary hover:underline"
+                  onClick={() => {
+                    // TODO: Add recovery code flow
+                    showError("Recovery codes", "Please use one of your recovery codes.")
+                  }}
+                >
+                  Use recovery code
+                </button>
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>,
+      target
+    )
+  }
 
   if (showVerificationDialog) {
     return createPortal(

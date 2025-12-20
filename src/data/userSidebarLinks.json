@@ -2,9 +2,28 @@
   { "title": "Overview", "href": "/dashboard/overview", "icon": "dashboard", "badge": null },
   { "title": "Chat", "href": "/dashboard/chat", "icon": "messagecircle", "badge": null },
   { "title": "Media Library", "href": "/dashboard/media", "icon": "image", "badge": null },
-  { "title": "Blog", "href": "/dashboard/blog", "icon": "file-text", "badge": "Premium" },
+  {
+    "title": "Blog Management",
+    "icon": "file-text",
+    "badge": "Premium",
+    "children": [
+      { "title": "My Posts", "href": "/dashboard/blog", "icon": "file-text" },
+      { "title": "Categories", "href": "/dashboard/blog/categories", "icon": "folder" },
+      { "title": "Tags", "href": "/dashboard/blog/tags", "icon": "tag" }
+    ]
+  },
   { "title": "Donations", "href": "/dashboard/donations", "icon": "creditcard", "badge": null },
-  { "title": "Events", "href": "/dashboard/events", "icon": "calendar", "badge": null },
+  { "title": "My RSVPs", "href": "/dashboard/events", "icon": "calendar", "badge": null },
+  {
+    "title": "Event Organizer",
+    "icon": "calendar",
+    "badge": null,
+    "children": [
+      { "title": "My Events", "href": "/dashboard/organizer/events", "icon": "calendar" },
+      { "title": "Create Event", "href": "/dashboard/organizer/events/create", "icon": "file-text" },
+      { "title": "Payouts", "href": "/dashboard/organizer/payouts", "icon": "dollar-sign" }
+    ]
+  },
   { "title": "Subscription", "href": "/dashboard/subscription", "icon": "dollar-sign", "badge": null },
   { "title": "Support", "href": "/dashboard/support", "icon": "helpcircle", "badge": null }
 ]

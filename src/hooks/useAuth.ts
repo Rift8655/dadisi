@@ -22,7 +22,16 @@ export function useLogin() {
   return useMutation({
     mutationFn: (data: LoginPayload) => authApi.login(data),
     onSuccess: async (data) => {
-      // Invalidate the 'me' query so it refetches if needed (though we have the user here)
+      // Check if 2FA is required - don't set auth yet
+      if ((data as any).requires_2fa) {
+        return {
+          requires2fa: true,
+          email: (data as any).email,
+          needsVerification: false,
+        }
+      }
+
+      // Normal login flow
       await queryClient.invalidateQueries({ queryKey: ["auth", "me"] })
       
       // Store both user and token
@@ -32,7 +41,8 @@ export function useLogin() {
       // Return data for the component (AuthDialog expects { user, needsVerification })
       return {
         user: authUser,
-        needsVerification: !data.email_verified
+        needsVerification: !data.email_verified,
+        requires2fa: false,
       }
     },
   })
@@ -64,3 +74,22 @@ export function useSignup() {
 
 // Deprecated or Aliased hooks if needed for backward compact
 // but sticking to new architecture is better.
+
+export type ResetPasswordPayload = {
+  email: string;
+  password: string;
+  password_confirmation: string;
+  token: string;
+};
+
+export function useSendResetEmail() {
+  return useMutation({
+    mutationFn: (data: { email: string }) => authApi.sendResetEmail(data),
+  })
+}
+
+export function useResetPassword() {
+  return useMutation({
+    mutationFn: (data: ResetPasswordPayload) => authApi.resetPassword(data),
+  })
+}

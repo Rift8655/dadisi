@@ -141,12 +141,22 @@ export const AdminCategorySchema = z.object({
   name: z.string(),
   slug: z.string(),
   description: z.string().nullable().optional(),
+  post_count: z.number().optional(),
+  created_at: z.string().optional(),
+  updated_at: z.string().optional(),
+  requested_deletion_at: z.string().nullable().optional(),
+  created_by: z.number().nullable().optional(),
 })
 
 export const AdminTagSchema = z.object({
   id: z.number(),
   name: z.string(),
   slug: z.string(),
+  post_count: z.number().optional(),
+  created_at: z.string().optional(),
+  updated_at: z.string().optional(),
+  requested_deletion_at: z.string().nullable().optional(),
+  created_by: z.number().nullable().optional(),
 })
 
 export const AdminPostSchema = z.object({
@@ -191,6 +201,64 @@ export const AdminWebhookEventSchema = z.object({
   updated_at: z.string().optional(),
 })
 
+export const AdminPlanSchema = z.object({
+  id: z.number(),
+  name: z.string().or(z.record(z.string())),
+  slug: z.string().optional(),
+  description: z.string().or(z.record(z.string())).nullable().optional(),
+  is_active: z.boolean().optional(),
+  price: z.string().or(z.number()).optional(),
+  base_monthly_price: z.string().or(z.number()).optional(),
+  currency: z.string().optional(),
+  pricing: z
+    .object({
+      kes: z.object({
+        base_monthly: z.number(),
+        discounted_monthly: z.number(),
+        base_yearly: z.number(),
+        discounted_yearly: z.number(),
+      }),
+      usd: z.object({
+        base_monthly: z.number(),
+        discounted_monthly: z.number(),
+        base_yearly: z.number(),
+        discounted_yearly: z.number(),
+      }),
+      exchange_rate: z.number(),
+      last_updated: z.string(),
+    })
+    .optional(),
+  promotions: z
+    .object({
+      monthly: z
+        .object({
+          discount_percent: z.number(),
+          expires_at: z.string(),
+          active: z.boolean(),
+          time_remaining: z.string().nullable().optional(),
+        })
+        .nullable(),
+      yearly: z
+        .object({
+          discount_percent: z.number(),
+          expires_at: z.string(),
+          active: z.boolean(),
+          time_remaining: z.string().nullable().optional(),
+        })
+        .nullable(),
+    })
+    .optional(),
+  features: z
+    .array(
+      z.object({
+        id: z.number(),
+        name: z.string().or(z.record(z.string())),
+        limit: z.number().nullable().optional(),
+      })
+    )
+    .optional(),
+})
+
 // Generic paginated response helper
 export const PaginatedSchema = <T extends z.ZodTypeAny>(itemSchema: T) =>
   z.object({
@@ -225,6 +293,7 @@ export type ExchangeRate = z.infer<typeof ExchangeRateSchema>
 export type AdminPost = z.infer<typeof AdminPostSchema>
 export type AdminCategory = z.infer<typeof AdminCategorySchema>
 export type AdminTag = z.infer<typeof AdminTagSchema>
+export type AdminPlan = z.infer<typeof AdminPlanSchema>
 
 export default {
   AdminUserSchema,
@@ -238,5 +307,6 @@ export default {
   AdminCategorySchema,
   AdminTagSchema,
   AdminWebhookEventSchema,
+  AdminPlanSchema,
   PaginatedSchema,
 }

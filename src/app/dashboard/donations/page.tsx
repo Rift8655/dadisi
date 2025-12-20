@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useQuery } from "@tanstack/react-query"
 import Link from "next/link"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -13,7 +13,7 @@ interface Donation {
   id: number
   amount: number
   currency: string
-  status: "completed" | "pending" | "failed"
+  status: string
   payment_method: string
   created_at: string
   receipt_url?: string
@@ -22,41 +22,30 @@ interface Donation {
 
 export default function DonationsPage() {
   const { user } = useAuth()
-  const [donations, setDonations] = useState<Donation[]>([])
-  const [loading, setLoading] = useState(true)
-  const [totalDonated, setTotalDonated] = useState(0)
 
-  useEffect(() => {
-    const loadDonations = async () => {
-      setLoading(true)
-      try {
-        const response = await donationsApi.list({ page: 1 })
-        const donationsList = (response as any)?.data || []
-        
-        const mappedDonations = donationsList.map((d: any) => ({
-          id: d.id,
-          amount: d.amount,
-          currency: d.currency || "KES",
-          status: d.status || "completed",
-          payment_method: d.payment_method || "M-Pesa",
-          created_at: d.created_at,
-          receipt_url: d.receipt_url,
-          campaign: d.campaign_name,
-        }))
-        
-        setDonations(mappedDonations)
-        setTotalDonated(mappedDonations.reduce((sum: number, d: Donation) => 
-          d.status === "completed" ? sum + d.amount : sum, 0
-        ))
-      } catch (error) {
-        console.error("Failed to load donations:", error)
-      } finally {
-        setLoading(false)
-      }
-    }
+  const { data: donations = [], isLoading: loading } = useQuery({
+    queryKey: ["user-donations"],
+    queryFn: async () => {
+      const response = await donationsApi.list({ page: 1 })
+      const donationsList = response?.data || []
+      
+      return donationsList.map((d) => ({
+        id: d.id,
+        amount: d.amount,
+        currency: d.currency || "KES",
+        status: d.status === "paid" ? "completed" : d.status,
+        payment_method: "M-Pesa",
+        created_at: d.created_at,
+        receipt_url: undefined,
+        campaign: d.campaign?.title,
+      })) as Donation[]
+    },
+  })
 
-    loadDonations()
-  }, [])
+  const totalDonated = donations.reduce((sum, d) => 
+    d.status === "completed" ? sum + d.amount : sum, 0
+  )
+
 
   const formatDate = (dateStr: string) => {
     try {
@@ -87,7 +76,7 @@ export default function DonationsPage() {
       case "failed":
         return <Badge className="bg-red-500/10 text-red-600">Failed</Badge>
       default:
-        return <Badge variant="outline">{status}</Badge>
+        return <Badge className="bg-muted text-muted-foreground">{status}</Badge>
     }
   }
 

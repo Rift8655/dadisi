@@ -25,24 +25,26 @@ const links = [
   { href: "/membership", label: "Membership" },
   { href: "/events", label: "Events" },
   { href: "/blog", label: "Blog" },
+  { href: "/forum", label: "Forum" },
   { href: "/donations", label: "Donations" },
 ]
 
 export function Navbar() {
   const pathname = usePathname()
   const router = useRouter()
-  const { mutate: logout } = useLogout()
-  
-  // Clean up unused selectors and state
   // const storeMember and useMemberProfileQuery are no longer needed for auth/staff check logic
   // if they are used elsewhere in navbar, keep them, but looking at usage:
   // member was used for isStaff check (deleted)
   // storeMember used for isStaff check (deleted)
   // So likely safe to remove deeply.
   
-  const [authOpen, setAuthOpen] = useState(false)
+  const { mutate: logout } = useLogout()
+  
+  const user = useAuth((state) => state.user)
+  const authDialogState = useAuth((state) => state.authDialogState)
+  const setAuthDialogOpen = useAuth((state) => state.setAuthDialogOpen)
+  
   const [menuOpen, setMenuOpen] = useState(false)
-  const user = useAuth((s) => s.user)
 
   const handleLogout = async () => {
     try {
@@ -56,7 +58,11 @@ export function Navbar() {
   return (
     <header className="sticky top-0 z-40 w-full border-b bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-14 items-center justify-between gap-2">
-        <AuthDialog open={authOpen} onOpenChange={setAuthOpen} />
+        <AuthDialog 
+          open={authDialogState.open} 
+          onOpenChange={(open) => setAuthDialogOpen(open)} 
+          defaultTab={authDialogState.tab}
+        />
         <Link
           href="/"
           className="flex items-center gap-2 font-semibold"
@@ -137,7 +143,7 @@ export function Navbar() {
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
-            <Button variant="outline" onClick={() => setAuthOpen(true)}>
+            <Button variant="outline" onClick={() => setAuthDialogOpen(true, "signin")}>
               Sign in
             </Button>
           )}

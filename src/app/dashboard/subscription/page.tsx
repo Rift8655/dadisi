@@ -1,6 +1,7 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
+import { useQuery } from "@tanstack/react-query"
 import Link from "next/link"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -61,38 +62,26 @@ const mockSubscription: Subscription | null = {
 export default function SubscriptionPage() {
   const { user } = useAuth()
   const [subscription, setSubscription] = useState<Subscription | null>(mockSubscription)
-  const [plans, setPlans] = useState<Plan[]>([])
-  const [loading, setLoading] = useState(true)
   const [showCancelConfirm, setShowCancelConfirm] = useState(false)
 
-  useEffect(() => {
-    const loadData = async () => {
-      setLoading(true)
-      try {
-        const plansData = await plansApi.getAll()
-        const plansList = Array.isArray(plansData) ? plansData : []
-        setPlans(
-          plansList.map((p: any) => ({
-            id: p.id,
-            name: p.name,
-            slug: p.slug,
-            description: p.description,
-            price_monthly: p.price_monthly || p.price || 0,
-            price_yearly: p.price_yearly || (p.price || 0) * 10,
-            currency: p.currency || "KES",
-            features: p.features || [],
-            is_popular: p.is_popular,
-          }))
-        )
-      } catch (error) {
-        console.error("Failed to load plans:", error)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    loadData()
-  }, [])
+  const { data: plans = [], isLoading: loading } = useQuery({
+    queryKey: ["subscription-plans"],
+    queryFn: async () => {
+      const plansData = await plansApi.getAll()
+      const plansList = Array.isArray(plansData) ? plansData : []
+      return plansList.map((p: any) => ({
+        id: p.id,
+        name: p.name,
+        slug: p.slug,
+        description: p.description,
+        price_monthly: p.price_monthly || p.price || 0,
+        price_yearly: p.price_yearly || (p.price || 0) * 10,
+        currency: p.currency || "KES",
+        features: p.features || [],
+        is_popular: p.is_popular,
+      })) as Plan[]
+    },
+  })
 
   const formatDate = (dateStr: string) => {
     try {

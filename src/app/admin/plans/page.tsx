@@ -109,7 +109,7 @@ export default function AdminPlansPage() {
                   {plans.map((p: Plan) => (
                     <TableRow key={p.id}>
                       <TableCell className="font-medium">
-                        {p.name?.en || p.name || "Unnamed Plan"}
+                        {typeof p.name === 'object' && p.name !== null && 'en' in p.name ? String(p.name.en) : String(p.name || "Unnamed Plan")}
                         {p.interval && <span className="ml-2 text-xs text-muted-foreground">({p.interval})</span>}
                       </TableCell>
                       <TableCell>
@@ -163,7 +163,7 @@ export default function AdminPlansPage() {
           onClose={() => setDialogOpen(false)}
           onSubmit={handleFormSubmit}
           initialData={editingPlan}
-          isLoading={createMut.isLoading || updateMut.isLoading}
+          isLoading={createMut.isPending || updateMut.isPending}
         />
       </div>
     </AdminDashboardShell>

@@ -1,7 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import { useAdmin } from "@/store/admin"
+import { useAdminReconciliationRuns, useAdminReconciliationStats, useTriggerReconciliation, useExportReconciliation } from "@/hooks/useAdminReconciliation"
 import { AdminDashboardShell } from "@/components/admin-dashboard-shell"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
@@ -9,43 +8,29 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import Swal from "sweetalert2"
 import { Icons } from "@/components/icons"
 import { formatDate } from "@/lib/utils"
-import { Download, Activity, CheckCircle2, AlertOctagon, BarChart3 } from "lucide-react"
+import { Download, Activity, CheckCircle2, AlertOctagon, BarChart3, Loader2 } from "lucide-react"
 
 export default function ReconciliationPage() {
-  const { 
-    reconciliationRuns, 
-    reconciliationStats,
-    reconciliationLoading, 
-    fetchReconciliationRuns, 
-    fetchReconciliationStats,
-    triggerReconciliation,
-    downloadReconciliationExport
-  } = useAdmin()
-  const [triggering, setTriggering] = useState(false)
-  const [exporting, setExporting] = useState(false)
+  const { data: reconciliationRuns = [], isLoading: runsLoading } = useAdminReconciliationRuns()
+  const { data: reconciliationStats, isLoading: statsLoading } = useAdminReconciliationStats()
+  const triggerMutation = useTriggerReconciliation()
+  const exportMutation = useExportReconciliation()
 
-  useEffect(() => {
-    fetchReconciliationRuns().catch(console.error)
-    fetchReconciliationStats().catch(console.error)
-  }, [fetchReconciliationRuns, fetchReconciliationStats])
+  const reconciliationLoading = runsLoading || statsLoading
 
   const handleTrigger = async (mode: "dry_run" | "sync") => {
-    setTriggering(true)
     try {
-      await triggerReconciliation(mode)
-      Swal.fire("Success", `Reconciliation (${mode}) started`, "success")
+      await triggerMutation.mutateAsync({ mode })
+      Swal.fire("Success", `Reconciliation (${mode.replace("_", " ")}) started`, "success")
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : String(err ?? "Failed to start reconciliation")
-      Swal.fire("Error", message || "Failed to start reconciliation", "error")
-    } finally {
-      setTriggering(false)
+      const message = err instanceof Error ? err.message : "Failed to start reconciliation"
+      Swal.fire("Error", message, "error")
     }
   }
 
   const handleExport = async () => {
     try {
-      setExporting(true)
-      const csvData = await downloadReconciliationExport()
+      const csvData = await exportMutation.mutateAsync({})
       const blob = new Blob([csvData], { type: 'text/csv' })
       const url = window.URL.createObjectURL(blob)
       const a = document.createElement('a')
@@ -56,10 +41,8 @@ export default function ReconciliationPage() {
       window.URL.revokeObjectURL(url)
       document.body.removeChild(a)
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : String(err ?? "Failed to export data")
-      Swal.fire("Error", message || "Failed to export data", "error")
-    } finally {
-      setExporting(false)
+      const message = err instanceof Error ? err.message : "Failed to export data"
+      Swal.fire("Error", message, "error")
     }
   }
 
@@ -74,7 +57,11 @@ export default function ReconciliationPage() {
               <Activity className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{reconciliationStats?.total_runs || 0}</div>
+              {statsLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+              ) : (
+                <div className="text-2xl font-bold">{reconciliationStats?.total_runs || 0}</div>
+              )}
               <p className="text-xs text-muted-foreground">
                 Lifetime executions
               </p>
@@ -86,7 +73,11 @@ export default function ReconciliationPage() {
               <CheckCircle2 className="h-4 w-4 text-green-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{reconciliationStats?.matched_items || 0}</div>
+              {statsLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+              ) : (
+                <div className="text-2xl font-bold">{reconciliationStats?.matched_items || 0}</div>
+              )}
               <p className="text-xs text-muted-foreground">
                 Successful matches
               </p>
@@ -98,7 +89,11 @@ export default function ReconciliationPage() {
               <AlertOctagon className="h-4 w-4 text-red-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{reconciliationStats?.unmatched_items || 0}</div>
+              {statsLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+              ) : (
+                <div className="text-2xl font-bold">{reconciliationStats?.unmatched_items || 0}</div>
+              )}
               <p className="text-xs text-muted-foreground">
                 Requires attention
               </p>
@@ -110,9 +105,13 @@ export default function ReconciliationPage() {
               <BarChart3 className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-lg font-bold truncate">
-                {reconciliationStats?.last_run ? formatDate(reconciliationStats.last_run) : "Never"}
-              </div>
+              {statsLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+              ) : (
+                <div className="text-lg font-bold truncate">
+                  {reconciliationStats?.last_run ? formatDate(reconciliationStats.last_run) : "Never"}
+                </div>
+              )}
               <p className="text-xs text-muted-foreground">
                 Most recent activity
               </p>
@@ -128,23 +127,23 @@ export default function ReconciliationPage() {
             </p>
           </div>
           <div className="flex gap-2">
-            <Button variant="secondary" onClick={handleExport} disabled={exporting}>
-              {exporting ? <Icons.spinner className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
+            <Button variant="secondary" onClick={handleExport} disabled={exportMutation.isPending}>
+              {exportMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
               Export CSV
             </Button>
             <Button 
               variant="outline" 
               onClick={() => handleTrigger("dry_run")} 
-              disabled={triggering || reconciliationLoading}
+              disabled={triggerMutation.isPending || reconciliationLoading}
             >
-              {triggering ? <Icons.spinner className="mr-2 h-4 w-4 animate-spin" /> : null}
+              {triggerMutation.isPending && triggerMutation.variables?.mode === "dry_run" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
               Dry Run
             </Button>
             <Button 
               onClick={() => handleTrigger("sync")}
-              disabled={triggering || reconciliationLoading}
+              disabled={triggerMutation.isPending || reconciliationLoading}
             >
-              {triggering ? <Icons.spinner className="mr-2 h-4 w-4 animate-spin" /> : null}
+              {triggerMutation.isPending && triggerMutation.variables?.mode === "sync" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
               Run Sync
             </Button>
           </div>
@@ -156,9 +155,9 @@ export default function ReconciliationPage() {
             <CardDescription>History of reconciliation executions.</CardDescription>
           </CardHeader>
           <CardContent>
-            {reconciliationLoading ? (
+            {runsLoading ? (
                <div className="flex justify-center p-8">
-                 <Icons.spinner className="h-8 w-8 animate-spin" />
+                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
                </div>
             ) : reconciliationRuns.length === 0 ? (
                <div className="p-8 text-center text-muted-foreground">No reconciliation runs found.</div>
@@ -180,7 +179,7 @@ export default function ReconciliationPage() {
                       <TableCell>#{run.id}</TableCell>
                       <TableCell>{formatDate(run.created_at)}</TableCell>
                       <TableCell>
-                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium capitalize ${
                           run.status === 'completed' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
                         }`}>
                           {run.status}

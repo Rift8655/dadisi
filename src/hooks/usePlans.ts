@@ -6,6 +6,6 @@ export function usePlans() {
   return useQuery({
     queryKey: ["plans"],
     queryFn: plansApi.getAll,
-    staleTime: 1000 * 60 * 5
+    staleTime: 1000 * 60 * 60, // Tier 2: Stable metadata - 1 hour
   })
 }

@@ -1,13 +1,13 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useAdmin } from "@/store/admin"
+import { useAdminUI } from "@/store/adminUI"
 import { useAuth } from "@/store/auth"
 import { Plus, Search } from "lucide-react"
 import Swal from "sweetalert2"
 
 import { AdminRole, AdminUser, PaginatedResponse } from "@/types/admin"
-import { useUsers, useDeleteUser, useRestoreUser, useInviteUser, useBulkDeleteUsers, useBulkRestoreUsers, useBulkAssignRole, useBulkRemoveRole } from "@/hooks/useUsers"
+import { useUsers, useDeleteUser, useRestoreUser, useForceDeleteUser, useInviteUser, useBulkDeleteUsers, useBulkRestoreUsers, useBulkAssignRole, useBulkRemoveRole } from "@/hooks/useUsers"
 import { useRoles } from "@/hooks/useRoles"
 import { Button } from "@/components/ui/button"
 import {
@@ -35,7 +35,7 @@ export default function UsersPage() {
     setUserRoleFilter,
     setUserStatusFilter,
     setUsersPagination,
-  } = useAdmin()
+  } = useAdminUI()
 
   const { data: usersData, isLoading: usersLoading, error: usersError } = useUsers({
     search: filters.userSearch,
@@ -49,6 +49,7 @@ export default function UsersPage() {
 
   const deleteMutation = useDeleteUser()
   const restoreMutation = useRestoreUser()
+  const forceDeleteMutation = useForceDeleteUser()
   const inviteMutation = useInviteUser()
   const bulkDeleteMutation = useBulkDeleteUsers()
   const bulkRestoreMutation = useBulkRestoreUsers()
@@ -123,8 +124,7 @@ export default function UsersPage() {
           await restoreMutation.mutateAsync(targetUser.id)
           break
         case "forceDelete":
-          // Force delete not yet in hooks, fallback to store or implement in hook
-          await useAdmin.getState().forceDeleteUser(targetUser.id)
+          await forceDeleteMutation.mutateAsync(targetUser.id)
           break
       }
 

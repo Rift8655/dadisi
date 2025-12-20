@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation"
 import { useAuth } from "@/store/auth"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
-import { ChevronLeft, ChevronRight, Menu, X } from "lucide-react"
+import { ChevronLeft, ChevronRight, ChevronDown, Menu, X } from "lucide-react"
 
 // Icon mapping – matches keys used in the JSON link files
 import {
@@ -21,6 +21,8 @@ import {
   HelpCircle,
   MessageCircle,
   Image as ImageIcon,
+  Folder,
+  Tag,
 } from "lucide-react"
 
 const iconMap: Record<string, any> = {
@@ -35,13 +37,16 @@ const iconMap: Record<string, any> = {
   helpcircle: HelpCircle,
   messagecircle: MessageCircle,
   image: ImageIcon,
+  folder: Folder,
+  tag: Tag,
 }
 
 interface LinkItem {
   title: string
-  href: string
+  href?: string
   icon: string
   badge?: string | null
+  children?: LinkItem[]
 }
 
 interface SidebarProps {
@@ -62,6 +67,7 @@ export default function Sidebar({ role }: SidebarProps) {
   const { adminAccess } = useAuth()
   const [open, setOpen] = useState(false) // mobile overlay
   const [collapsed, setCollapsed] = useState(false) // tablet collapse
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set())
 
   // Load link data based on role
   const links: LinkItem[] = role === "admin" ? adminLinks : userLinks
@@ -70,6 +76,24 @@ export default function Sidebar({ role }: SidebarProps) {
   const visible = role === "admin"
     ? pathname === "/admin" || pathname.startsWith("/admin/")
     : pathname === "/dashboard" || pathname.startsWith("/dashboard/")
+
+  // Auto-expand groups that contain the current route
+  useEffect(() => {
+    const newExpanded = new Set<string>()
+    links.forEach((link) => {
+      if (link.children) {
+        const hasActiveChild = link.children.some(
+          (child) => child.href && pathname.startsWith(child.href)
+        )
+        if (hasActiveChild) {
+          newExpanded.add(link.title)
+        }
+      }
+    })
+    if (newExpanded.size > 0) {
+      setExpandedGroups((prev) => new Set([...prev, ...newExpanded]))
+    }
+  }, [pathname, links])
 
   // Load collapsed state from localStorage on mount
   useEffect(() => {
@@ -108,32 +132,106 @@ export default function Sidebar({ role }: SidebarProps) {
 
   const toggleCollapse = () => setCollapsed((prev) => !prev)
 
-  const renderLinks = (onNavigate?: () => void) => (
-    <nav className="space-y-1" role="navigation" aria-label={`${role} navigation`}>
-      {links.map((link) => {
-        const Icon = iconMap[link.icon] || LayoutDashboard
-        const active = pathname === link.href
-        return (
-          <Link
-            key={link.href}
-            href={link.href}
-            onClick={onNavigate}
+  const toggleGroup = (title: string) => {
+    setExpandedGroups((prev) => {
+      const next = new Set(prev)
+      if (next.has(title)) {
+        next.delete(title)
+      } else {
+        next.add(title)
+      }
+      return next
+    })
+  }
+
+  const renderLink = (link: LinkItem, onNavigate?: () => void, isChild = false) => {
+    const Icon = iconMap[link.icon] || LayoutDashboard
+    const active = link.href ? pathname === link.href : false
+
+    return (
+      <Link
+        key={link.href}
+        href={link.href || "#"}
+        onClick={onNavigate}
+        className={cn(
+          "flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors duration-300",
+          "hover:bg-sidebar-hover",
+          active ? "bg-sidebar-hover text-sidebar-foreground font-medium" : "text-sidebar-foreground/80",
+          isChild && !collapsed && "pl-8"
+        )}
+      >
+        <Icon className="h-4 w-4 shrink-0" />
+        {!collapsed && <span className="truncate">{link.title}</span>}
+        {!collapsed && link.badge && (
+          <span className="ml-auto text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">
+            {link.badge}
+          </span>
+        )}
+      </Link>
+    )
+  }
+
+  const renderGroupOrLink = (link: LinkItem, onNavigate?: () => void) => {
+    // If it has children, render as collapsible group
+    if (link.children && link.children.length > 0) {
+      const Icon = iconMap[link.icon] || LayoutDashboard
+      const isExpanded = expandedGroups.has(link.title)
+      const hasActiveChild = link.children.some(
+        (child) => child.href && pathname.startsWith(child.href)
+      )
+
+      return (
+        <div key={link.title} className="space-y-1">
+          {/* Group header button */}
+          <button
+            onClick={() => toggleGroup(link.title)}
             className={cn(
-              "flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors duration-300",
+              "w-full flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors duration-300",
               "hover:bg-sidebar-hover",
-              active ? "bg-sidebar-hover text-sidebar-foreground font-medium" : "text-sidebar-foreground/80"
+              hasActiveChild ? "text-sidebar-foreground font-medium" : "text-sidebar-foreground/80"
             )}
+            aria-expanded={isExpanded}
           >
             <Icon className="h-4 w-4 shrink-0" />
-            {!collapsed && <span className="truncate">{link.title}</span>}
-            {!collapsed && link.badge && (
-              <span className="ml-auto text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">
-                {link.badge}
-              </span>
+            {!collapsed && (
+              <>
+                <span className="truncate flex-1 text-left">{link.title}</span>
+                {link.badge && (
+                  <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">
+                    {link.badge}
+                  </span>
+                )}
+                <ChevronDown
+                  className={cn(
+                    "h-4 w-4 shrink-0 transition-transform duration-300",
+                    isExpanded && "rotate-180"
+                  )}
+                />
+              </>
             )}
-          </Link>
-        )
-      })}
+          </button>
+          {/* Children - animate height */}
+          <div
+            className={cn(
+              "overflow-hidden transition-all duration-300",
+              isExpanded && !collapsed ? "max-h-96 opacity-100" : "max-h-0 opacity-0"
+            )}
+          >
+            <div className="space-y-1 py-1">
+              {link.children.map((child) => renderLink(child, onNavigate, true))}
+            </div>
+          </div>
+        </div>
+      )
+    }
+
+    // Regular link without children
+    return renderLink(link, onNavigate)
+  }
+
+  const renderLinks = (onNavigate?: () => void) => (
+    <nav className="space-y-1" role="navigation" aria-label={`${role} navigation`}>
+      {links.map((link) => renderGroupOrLink(link, onNavigate))}
     </nav>
   )
 

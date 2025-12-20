@@ -1,17 +1,13 @@
 "use client"
 
 import { useCurrency, Currency } from "@/store/currency"
+import { useExchangeRateQuery } from "@/hooks/useExchangeRateQuery"
 import { Button } from "@/components/ui/button"
-import { useEffect } from "react"
 import { Loader2 } from "lucide-react"
 
 export function CurrencySwitcher() {
-  const { currency, setCurrency, fetchRate, isLoading } = useCurrency()
-
-  useEffect(() => {
-    // Refresh rate on mount if it's been a while (optional enhancement)
-    fetchRate()
-  }, [])
+  const { currency, setCurrency } = useCurrency()
+  const { isLoading } = useExchangeRateQuery()
 
   const handleToggle = (newCurrency: Currency) => {
     setCurrency(newCurrency)

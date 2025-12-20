@@ -4,7 +4,7 @@ import { useState } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useAuth } from "@/store/auth"
-import useMemberProfile from "@/store/memberProfile"
+
 import {
   BarChart2,
   Calendar,
@@ -55,11 +55,12 @@ export function DashboardShell({
     { href: "/support", label: "Support", icon: HelpCircle },
   ]
 
-  const member = useMemberProfile((s) => s.member)
+
   const visibleAdminItems = adminAccess?.menu || []
 
   // Show admin menu if backend says so
-  const shouldShowAdmin = Boolean(user?.ui_permissions.can_access_admin)
+  const shouldShowAdmin = Boolean(adminAccess?.can_access_admin)
+
 
   const isAdminPath = (path: string) => {
     // If not visible, not an admin path relevant to show

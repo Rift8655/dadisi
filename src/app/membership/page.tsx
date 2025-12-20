@@ -1,5 +1,6 @@
 "use client"
 
+import { useState } from "react"
 import {
   Card,
   CardContent,
@@ -7,22 +8,59 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
 import { usePlans } from "@/hooks/usePlans"
-import SelectMembershipButton from "@/components/select-membership-button"
 import { PageShell } from "@/components/page-shell"
 import { useCurrency } from "@/store/currency"
 import { CurrencySwitcher } from "@/components/currency-switcher"
+import { PlanDetailDialog } from "@/components/plan-detail-dialog"
+
+type PlanForDialog = {
+  id: number
+  name: string
+  description?: string
+  features: string[]
+  pricing: {
+    monthly: { base: number; discounted?: number }
+    yearly: { base: number; discounted?: number }
+  }
+  promotions: {
+    monthly: { active: boolean; discount_percent: number } | null
+    yearly: { active: boolean; discount_percent: number } | null
+  }
+  currency: string
+}
 
 export default function MembershipPage() {
   const { data: plans = [], isLoading: loading, error } = usePlans()
-  const { currency: activeCurrency, rate: exchangeRate } = useCurrency()
+  const { currency: activeCurrency } = useCurrency()
+  const [selectedPlan, setSelectedPlan] = useState<PlanForDialog | null>(null)
+  const [dialogOpen, setDialogOpen] = useState(false)
 
   if (loading) {
-// ... existing code ...
+    return (
+      <PageShell title="Membership">
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full border-b-2 border-primary h-8 w-8"></div>
+        </div>
+      </PageShell>
+    )
   }
 
   if (error) {
-// ... existing code ...
+    return (
+      <PageShell title="Membership">
+        <div className="text-center text-red-500 py-8">
+          Failed to load membership plans.
+        </div>
+      </PageShell>
+    )
+  }
+
+  const handleViewPlan = (plan: PlanForDialog) => {
+    setSelectedPlan(plan)
+    setDialogOpen(true)
   }
 
   return (
@@ -40,38 +78,53 @@ export default function MembershipPage() {
 
         <div className="grid gap-6 md:grid-cols-3">
           {plans.map((plan) => {
-            // Extract name (can be string or localized object)
-            const name = typeof plan.name === "string" 
-              ? plan.name 
+            // Extract name
+            const name = typeof plan.name === "string"
+              ? plan.name
               : (plan.name.en || Object.values(plan.name)[0] || "Unnamed Plan")
-            
-            // Extract pricing based on active currency
+
+            // Extract description (handle both string and localized JSON)
+            const description = typeof plan.description === "string"
+              ? plan.description
+              : plan.description && typeof plan.description === "object"
+              ? (plan.description as { en?: string }).en || Object.values(plan.description as object)[0] as string || ""
+              : ""
+
+            // Extract pricing
             const pricing = activeCurrency === "KES" ? plan.pricing?.kes : plan.pricing?.usd
-            
             const baseMonthly = pricing?.base_monthly ?? 0
             const baseYearly = pricing?.base_yearly ?? (baseMonthly * 12)
-            
-            // Calculate discounted prices if available
             const discountedMonthly = pricing?.discounted_monthly
             const discountedYearly = pricing?.discounted_yearly
-            
-            // Use discounted prices if available, otherwise use base prices
-            const monthlyPrice = discountedMonthly ?? baseMonthly
-            const yearlyPrice = discountedYearly ?? baseYearly
-            
-            // Calculate savings percent (comparing yearly vs 12 months)
-            const yearlyEquivalent = monthlyPrice * 12
-            const savingsPercent = yearlyEquivalent > 0 
-              ? Math.round(((yearlyEquivalent - yearlyPrice) / yearlyEquivalent) * 100) 
-              : 0
 
-            // Extract features safely
+            // Check if promotions are active
+            const promotions = plan.promotions as {
+              monthly?: { active?: boolean; discount_percent?: number } | null
+              yearly?: { active?: boolean; discount_percent?: number } | null
+            } | undefined
+
+            const monthlyPromoActive = promotions?.monthly?.active ?? false
+            const yearlyPromoActive = promotions?.yearly?.active ?? false
+            const hasAnyPromotion = monthlyPromoActive || yearlyPromoActive
+
+            // Show promotional price when active
+            const displayMonthlyPrice = monthlyPromoActive && discountedMonthly
+              ? discountedMonthly
+              : baseMonthly
+
+            const formatPrice = (val: number) => {
+              return activeCurrency === "KES"
+                ? `KES ${val.toLocaleString()}`
+                : `$${val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+            }
+
+            // Extract features
             const features = (plan.features ?? []).map((f: unknown) => {
               if (typeof f === "string") return f
               if (typeof f === "object" && f !== null) {
                 const feat = f as { name?: string | { en?: string }; limit?: number | null }
-                const featureName = typeof feat.name === "string" 
-                  ? feat.name 
+                const featureName = typeof feat.name === "string"
+                  ? feat.name
                   : (feat.name?.en || "Feature")
                 const limit = feat.limit ? ` (Limit: ${feat.limit})` : ""
                 return `${featureName}${limit}`
@@ -79,54 +132,74 @@ export default function MembershipPage() {
               return "Feature"
             })
 
-            const formatPrice = (val: number) => {
-              return activeCurrency === "KES" 
-                ? `KES ${val.toLocaleString()}` 
-                : `$${val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-            }
-
-            const membership = {
+            // Prepare plan data for dialog
+            const planForDialog: PlanForDialog = {
               id: plan.id,
               name,
-              base_monthly_price: monthlyPrice,
-              yearly_price: yearlyPrice,
-              savings_percent: savingsPercent,
-              currency: activeCurrency,
+              description: description || undefined,
               features,
+              pricing: {
+                monthly: { base: baseMonthly, discounted: discountedMonthly },
+                yearly: { base: baseYearly, discounted: discountedYearly },
+              },
+              promotions: {
+                monthly: monthlyPromoActive && promotions?.monthly
+                  ? { active: true, discount_percent: promotions.monthly.discount_percent ?? 0 }
+                  : null,
+                yearly: yearlyPromoActive && promotions?.yearly
+                  ? { active: true, discount_percent: promotions.yearly.discount_percent ?? 0 }
+                  : null,
+              },
+              currency: activeCurrency,
             }
 
             return (
-              <Card key={plan.id} className="flex flex-col">
+              <Card key={plan.id} className="flex flex-col relative">
+                {/* Promotion badge - only show when promotions are active */}
+                {hasAnyPromotion && (
+                  <Badge className="absolute -top-2 -right-2 bg-green-500 hover:bg-green-600">
+                    {monthlyPromoActive && promotions?.monthly?.discount_percent
+                      ? `${promotions.monthly.discount_percent}% OFF`
+                      : yearlyPromoActive && promotions?.yearly?.discount_percent
+                      ? `Save ${promotions.yearly.discount_percent}%`
+                      : "On Sale"}
+                  </Badge>
+                )}
+
                 <CardHeader>
-                  <CardTitle>{name}</CardTitle>
-                  <CardDescription>{plan.description || ""}</CardDescription>
+                  <CardTitle className="text-xl">{name}</CardTitle>
                 </CardHeader>
+
                 <CardContent className="flex-1 flex flex-col">
+                  {/* Price display */}
                   <div className="mb-4">
-                    <div className="text-2xl font-bold mb-1">
-                      {formatPrice(monthlyPrice)}
-                      <span className="text-sm font-normal text-muted-foreground ml-1">/month</span>
+                    <div className="text-3xl font-bold">
+                      {displayMonthlyPrice === 0 ? "Free" : formatPrice(displayMonthlyPrice)}
+                      {displayMonthlyPrice !== 0 && <span className="text-sm font-normal text-muted-foreground ml-1">/month</span>}
                     </div>
-                    <div className="text-sm text-muted-foreground mb-2">
-                       or {formatPrice(yearlyPrice)}/year
-                    </div>
-                    {savingsPercent > 0 && (
-                      <div className="text-xs bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 px-2 py-1 rounded inline-block font-medium">
-                        Save {savingsPercent}% with annual billing
+                    {monthlyPromoActive && discountedMonthly && discountedMonthly < baseMonthly && (
+                      <div className="text-sm text-muted-foreground line-through mt-1">
+                        {formatPrice(baseMonthly)}/month
                       </div>
                     )}
                   </div>
-                  <ul className="mb-6 list-disc space-y-2 pl-5 text-sm text-muted-foreground flex-1">
-                    {features.length > 0 ? (
-                      features.map((f, idx) => (
-                        <li key={idx} className="leading-tight">{f}</li>
-                      ))
-                    ) : (
-                      <li className="text-muted-foreground/60">No features listed</li>
-                    )}
-                  </ul>
-                  <div className="mt-auto pt-4">
-                    <SelectMembershipButton membership={membership} />
+
+                  {/* Description below price */}
+                  {description && (
+                    <p className="text-sm text-muted-foreground mb-6 line-clamp-3">
+                      {description}
+                    </p>
+                  )}
+
+                  {/* View button */}
+                  <div className="mt-auto">
+                    <Button
+                      variant="default"
+                      className="w-full"
+                      onClick={() => handleViewPlan(planForDialog)}
+                    >
+                      View
+                    </Button>
                   </div>
                 </CardContent>
               </Card>
@@ -134,6 +207,15 @@ export default function MembershipPage() {
           })}
         </div>
       </div>
+
+      {/* Plan detail dialog */}
+      {selectedPlan && (
+        <PlanDetailDialog
+          open={dialogOpen}
+          onOpenChange={setDialogOpen}
+          plan={selectedPlan}
+        />
+      )}
     </PageShell>
   )
 }

@@ -1,87 +1,56 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useMemo } from "react"
 import Link from "next/link"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { DataTable } from "@/components/ui/data-table"
 import { UserDashboardShell } from "@/components/user-dashboard-shell"
 import { useAuth } from "@/store/auth"
-import { postsApi } from "@/lib/api"
-
-interface UserPost {
-  id: number
-  title: string
-  slug: string
-  status: "draft" | "published" | "archived"
-  excerpt?: string
-  created_at: string
-  updated_at: string
-  views_count: number
-  comments_count: number
-}
-
-interface Category {
-  id: number
-  name: string
-  slug: string
-}
-
-interface Tag {
-  id: number
-  name: string
-  slug: string
-}
+import { authorPostsApi } from "@/lib/api"
+import Swal from "sweetalert2"
+import { Eye, Pencil, Trash, Send, FileX, Plus, Loader2 } from "lucide-react"
+import { 
+  useAuthorPosts, 
+  useAuthorCategories, 
+  useAuthorTags,
+  usePublishPostMutation,
+  useUnpublishPostMutation,
+  useDeletePostMutation
+} from "@/hooks/usePosts"
+import { useMemberProfileQuery } from "@/hooks/useMemberProfileQuery"
+import { Post as UserPost, Category, Tag } from "@/schemas/post"
 
 export default function BlogPage() {
   const { user } = useAuth()
-  const [posts, setPosts] = useState<UserPost[]>([])
-  const [categories, setCategories] = useState<Category[]>([])
-  const [tags, setTags] = useState<Tag[]>([])
-  const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<"posts" | "categories" | "tags">("posts")
-  const [hasSubscription, setHasSubscription] = useState(true) // Check subscription status
+  const [page, setPage] = useState(1)
 
-  useEffect(() => {
-    const loadData = async () => {
-      setLoading(true)
-      try {
-        // For now, load all posts - would filter by current user in production
-        const postsData = await postsApi.list({ page: 1 })
-        const postsList = Array.isArray(postsData) ? postsData : []
-        setPosts(
-          postsList.map((p: any) => ({
-            id: p.id,
-            title: p.title,
-            slug: p.slug,
-            status: p.status || "published",
-            excerpt: p.excerpt,
-            created_at: p.created_at,
-            updated_at: p.updated_at,
-            views_count: p.views_count || 0,
-            comments_count: p.comments_count || 0,
-          }))
-        )
+  // Fetch data with TanStack Query
+  const { 
+    data: profile, 
+    isLoading: profileLoading 
+  } = useMemberProfileQuery()
 
-        // TODO: Load user's categories and tags from API
-        setCategories([
-          { id: 1, name: "Technology", slug: "technology" },
-          { id: 2, name: "Community", slug: "community" },
-        ])
-        setTags([
-          { id: 1, name: "Science", slug: "science" },
-          { id: 2, name: "Events", slug: "events" },
-          { id: 3, name: "Workshop", slug: "workshop" },
-        ])
-      } catch (error) {
-        console.error("Failed to load blog data:", error)
-      } finally {
-        setLoading(false)
-      }
-    }
+  const { 
+    data: postsResponse, 
+    isLoading: postsLoading,
+    error: postsError 
+  } = useAuthorPosts({ page })
+  
+  const { data: categories = [], isLoading: categoriesLoading } = useAuthorCategories()
+  const { data: tags = [], isLoading: tagsLoading } = useAuthorTags()
 
-    loadData()
-  }, [])
+  // Mutations
+  const publishMutation = usePublishPostMutation()
+  const unpublishMutation = useUnpublishPostMutation()
+  const deleteMutation = useDeletePostMutation()
+
+  const hasSubscription = !!profile?.plan_type && profile.plan_type !== "Free"
+  const posts = (postsResponse as any)?.data || []
+  const loading = profileLoading || postsLoading || categoriesLoading || tagsLoading
+  const error = postsError ? (postsError as any).message : null
 
   const formatDate = (dateStr: string) => {
     try {
@@ -105,6 +74,63 @@ export default function BlogPage() {
         return <Badge variant="outline">Archived</Badge>
       default:
         return <Badge variant="outline">{status}</Badge>
+    }
+  }
+
+  const handlePublish = async (post: UserPost) => {
+    const result = await Swal.fire({
+      title: "Publish Post?",
+      text: "This will make the post visible to the public.",
+      icon: "question",
+      showCancelButton: true,
+      confirmButtonText: "Publish",
+      confirmButtonColor: "#22c55e"
+    })
+    if (result.isConfirmed) {
+      try {
+        await publishMutation.mutateAsync(post.slug)
+        Swal.fire("Published", "Post is now live.", "success")
+      } catch (e: any) {
+        Swal.fire("Error", e.message || "Failed to publish post", "error")
+      }
+    }
+  }
+
+  const handleUnpublish = async (post: UserPost) => {
+    const result = await Swal.fire({
+      title: "Unpublish Post?",
+      text: "This will hide the post from the public.",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Unpublish",
+      confirmButtonColor: "#f59e0b"
+    })
+    if (result.isConfirmed) {
+      try {
+        await unpublishMutation.mutateAsync(post.slug)
+        Swal.fire("Unpublished", "Post is now a draft.", "success")
+      } catch (e: any) {
+        Swal.fire("Error", e.message || "Failed to unpublish post", "error")
+      }
+    }
+  }
+
+  const handleDelete = async (post: UserPost) => {
+    const result = await Swal.fire({
+      title: "Delete Post?",
+      text: "This action cannot be undone.",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Delete",
+      confirmButtonColor: "#ef4444"
+    })
+    if (result.isConfirmed) {
+      try {
+        await deleteMutation.mutateAsync(post.slug)
+        Swal.fire("Deleted", "Post has been deleted.", "success")
+      } catch (e: any) {
+        Swal.fire("Error", e.message || "Failed to delete post", "error")
+      }
     }
   }
 
@@ -145,11 +171,11 @@ export default function BlogPage() {
               Create, edit, and manage your blog posts, categories, and tags.
             </p>
           </div>
-          <Button>
-            <svg className="mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
-            New Post
+          <Button asChild>
+            <Link href="/dashboard/blog/create">
+              <Plus className="mr-2 h-4 w-4" />
+              New Post
+            </Link>
           </Button>
         </div>
 
@@ -180,47 +206,71 @@ export default function BlogPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {loading ? (
-                <div className="space-y-3">
-                  {[1, 2, 3].map((i) => (
-                    <div key={i} className="h-16 animate-pulse rounded bg-muted" />
-                  ))}
-                </div>
-              ) : posts.length > 0 ? (
-                <div className="divide-y">
-                  {posts.map((post) => (
-                    <div
-                      key={post.id}
-                      className="flex items-center justify-between py-4 first:pt-0 last:pb-0"
-                    >
-                      <div className="flex-1 min-w-0">
+              <DataTable
+                data={posts}
+                columns={[
+                  {
+                    key: "title",
+                    header: "Title",
+                    cell: (post: UserPost) => (
+                      <div>
                         <div className="flex items-center gap-2">
-                          <h4 className="font-medium truncate">{post.title}</h4>
-                          {getStatusBadge(post.status)}
+                          <h4 className="font-medium">{post.title}</h4>
+                          {getStatusBadge(post.status || "draft")}
                         </div>
                         <div className="mt-1 flex gap-4 text-xs text-muted-foreground">
                           <span>{formatDate(post.created_at)}</span>
-                          <span>{post.views_count} views</span>
-                          <span>{post.comments_count} comments</span>
                         </div>
                       </div>
-                      <div className="flex gap-2">
-                        <Button variant="ghost" size="sm" asChild>
-                          <Link href={`/blog/${post.slug}`}>View</Link>
+                    ),
+                  },
+                  {
+                    key: "views",
+                    header: "Views",
+                    cell: (post: UserPost) => post.views_count,
+                  },
+                  {
+                    key: "comments",
+                    header: "Comments",
+                    cell: (post: UserPost) => post.comments_count,
+                  },
+                  {
+                    key: "actions",
+                    header: "Actions",
+                    className: "text-right",
+                    cell: (post: UserPost) => (
+                      <div className="flex justify-end gap-1">
+                        {post.status === "published" ? (
+                          <Button variant="ghost" size="icon" title="Unpublish" onClick={() => handleUnpublish(post)} className="text-amber-500 hover:bg-amber-50">
+                            <FileX className="h-4 w-4" />
+                          </Button>
+                        ) : (
+                          <Button variant="ghost" size="icon" title="Publish" onClick={() => handlePublish(post)} className="text-green-500 hover:bg-green-50">
+                            <Send className="h-4 w-4" />
+                          </Button>
+                        )}
+                        <Button variant="ghost" size="icon" title="View" asChild>
+                          <Link href={`/blog/${post.slug}`}>
+                            <Eye className="h-4 w-4" />
+                          </Link>
                         </Button>
-                        <Button variant="outline" size="sm">
-                          Edit
+                        <Button variant="ghost" size="icon" title="Edit" asChild>
+                          <Link href={`/dashboard/blog/${post.slug}/edit`}>
+                            <Pencil className="h-4 w-4" />
+                          </Link>
+                        </Button>
+                        <Button variant="ghost" size="icon" title="Delete" onClick={() => handleDelete(post)} className="text-red-500 hover:bg-red-50">
+                          <Trash className="h-4 w-4" />
                         </Button>
                       </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="py-8 text-center text-muted-foreground">
-                  <p className="mb-2">No posts yet</p>
-                  <Button size="sm">Create Your First Post</Button>
-                </div>
-              )}
+                    ),
+                  },
+                ]}
+                loading={loading}
+                pageSize={10}
+                pageSizeOptions={[5, 10, 20, 50]}
+                emptyMessage="No posts yet. Create your first post!"
+              />
             </CardContent>
           </Card>
         )}
@@ -239,7 +289,7 @@ export default function BlogPage() {
             <CardContent>
               {categories.length > 0 ? (
                 <div className="divide-y">
-                  {categories.map((category) => (
+                  {categories.map((category: Category) => (
                     <div
                       key={category.id}
                       className="flex items-center justify-between py-3 first:pt-0 last:pb-0"
@@ -277,7 +327,7 @@ export default function BlogPage() {
             <CardContent>
               {tags.length > 0 ? (
                 <div className="flex flex-wrap gap-2">
-                  {tags.map((tag) => (
+                  {tags.map((tag: Tag) => (
                     <Badge
                       key={tag.id}
                       variant="secondary"

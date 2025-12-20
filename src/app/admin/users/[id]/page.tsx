@@ -2,13 +2,23 @@
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
-import { useParams } from "next/navigation"
+import { useParams, useRouter } from "next/navigation"
 import { useAuth } from "@/store/auth"
-import { ArrowLeft, Plus, RotateCcw, Trash2, Zap, X } from "lucide-react"
+import { ArrowLeft, Plus, RotateCcw, Trash2, Zap, X, Loader2, AlertCircle } from "lucide-react"
 import Swal from "sweetalert2"
 
 import { AdminRole, AdminUser } from "@/types/admin"
-import { useAdmin } from "@/store/admin"
+import {
+  useUser,
+  useUpdateUser,
+  useDeleteUser,
+  useRestoreUser,
+  useForceDeleteUser,
+  useSyncUserRoles,
+  useAssignUserRole,
+  useRemoveUserRole,
+} from "@/hooks/useUsers"
+import { useRoles } from "@/hooks/useRoles"
 import { canManageUser } from "@/lib/rbac"
 import { Button } from "@/components/ui/button"
 import {
@@ -23,21 +33,30 @@ import { AdminDashboardShell } from "@/components/admin-dashboard-shell"
 import { ConfirmationDialog } from "@/components/admin/confirmation-dialog"
 import { RoleSelector } from "@/components/admin/role-selector"
 import { Unauthorized } from "@/components/unauthorized"
+import { Skeleton } from "@/components/ui/skeleton"
+import { Badge } from "@/components/ui/badge"
 
 export default function UserDetailPage() {
   const params = useParams()
+  const router = useRouter()
   const userId = parseInt(params.id as string)
-  const currentUser = useAuth((s) => s.user)
   const logout = useAuth((s) => s.logout)
 
-  const [user, setUser] = useState<AdminUser | null>(null)
-  const [roles, setRoles] = useState<AdminRole[]>([])
+  const { data: user, isLoading: loading, error: userError } = useUser(userId)
+  const { data: rolesResponse, isLoading: loadingRoles } = useRoles({ per_page: 100 })
+  const roles = Array.isArray(rolesResponse) ? rolesResponse : rolesResponse?.data || []
+
+  const updateMutation = useUpdateUser()
+  const deleteMutation = useDeleteUser()
+  const restoreMutation = useRestoreUser()
+  const forceDeleteMutation = useForceDeleteUser()
+  const syncRolesMutation = useSyncUserRoles()
+  const assignRoleMutation = useAssignUserRole()
+  const removeRoleMutation = useRemoveUserRole()
+
   const [selectedRoles, setSelectedRoles] = useState<AdminRole[]>([])
   const [editData, setEditData] = useState({ username: "", email: "" })
-  const [loading, setLoading] = useState(true)
-  const [isSaving, setIsSaving] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
-  const [authorizationError, setAuthorizationError] = useState(false)
   const [confirmDialog, setConfirmDialog] = useState<{
     open: boolean
     action: "delete" | "restore" | "forceDelete" | null
@@ -47,225 +66,157 @@ export default function UserDetailPage() {
   })
   const [showAddRole, setShowAddRole] = useState(false)
   const [selectedRoleToAdd, setSelectedRoleToAdd] = useState<string>("")
-  const [roleOperationLoading, setRoleOperationLoading] = useState<{
-    role: string
-    operation: "add" | "remove"
-  } | null>(null)
 
-  const loadUserAction = useAdmin((s) => s.loadUser)
-  const loadRolesAction = useAdmin((s) => s.loadRoles)
-
-  const loadUser = async () => {
-    try {
-      setLoading(true)
-      const userData = await loadUserAction(userId)
-      setUser(userData)
-      setEditData({ username: userData.username || "", email: userData.email })
-      setSelectedRoles(userData.roles || [])
-    } catch (error) {
-      const status = (error as any).status
-
-      if (status === 403) {
-        setAuthorizationError(true)
-      } else if (status === 401) {
-        logout()
-      } else {
-        const errorMessage =
-          error instanceof Error ? error.message : "Failed to load user"
-        Swal.fire({ icon: "error", title: "Error", text: errorMessage })
-      }
-    } finally {
-      setLoading(false)
+  useEffect(() => {
+    if (user) {
+      setEditData({ username: user.username || "", email: user.email })
+      setSelectedRoles(user.roles || [])
     }
-  }
-
-  const loadRoles = async () => {
-    try {
-      await loadRolesAction()
-      const rolesFromStore = useAdmin.getState().roles
-      setRoles(rolesFromStore || [])
-    } catch (error) {
-      console.error("Failed to load roles:", error)
-    }
-  }
+  }, [user])
 
   const handleSave = async () => {
     if (!user) return
 
-    setIsSaving(true)
     try {
-      await useAdmin.getState().updateUser(user.id, {
-        username: editData.username,
-        email: editData.email,
+      await updateMutation.mutateAsync({
+        id: user.id,
+        data: {
+          username: editData.username,
+          email: editData.email,
+        },
       })
 
       const roleNames = selectedRoles.map((r) => r.name)
-      await useAdmin.getState().syncUserRoles(user.id, roleNames)
+      await syncRolesMutation.mutateAsync({ id: user.id, roleNames })
 
       await Swal.fire({
         icon: "success",
         title: "Success",
         text: "User updated successfully",
         timer: 1500,
+        showConfirmButton: false,
       })
 
       setIsEditing(false)
-      await loadUser()
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : "Failed to update user"
+    } catch (error: any) {
       Swal.fire({
         icon: "error",
         title: "Error",
-        text: errorMessage,
+        text: error.message || "Failed to update user",
       })
-    } finally {
-      setIsSaving(false)
     }
   }
 
   const handleDeleteAction = async () => {
     if (!user) return
-
     try {
-      await useAdmin.getState().deleteUser(user.id)
+      await deleteMutation.mutateAsync(user.id)
       await Swal.fire({
         icon: "success",
         title: "Success",
         text: "User deleted successfully",
         timer: 1500,
+        showConfirmButton: false,
       })
-      window.location.href = "/admin/users"
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : "Failed to delete user"
-      Swal.fire({
-        icon: "error",
-        title: "Error",
-        text: errorMessage,
-      })
+      router.push("/admin/users")
+    } catch (error: any) {
+      Swal.fire({ icon: "error", title: "Error", text: error.message || "Failed to delete user" })
     }
   }
 
   const handleRestoreAction = async () => {
     if (!user) return
-
     try {
-      await useAdmin.getState().restoreUser(user.id)
+      await restoreMutation.mutateAsync(user.id)
       await Swal.fire({
         icon: "success",
         title: "Success",
         text: "User restored successfully",
         timer: 1500,
+        showConfirmButton: false,
       })
-      await loadUser()
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : "Failed to restore user"
-      Swal.fire({
-        icon: "error",
-        title: "Error",
-        text: errorMessage,
-      })
+    } catch (error: any) {
+      Swal.fire({ icon: "error", title: "Error", text: error.message || "Failed to restore user" })
     }
   }
 
   const handleForceDeleteAction = async () => {
     if (!user) return
-
     try {
-      await useAdmin.getState().forceDeleteUser(user.id)
+      await forceDeleteMutation.mutateAsync(user.id)
       await Swal.fire({
         icon: "success",
         title: "Success",
-        text: "User permanently deleted successfully",
+        text: "User permanently deleted",
         timer: 1500,
+        showConfirmButton: false,
       })
-      window.location.href = "/admin/users"
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error
-          ? error.message
-          : "Failed to permanently delete user"
-      Swal.fire({
-        icon: "error",
-        title: "Error",
-        text: errorMessage,
-      })
+      router.push("/admin/users")
+    } catch (error: any) {
+      Swal.fire({ icon: "error", title: "Error", text: error.message || "Failed to permanently delete user" })
     }
   }
 
   const handleAssignRole = async () => {
     if (!user || !selectedRoleToAdd) return
-
-    setRoleOperationLoading({ role: selectedRoleToAdd, operation: "add" })
-
     try {
-      await useAdmin.getState().assignUserRole(user.id, selectedRoleToAdd)
+      await assignRoleMutation.mutateAsync({ id: user.id, roleName: selectedRoleToAdd })
       await Swal.fire({
         icon: "success",
         title: "Success",
-        text: `Role '${selectedRoleToAdd}' assigned successfully`,
+        text: `Role '${selectedRoleToAdd}' assigned`,
         timer: 1500,
+        showConfirmButton: false,
       })
-
       setSelectedRoleToAdd("")
       setShowAddRole(false)
-      await loadUser()
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : "Failed to assign role"
-      Swal.fire({
-        icon: "error",
-        title: "Error",
-        text: errorMessage,
-      })
-    } finally {
-      setRoleOperationLoading(null)
+    } catch (error: any) {
+      Swal.fire({ icon: "error", title: "Error", text: error.message || "Failed to assign role" })
     }
   }
 
   const handleRemoveRole = async (roleName: string) => {
     if (!user) return
-
-    setRoleOperationLoading({ role: roleName, operation: "remove" })
-
     try {
-      await useAdmin.getState().removeUserRole(user.id, roleName)
+      await removeRoleMutation.mutateAsync({ id: user.id, roleName })
       await Swal.fire({
         icon: "success",
         title: "Success",
-        text: `Role '${roleName}' removed successfully`,
+        text: `Role '${roleName}' removed`,
         timer: 1500,
+        showConfirmButton: false,
       })
-
-      await loadUser()
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : "Failed to remove role"
-      Swal.fire({
-        icon: "error",
-        title: "Error",
-        text: errorMessage,
-      })
-    } finally {
-      setRoleOperationLoading(null)
+    } catch (error: any) {
+      Swal.fire({ icon: "error", title: "Error", text: error.message || "Failed to remove role" })
     }
   }
 
-  useEffect(() => {
-    loadUser()
-    loadRoles()
-  }, [userId])
-
-  if (authorizationError) {
-    return <Unauthorized actionHref="/admin/users" />
+  if (userError) {
+    const status = (userError as any).status
+    if (status === 403) return <Unauthorized actionHref="/admin/users" />
+    if (status === 401) {
+      logout()
+      return null
+    }
+    return (
+      <AdminDashboardShell title="Error">
+        <div className="p-8 text-center">
+          <AlertCircle className="h-12 w-12 text-destructive mx-auto mb-4" />
+          <p className="text-lg font-medium">Failed to load user</p>
+          <p className="text-muted-foreground">{userError.message}</p>
+        </div>
+      </AdminDashboardShell>
+    )
   }
 
   if (loading) {
     return (
       <AdminDashboardShell title="User Detail">
-        <div className="p-4 text-center">Loading...</div>
+        <div className="space-y-4 p-4">
+          <Skeleton className="h-24 w-full" />
+          <Skeleton className="h-48 w-full" />
+          <Skeleton className="h-32 w-full" />
+        </div>
       </AdminDashboardShell>
     )
   }
@@ -273,12 +224,13 @@ export default function UserDetailPage() {
   if (!user) {
     return (
       <AdminDashboardShell title="User Detail">
-        <div className="p-4 text-center text-gray-500">User not found</div>
+        <div className="p-8 text-center text-gray-500">User not found</div>
       </AdminDashboardShell>
     )
   }
 
   const isDeleted = !!user.deleted_at
+  const isSaving = updateMutation.isPending || syncRolesMutation.isPending
 
   return (
     <AdminDashboardShell title={user.name || user.username}>
@@ -299,13 +251,9 @@ export default function UserDetailPage() {
               </div>
               <div>
                 {isDeleted ? (
-                  <span className="inline-block rounded bg-red-100 px-3 py-1 text-sm font-medium text-red-800 dark:bg-red-900 dark:text-red-100">
-                    Deleted
-                  </span>
+                  <Badge variant="destructive">Deleted</Badge>
                 ) : (
-                  <span className="inline-block rounded bg-green-100 px-3 py-1 text-sm font-medium text-green-800 dark:bg-green-900 dark:text-green-100">
-                    Active
-                  </span>
+                  <Badge variant="outline" className="bg-green-100 text-green-800 border-green-200">Active</Badge>
                 )}
               </div>
             </div>
@@ -319,37 +267,27 @@ export default function UserDetailPage() {
           <CardContent className="space-y-4">
             {isEditing ? (
               <>
-                <div>
-                  <label className="mb-1 block text-sm font-medium">
-                    Username
-                  </label>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Username</label>
                   <Input
                     value={editData.username}
-                    onChange={(e) =>
-                      setEditData({ ...editData, username: e.target.value })
-                    }
+                    onChange={(e) => setEditData({ ...editData, username: e.target.value })}
                     disabled={isSaving}
                   />
                 </div>
 
-                <div>
-                  <label className="mb-1 block text-sm font-medium">
-                    Email
-                  </label>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Email</label>
                   <Input
                     type="email"
                     value={editData.email}
-                    onChange={(e) =>
-                      setEditData({ ...editData, email: e.target.value })
-                    }
+                    onChange={(e) => setEditData({ ...editData, email: e.target.value })}
                     disabled={isSaving}
                   />
                 </div>
 
-                <div>
-                  <label className="mb-2 block text-sm font-medium">
-                    Assign Roles
-                  </label>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Assign Roles</label>
                   <RoleSelector
                     roles={roles}
                     selectedRoles={selectedRoles}
@@ -363,10 +301,7 @@ export default function UserDetailPage() {
                     variant="outline"
                     onClick={() => {
                       setIsEditing(false)
-                      setEditData({
-                        username: user.username || "",
-                        email: user.email,
-                      })
+                      setEditData({ username: user.username || "", email: user.email })
                       setSelectedRoles(user.roles || [])
                     }}
                     disabled={isSaving}
@@ -421,10 +356,7 @@ export default function UserDetailPage() {
                               variant="ghost"
                               className="h-3 w-3 p-0 hover:bg-purple-200"
                               onClick={() => handleRemoveRole(role.name)}
-                              disabled={
-                                roleOperationLoading?.role === role.name &&
-                                roleOperationLoading.operation === "remove"
-                              }
+                              disabled={removeRoleMutation.isPending}
                             >
                               <X className="h-2 w-2" />
                             </Button>
@@ -453,7 +385,7 @@ export default function UserDetailPage() {
                             value={selectedRoleToAdd}
                             onChange={(e) => setSelectedRoleToAdd(e.target.value)}
                             className="rounded border px-2 py-1 text-sm"
-                            disabled={roleOperationLoading?.operation === "add"}
+                            disabled={assignRoleMutation.isPending}
                           >
                             <option value="">Select a role...</option>
                             {roles
@@ -470,10 +402,7 @@ export default function UserDetailPage() {
                           <Button
                             size="sm"
                             onClick={handleAssignRole}
-                            disabled={
-                              !selectedRoleToAdd ||
-                              roleOperationLoading?.operation === "add"
-                            }
+                            disabled={assignRoleMutation.isPending}
                           >
                             Add
                           </Button>
@@ -484,7 +413,7 @@ export default function UserDetailPage() {
                               setShowAddRole(false)
                               setSelectedRoleToAdd("")
                             }}
-                            disabled={roleOperationLoading?.operation === "add"}
+                            disabled={assignRoleMutation.isPending}
                           >
                             Cancel
                           </Button>

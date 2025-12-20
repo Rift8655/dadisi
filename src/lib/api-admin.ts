@@ -14,6 +14,7 @@ import {
   AdminCategorySchema,
   AdminTagSchema,
   AdminWebhookEventSchema,
+  AdminPlanSchema,
 } from "@/schemas/admin"
 import type { 
   AdminUser, 
@@ -24,6 +25,7 @@ import type {
   BulkUserInvitePayload, 
   AdminPermission,
   AdminPost,
+  AdminPlan,
 } from "@/types/admin"
 
 // User Management API
@@ -110,19 +112,18 @@ export const auditLogApi = {
   },
 }
 
-// Retention Settings API
-// Retention Settings API
+// Retention Settings API (Admin only)
 export const retentionApi = {
-  list: (params?: { data_type?: string }) => api.get<unknown>("/api/retention-settings", { params }),
+  list: (params?: { data_type?: string }) => api.get<unknown>("/api/admin/retention-settings", { params }),
 
-  getOne: (id: number) => api.get<unknown>(`/api/retention-settings/${id}`),
+  getOne: (id: number) => api.get<unknown>(`/api/admin/retention-settings/${id}`),
 
   update: (
     id: number,
     data: { retention_days: number; auto_delete: boolean; description?: string }
-  ) => api.put<unknown>(`/api/retention-settings/${id}`, data),
+  ) => api.put<unknown>(`/api/admin/retention-settings/${id}`, data),
 
-  getSummary: () => api.get<unknown>("/api/retention-settings-summary"),
+  getSummary: () => api.get<unknown>("/api/admin/retention-settings-summary"),
 }
 
 // Reconciliation API
@@ -194,15 +195,17 @@ export const blogApi = {
         .or(z.array(AdminPostSchema))
         .parse(res)
     },
-    get: async (id: number | string): Promise<AdminPost> => {
-      const res = await api.get<ApiResponse<unknown>>(`/api/admin/blog/posts/${id}`)
+    get: async (slug: string): Promise<AdminPost> => {
+      const res = await api.get<ApiResponse<unknown>>(`/api/admin/blog/posts/${slug}`)
       return AdminPostSchema.parse(res.data)
     },
     create: (data: unknown) => api.post<unknown>("/api/admin/blog/posts", data),
-    update: (id: number | string, data: unknown) => api.put<unknown>(`/api/admin/blog/posts/${id}`, data),
-    delete: (id: number | string) => api.delete<unknown>(`/api/admin/blog/posts/${id}`),
-    restore: (id: number | string) => api.post<unknown>(`/api/admin/blog/posts/${id}/restore`),
-    forceDelete: (id: number | string) => api.delete<unknown>(`/api/admin/blog/posts/${id}/force`),
+    update: (slug: string, data: unknown) => api.put<unknown>(`/api/admin/blog/posts/${slug}`, data),
+    delete: (slug: string) => api.delete<unknown>(`/api/admin/blog/posts/${slug}`),
+    restore: (slug: string) => api.post<unknown>(`/api/admin/blog/posts/${slug}/restore`),
+    forceDelete: (slug: string) => api.delete<unknown>(`/api/admin/blog/posts/${slug}/force`),
+    publish: (slug: string) => api.post<unknown>(`/api/admin/blog/posts/${slug}/publish`),
+    unpublish: (slug: string) => api.post<unknown>(`/api/admin/blog/posts/${slug}/unpublish`),
   },
   categories: {
     list: async (params?: Record<string, unknown>): Promise<any> => {
@@ -226,11 +229,144 @@ export const blogApi = {
   }
 }
 
-// System Settings API
+// Subscription Plans API
+export const plansApi = {
+  list: async (params?: Record<string, unknown>): Promise<any> => {
+    const res = await api.get<ApiResponse<unknown>>("/api/plans", { params: params as Record<string, string | number | boolean> })
+    return z.array(AdminPlanSchema).parse(res.data)
+  },
+  get: async (id: number): Promise<AdminPlan> => {
+    const res = await api.get<ApiResponse<unknown>>(`/api/plans/${id}`)
+    return AdminPlanSchema.parse(res.data)
+  },
+  create: async (data: unknown): Promise<AdminPlan> => {
+    const res = await api.post<ApiResponse<unknown>>("/api/plans", data)
+    return AdminPlanSchema.parse(res.data)
+  },
+  update: async (id: number, data: unknown): Promise<AdminPlan> => {
+    const res = await api.put<ApiResponse<unknown>>(`/api/plans/${id}`, data)
+    return AdminPlanSchema.parse(res.data)
+  },
+  delete: (id: number) => api.delete<unknown>(`/api/plans/${id}`),
+}
+
 // System Settings API
 export const systemSettingsApi = {
   list: (params?: { group?: string }) => api.get<Record<string, unknown>>("/api/admin/system-settings", { params }),
   update: (data: Record<string, unknown>) => api.put<unknown>("/api/admin/system-settings", data),
+}
+
+// Admin - Donation Campaigns Management
+import { 
+  DonationCampaignSchema, 
+  type CreateCampaignInput, 
+  type UpdateCampaignInput 
+} from "@/schemas/campaign"
+
+export const campaignAdminApi = {
+  list: async (params?: Record<string, unknown>): Promise<any> => {
+    const res = await api.get<ApiResponse<unknown>>("/api/admin/donation-campaigns", { 
+      params: params as Record<string, string | number | boolean> 
+    })
+    return res
+  },
+  
+  getCreateMetadata: () => 
+    api.get<{ success: boolean; data: { counties: Array<{ id: number; name: string }> } }>("/api/admin/donation-campaigns/create"),
+  
+  get: async (slug: string) => {
+    const res = await api.get<ApiResponse<unknown>>(`/api/admin/donation-campaigns/${slug}`)
+    return DonationCampaignSchema.parse(res.data)
+  },
+  
+  getEditData: (slug: string) => 
+    api.get<{ success: boolean; data: { campaign: unknown; counties: Array<{ id: number; name: string }> } }>(`/api/admin/donation-campaigns/${slug}/edit`),
+  
+  create: (data: CreateCampaignInput) => 
+    api.post<unknown>("/api/admin/donation-campaigns", data),
+  
+  update: (slug: string, data: UpdateCampaignInput) => 
+    api.put<unknown>(`/api/admin/donation-campaigns/${slug}`, data),
+  
+  delete: (slug: string) => 
+    api.delete<unknown>(`/api/admin/donation-campaigns/${slug}`),
+  
+  restore: (slug: string) => 
+    api.post<unknown>(`/api/admin/donation-campaigns/${slug}/restore`),
+  
+  publish: (slug: string) => 
+    api.post<unknown>(`/api/admin/donation-campaigns/${slug}/publish`),
+  
+  unpublish: (slug: string) => 
+    api.post<unknown>(`/api/admin/donation-campaigns/${slug}/unpublish`),
+  
+  complete: (slug: string) => 
+    api.post<unknown>(`/api/admin/donation-campaigns/${slug}/complete`),
+}
+
+// Admin - Donations Management
+export const donationAdminApi = {
+  list: (params?: { 
+    page?: number
+    per_page?: number
+    status?: string
+    campaign_id?: number
+    search?: string
+    start_date?: string
+    end_date?: string
+  }) => api.get<{
+    success: boolean
+    data: Array<{
+      id: number
+      reference: string
+      donor_name: string
+      donor_email: string
+      amount: number
+      currency: string
+      status: string
+      campaign?: { id: number; title: string; slug: string }
+      user?: { id: number; name: string; email: string }
+      created_at: string
+    }>
+    pagination: {
+      total: number
+      per_page: number
+      current_page: number
+      last_page: number
+    }
+  }>("/api/admin/donations", { params: params as Record<string, string | number | boolean> }),
+
+  get: (id: number) => api.get<{
+    success: boolean
+    data: {
+      id: number
+      reference: string
+      donor_name: string
+      donor_email: string
+      donor_phone?: string
+      amount: number
+      currency: string
+      status: string
+      notes?: string
+      county?: { id: number; name: string }
+      campaign?: { id: number; title: string; slug: string }
+      user?: { id: number; name: string; email: string }
+      created_at: string
+    }
+  }>(`/api/admin/donations/${id}`),
+
+  stats: () => api.get<{
+    success: boolean
+    data: {
+      total_donations: number
+      total_amount: number
+      paid_count: number
+      pending_count: number
+      failed_count: number
+      campaign_donations: number
+      general_donations: number
+    }
+  }>("/api/admin/donations/stats"),
 }
 
 // Bundle everything into adminApi for backward compatibility and convenience
@@ -249,5 +385,9 @@ export const adminApi = {
   webhooks: webhooksApi,
   exchangeRates: exchangeRatesApi,
   blog: blogApi,
+  plans: plansApi,
   systemSettings: systemSettingsApi,
+  campaigns: campaignAdminApi,
+  donations: donationAdminApi,
 }
+

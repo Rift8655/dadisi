@@ -1,32 +1,23 @@
 "use client"
 
-import { useEffect } from "react"
-import { useAdmin } from "@/store/admin"
+import { useAdminRenewals, useRetryRenewal, useCancelRenewal, useExtendRenewalGracePeriod } from "@/hooks/useAdminRenewals"
 import { AdminDashboardShell } from "@/components/admin-dashboard-shell"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { RefreshCw, XCircle, Clock, CheckCircle, AlertTriangle } from "lucide-react"
+import { RefreshCw, XCircle, Clock, CheckCircle, AlertTriangle, Loader2 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { format } from "date-fns"
 import Swal from "sweetalert2"
 
 export default function RenewalsPage() {
-  const { 
-    renewalJobs, 
-    renewalJobsLoading, 
-    fetchRenewalJobs, 
-    retryRenewalJob, 
-    cancelRenewalJob,
-    extendRenewalGracePeriod
-  } = useAdmin()
-
-  useEffect(() => {
-    fetchRenewalJobs()
-  }, [])
+  const { data: renewalJobs = [], isLoading: renewalJobsLoading, refetch } = useAdminRenewals()
+  const retryMutation = useRetryRenewal()
+  const cancelMutation = useCancelRenewal()
+  const extendGraceMutation = useExtendRenewalGracePeriod()
 
   const handleRetry = async (id: number) => {
     try {
-      await retryRenewalJob(id)
+      await retryMutation.mutateAsync(id)
       Swal.fire("Retried", "Renewal job has been queued for retry", "success")
     } catch (error) {
       Swal.fire("Error", "Failed to retry renewal job", "error")
@@ -35,7 +26,7 @@ export default function RenewalsPage() {
 
   const handleCancel = async (id: number) => {
     try {
-      await cancelRenewalJob(id)
+      await cancelMutation.mutateAsync(id)
       Swal.fire("Cancelled", "Renewal job has been cancelled", "success")
     } catch (error) {
       Swal.fire("Error", "Failed to cancel renewal job", "error")
@@ -66,10 +57,10 @@ export default function RenewalsPage() {
       })
 
       try {
-        await extendRenewalGracePeriod(subscriptionId, parseInt(days), note || undefined)
+        await extendGraceMutation.mutateAsync({ id: subscriptionId, days: parseInt(days), note: note || undefined })
         Swal.fire("Success", `Grace period extended by ${days} days.`, "success")
       } catch (err: unknown) {
-        const message = err instanceof Error ? err.message : String(err ?? "Failed to extend grace period")
+        const message = err instanceof Error ? err.message : "Failed to extend grace period"
         Swal.fire("Error", message, "error")
       }
     }
@@ -98,7 +89,7 @@ export default function RenewalsPage() {
                 <CardTitle>Subscription Renewals</CardTitle>
                 <CardDescription>Manage automated subscription renewal attempts</CardDescription>
               </div>
-              <Button onClick={() => fetchRenewalJobs()} disabled={renewalJobsLoading}>
+              <Button onClick={() => refetch()} disabled={renewalJobsLoading}>
                 <RefreshCw className={`w-4 h-4 mr-2 ${renewalJobsLoading ? 'animate-spin' : ''}`} />
                 Refresh
               </Button>
@@ -120,14 +111,19 @@ export default function RenewalsPage() {
                 <tbody>
                   {renewalJobsLoading && renewalJobs.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="p-8 text-center text-gray-500">Loading renewals...</td>
+                      <td colSpan={6} className="p-8 text-center text-gray-500">
+                        <div className="flex items-center justify-center">
+                          <Loader2 className="h-6 w-6 animate-spin text-primary mr-2" />
+                          Loading renewals...
+                        </div>
+                      </td>
                     </tr>
                   ) : renewalJobs.length === 0 ? (
                     <tr>
                       <td colSpan={6} className="p-8 text-center text-gray-500">No renewal jobs found</td>
                     </tr>
                   ) : (
-                    renewalJobs.map((job) => (
+                    renewalJobs.map((job: any) => (
                       <tr key={job.id} className="border-b hover:bg-gray-50 dark:hover:bg-gray-900">
                         <td className="p-4">
                           <div className="font-medium">{job.user?.name || `User #${job.user_id}`}</div>
@@ -149,17 +145,36 @@ export default function RenewalsPage() {
                         <td className="p-4 text-right space-x-2">
                           {job.status === 'failed' && (
                             <>
-                                <Button size="sm" variant="outline" onClick={() => handleRetry(job.id)}>
-                                  <RefreshCw className="w-3 h-3 mr-1" /> Retry
+                                <Button 
+                                  size="sm" 
+                                  variant="outline" 
+                                  onClick={() => handleRetry(job.id)}
+                                  disabled={retryMutation.isPending}
+                                >
+                                  {retryMutation.isPending && retryMutation.variables === job.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3 mr-1" />} 
+                                  Retry
                                 </Button>
-                                <Button size="sm" variant="outline" onClick={() => handleExtendGracePeriod(job.subscription_id)} className="text-blue-600 hover:text-blue-700">
-                                   <Clock className="w-3 h-3 mr-1" /> Extend
+                                <Button 
+                                  size="sm" 
+                                  variant="outline" 
+                                  onClick={() => handleExtendGracePeriod(job.subscription_id)} 
+                                  className="text-blue-600 hover:text-blue-700"
+                                  disabled={extendGraceMutation.isPending}
+                                >
+                                   {extendGraceMutation.isPending && (extendGraceMutation.variables as any)?.id === job.subscription_id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Clock className="w-3 h-3 mr-1" />}
+                                   Extend
                                 </Button>
                             </>
                           )}
                           {['pending', 'failed'].includes(job.status) && (
-                            <Button size="sm" variant="ghost" className="text-red-500 hover:text-red-600" onClick={() => handleCancel(job.id)}>
-                              <XCircle className="w-3 h-3" />
+                            <Button 
+                              size="sm" 
+                              variant="ghost" 
+                              className="text-red-500 hover:text-red-600" 
+                              onClick={() => handleCancel(job.id)}
+                              disabled={cancelMutation.isPending}
+                            >
+                              {cancelMutation.isPending && cancelMutation.variables === job.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <XCircle className="w-3 h-3" />}
                             </Button>
                           )}
                         </td>
