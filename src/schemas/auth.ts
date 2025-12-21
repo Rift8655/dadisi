@@ -30,7 +30,12 @@ export const UserSchema = AuthUserSchema;
 export const LoginResponseSchema = z.object({
   user: UserSchema,
   access_token: z.string(),
+  expires_at: z.string().optional().nullable(),
   email_verified: z.boolean().optional(),
+  // 2FA fields - when requires2fa is true, user and access_token may be partial
+  requires2fa: z.boolean().optional(),
+  email: z.string().optional(),
+  needsVerification: z.boolean().optional(),
 })
 
 export const SignupResponseSchema = z.object({

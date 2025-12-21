@@ -63,10 +63,8 @@ export default function ScanTicketsPage({ params }: ScanPageProps) {
       const eventData = await eventsApi.get(slug)
       setEvent(eventData)
       
-      // TODO: Add getAttendanceStats method to eventsApi when backend endpoint is ready
-      // const stats = await eventsApi.getAttendanceStats(eventData.id)
-      // setAttendanceStats(stats as any)
-      setAttendanceStats({ total: 0, checked_in: 0, pending: 0 })
+      const stats = await eventsApi.getAttendanceStats(eventData.id)
+      setAttendanceStats(stats)
     } catch (error) {
       console.error("Failed to load event:", error)
     } finally {
@@ -81,10 +79,29 @@ export default function ScanTicketsPage({ params }: ScanPageProps) {
     setLastScan(null)
     
     try {
-      // TODO: Add scanTicket method to eventsApi when backend endpoint is ready
-      // const result = await eventsApi.scanTicket(event.id, token.trim())
-      // For now, throw error since method doesn't exist
-      throw new Error("Ticket scanning is not yet implemented")
+      const result = await eventsApi.scanTicket(event.id, token.trim())
+      setLastScan({
+        success: true,
+        message: result.message || "Check-in successful!",
+        registration: {
+          id: result.registration.id,
+          user_name: result.registration.user?.username || result.registration.user?.email || "Unknown",
+          ticket_name: result.registration.ticket?.name || "Attendee",
+          checked_in_at: result.registration.check_in_at
+        }
+      })
+      
+      setScanCount(prev => prev + 1)
+      setManualToken("")
+      
+      // Update stats
+      const stats = await eventsApi.getAttendanceStats(event.id)
+      setAttendanceStats(stats)
+
+      // Play success vibration
+      if (navigator.vibrate) {
+        navigator.vibrate(100)
+      }
     } catch (error: any) {
       setLastScan({
         success: false,

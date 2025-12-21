@@ -73,7 +73,7 @@ export function EventForm({ initialData, isEdit = false }: EventFormProps) {
         name: t.name,
         description: t.description || "",
         price: Number(t.price),
-        quantity: t.quantity,
+        quantity: t.quantity || (t as any).capacity || 0,
         is_active: t.is_active,
       })) || [],
       speakers: initialData?.speakers?.map((s) => ({

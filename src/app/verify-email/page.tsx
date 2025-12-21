@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useAuth } from "@/store/auth"
+import { authApi } from "@/lib/api"
 import { showError, showSuccess } from "@/lib/sweetalert"
 import { Button } from "@/components/ui/button"
 import {
@@ -18,14 +19,14 @@ import { Label } from "@/components/ui/label"
 function VerifyEmailContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const { setToken } = useAuth()
   const [isLoading, setIsLoading] = useState(true)
   const [isVerifying, setIsVerifying] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [manualCode, setManualCode] = useState("")
-  const verifyEmail = useAuth((s) => s.verifyEmail)
 
   useEffect(() => {
-    const verifyEmail = async () => {
+    const handleVerifyEmail = async () => {
       const code = searchParams.get("code")
 
       if (!code) {
@@ -37,7 +38,10 @@ function VerifyEmailContent() {
       setIsVerifying(true)
 
       try {
-        await verifyEmail(code as string)
+        const response = await authApi.verifyEmail({ code })
+        if (response.token) {
+          await setToken(response.token)
+        }
 
         await showSuccess(
           "Email Verified!",
@@ -55,7 +59,7 @@ function VerifyEmailContent() {
       }
     }
 
-    verifyEmail()
+    handleVerifyEmail()
   }, [searchParams, router, setToken])
 
   const handleManualVerify = async (e: React.FormEvent) => {
@@ -64,7 +68,10 @@ function VerifyEmailContent() {
     setError(null)
 
     try {
-      await verifyEmail(manualCode)
+      const response = await authApi.verifyEmail({ code: manualCode })
+      if (response.token) {
+        await setToken(response.token)
+      }
 
       await showSuccess(
         "Email Verified!",

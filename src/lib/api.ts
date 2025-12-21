@@ -524,6 +524,12 @@ export const eventsApi = {
     api.post<any>(`/api/events/${eventId}/register`, data),
 
   rsvp: (id: number, data: unknown) => api.post(`/api/events/${id}/rsvp`, data),
+
+  getAttendanceStats: (eventId: number) => 
+    api.get<any>(`/api/events/${eventId}/attendance-stats`),
+
+  scanTicket: (eventId: number, token: string) => 
+    api.post<any>(`/api/events/${eventId}/scan`, { token }),
 }
 
 // Donations API

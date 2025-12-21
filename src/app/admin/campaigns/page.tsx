@@ -38,6 +38,7 @@ import {
 } from "lucide-react"
 import type { DonationCampaign } from "@/schemas/campaign"
 import Swal from "sweetalert2"
+import { AdminDashboardShell } from "@/components/admin-dashboard-shell"
 
 interface CampaignListResponse {
   success: boolean
@@ -161,171 +162,173 @@ export default function AdminCampaignsPage() {
   }
 
   return (
-    <div className="container py-8 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Donation Campaigns</h1>
-          <p className="text-muted-foreground">
-            Manage fundraising campaigns for the organization.
-          </p>
+    <AdminDashboardShell title="Donation Campaigns">
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-xl font-semibold">Manage Campaigns</h2>
+            <p className="text-sm text-muted-foreground">
+              Create and manage fundraising campaigns for the organization.
+            </p>
+          </div>
+          <Button asChild>
+            <Link href="/admin/campaigns/new">
+              <Plus className="h-4 w-4 mr-2" />
+              New Campaign
+            </Link>
+          </Button>
         </div>
-        <Button asChild>
-          <Link href="/admin/campaigns/new">
-            <Plus className="h-4 w-4 mr-2" />
-            New Campaign
-          </Link>
-        </Button>
-      </div>
 
-      {/* Search */}
-      <Card>
-        <CardContent className="pt-6">
-          <form onSubmit={handleSearch} className="flex gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search campaigns..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-            <Button type="submit">Search</Button>
-          </form>
-        </CardContent>
-      </Card>
+        {/* Search */}
+        <Card>
+          <CardContent className="pt-6">
+            <form onSubmit={handleSearch} className="flex gap-4">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search campaigns..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              <Button type="submit">Search</Button>
+            </form>
+          </CardContent>
+        </Card>
 
-      {/* Table */}
-      <Card>
-        <CardContent className="p-0">
-          {loading ? (
-            <div className="p-6 space-y-4">
-              {[...Array(5)].map((_, i) => (
-                <Skeleton key={i} className="h-12 w-full" />
-              ))}
-            </div>
-          ) : campaigns.length === 0 ? (
-            <div className="p-12 text-center">
-              <p className="text-muted-foreground">No campaigns found.</p>
-              <Button asChild className="mt-4">
-                <Link href="/admin/campaigns/new">Create Your First Campaign</Link>
-              </Button>
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Campaign</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Goal</TableHead>
-                  <TableHead className="text-right">Raised</TableHead>
-                  <TableHead className="text-right">Progress</TableHead>
-                  <TableHead className="text-right">Donors</TableHead>
-                  <TableHead className="w-12"></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {campaigns.map((campaign) => (
-                  <TableRow key={campaign.id}>
-                    <TableCell>
-                      <div>
-                        <div className="font-medium">{campaign.title}</div>
-                        <div className="text-sm text-muted-foreground truncate max-w-xs">
-                          {campaign.short_description}
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>{getStatusBadge(campaign.status)}</TableCell>
-                    <TableCell className="text-right">
-                      {formatCurrency(campaign.goal_amount, campaign.currency)}
-                    </TableCell>
-                    <TableCell className="text-right font-medium">
-                      {formatCurrency(campaign.current_amount, campaign.currency)}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {campaign.goal_amount ? `${campaign.progress_percentage}%` : "—"}
-                    </TableCell>
-                    <TableCell className="text-right">{campaign.donor_count}</TableCell>
-                    <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem asChild>
-                            <Link href={`/campaigns/${campaign.slug}`}>
-                              <Eye className="h-4 w-4 mr-2" />
-                              View Public
-                            </Link>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem asChild>
-                            <Link href={`/admin/campaigns/${campaign.slug}/edit`}>
-                              <Edit className="h-4 w-4 mr-2" />
-                              Edit
-                            </Link>
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          {campaign.status === "draft" && (
-                            <DropdownMenuItem onClick={() => handlePublish(campaign.slug)}>
-                              <Globe className="h-4 w-4 mr-2" />
-                              Publish
-                            </DropdownMenuItem>
-                          )}
-                          {campaign.status === "active" && (
-                            <>
-                              <DropdownMenuItem onClick={() => handleUnpublish(campaign.slug)}>
-                                <Lock className="h-4 w-4 mr-2" />
-                                Unpublish
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleComplete(campaign.slug)}>
-                                <CheckCircle className="h-4 w-4 mr-2" />
-                                Mark Complete
-                              </DropdownMenuItem>
-                            </>
-                          )}
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            className="text-destructive"
-                            onClick={() => handleDelete(campaign.slug)}
-                          >
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
+        {/* Table */}
+        <Card>
+          <CardContent className="p-0">
+            {loading ? (
+              <div className="p-6 space-y-4">
+                {[...Array(5)].map((_, i) => (
+                  <Skeleton key={i} className="h-12 w-full" />
                 ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+              </div>
+            ) : campaigns.length === 0 ? (
+              <div className="p-12 text-center">
+                <p className="text-muted-foreground">No campaigns found.</p>
+                <Button asChild className="mt-4">
+                  <Link href="/admin/campaigns/new">Create Your First Campaign</Link>
+                </Button>
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Campaign</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Goal</TableHead>
+                    <TableHead className="text-right">Raised</TableHead>
+                    <TableHead className="text-right">Progress</TableHead>
+                    <TableHead className="text-right">Donors</TableHead>
+                    <TableHead className="w-12"></TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {campaigns.map((campaign) => (
+                    <TableRow key={campaign.id}>
+                      <TableCell>
+                        <div>
+                          <div className="font-medium">{campaign.title}</div>
+                          <div className="text-sm text-muted-foreground truncate max-w-xs">
+                            {campaign.short_description}
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>{getStatusBadge(campaign.status)}</TableCell>
+                      <TableCell className="text-right">
+                        {formatCurrency(campaign.goal_amount, campaign.currency)}
+                      </TableCell>
+                      <TableCell className="text-right font-medium">
+                        {formatCurrency(campaign.current_amount, campaign.currency)}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {campaign.goal_amount ? `${campaign.progress_percentage}%` : "—"}
+                      </TableCell>
+                      <TableCell className="text-right">{campaign.donor_count}</TableCell>
+                      <TableCell>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem asChild>
+                              <Link href={`/campaigns/${campaign.slug}`}>
+                                <Eye className="h-4 w-4 mr-2" />
+                                View Public
+                              </Link>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem asChild>
+                              <Link href={`/admin/campaigns/${campaign.slug}/edit`}>
+                                <Edit className="h-4 w-4 mr-2" />
+                                Edit
+                              </Link>
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            {campaign.status === "draft" && (
+                              <DropdownMenuItem onClick={() => handlePublish(campaign.slug)}>
+                                <Globe className="h-4 w-4 mr-2" />
+                                Publish
+                              </DropdownMenuItem>
+                            )}
+                            {campaign.status === "active" && (
+                              <>
+                                <DropdownMenuItem onClick={() => handleUnpublish(campaign.slug)}>
+                                  <Lock className="h-4 w-4 mr-2" />
+                                  Unpublish
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleComplete(campaign.slug)}>
+                                  <CheckCircle className="h-4 w-4 mr-2" />
+                                  Mark Complete
+                                </DropdownMenuItem>
+                              </>
+                            )}
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              className="text-destructive"
+                              onClick={() => handleDelete(campaign.slug)}
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </CardContent>
+        </Card>
 
-      {/* Pagination */}
-      {lastPage > 1 && (
-        <div className="flex items-center justify-center gap-4">
-          <Button
-            variant="outline"
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
-            disabled={page <= 1}
-          >
-            Previous
-          </Button>
-          <span className="text-sm text-muted-foreground">
-            Page {page} of {lastPage} ({total} campaigns)
-          </span>
-          <Button
-            variant="outline"
-            onClick={() => setPage((p) => Math.min(lastPage, p + 1))}
-            disabled={page >= lastPage}
-          >
-            Next
-          </Button>
-        </div>
-      )}
-    </div>
+        {/* Pagination */}
+        {lastPage > 1 && (
+          <div className="flex items-center justify-center gap-4">
+            <Button
+              variant="outline"
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page <= 1}
+            >
+              Previous
+            </Button>
+            <span className="text-sm text-muted-foreground">
+              Page {page} of {lastPage} ({total} campaigns)
+            </span>
+            <Button
+              variant="outline"
+              onClick={() => setPage((p) => Math.min(lastPage, p + 1))}
+              disabled={page >= lastPage}
+            >
+              Next
+            </Button>
+          </div>
+        )}
+      </div>
+    </AdminDashboardShell>
   )
 }

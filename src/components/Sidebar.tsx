@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation"
 import { useAuth } from "@/store/auth"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
+import { ModeToggle } from "@/components/mode-toggle"
 import { ChevronLeft, ChevronRight, ChevronDown, Menu, X } from "lucide-react"
 
 // Icon mapping – matches keys used in the JSON link files
@@ -23,6 +24,7 @@ import {
   Image as ImageIcon,
   Folder,
   Tag,
+  Target,
 } from "lucide-react"
 
 const iconMap: Record<string, any> = {
@@ -39,6 +41,7 @@ const iconMap: Record<string, any> = {
   image: ImageIcon,
   folder: Folder,
   tag: Tag,
+  target: Target,
 }
 
 interface LinkItem {
@@ -288,6 +291,14 @@ export default function Sidebar({ role }: SidebarProps) {
         <div className="flex-1 overflow-y-auto p-4">
           {renderLinks()}
         </div>
+
+        {/* Footer with Theme Toggle */}
+        <div className="p-4 border-t border-sidebar-border flex items-center justify-between">
+          {!collapsed && <span className="text-xs text-muted-foreground">Theme</span>}
+          <div className={cn(collapsed && "mx-auto")}>
+            <ModeToggle />
+          </div>
+        </div>
       </aside>
 
       {/* Mobile overlay - slides in from left */}
@@ -321,6 +332,10 @@ export default function Sidebar({ role }: SidebarProps) {
               </Button>
             </div>
             {renderLinks(() => setOpen(false))}
+            <div className="mt-auto pt-4 border-t border-sidebar-border flex items-center justify-between">
+              <span className="text-sm font-medium">Theme</span>
+              <ModeToggle />
+            </div>
           </div>
         </div>
       )}

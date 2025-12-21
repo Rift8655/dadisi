@@ -22,14 +22,28 @@ export function useEvent(id: number | string) {
 }
 
 
+export type RSVPDetails = { name: string; email: string; guests: number; note?: string }
+
+export type RsvpInput =
+  | { eventId: number; ticketId: number }
+  | { id: number; payload: any }
+ 
 export function useRsvp() {
   const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: ({ eventId, ticketId }: { eventId: number; ticketId: number }) =>
-      eventsApi.register(eventId, { ticket_id: ticketId }),
-    onSuccess: (_, { eventId }) => {
-      queryClient.invalidateQueries({ queryKey: ["event", eventId] })
+  return useMutation<any, any, RsvpInput>({
+    mutationFn: (data: RsvpInput) => {
+      if ("eventId" in data) {
+        return eventsApi.register(data.eventId, { ticket_id: data.ticketId })
+      } else {
+        return eventsApi.rsvp(data.id, data.payload)
+      }
+    },
+    onSuccess: (_, data) => {
+      const id = "eventId" in data ? data.eventId : data.id
+      queryClient.invalidateQueries({ queryKey: ["event", id] })
       queryClient.invalidateQueries({ queryKey: ["events"] })
+      queryClient.invalidateQueries({ queryKey: ["user-events"] })
+      queryClient.invalidateQueries({ queryKey: ["organizer-events"] })
     },
   })
 }

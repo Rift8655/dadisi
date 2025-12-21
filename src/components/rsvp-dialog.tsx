@@ -1,9 +1,8 @@
 "use client"
 
-import { useEffect, useId, useState } from "react"
-import type { RSVPDetails } from "@/store/useRsvpStore"
+import { useId, useState, useEffect } from "react"
+import type { RSVPDetails } from "@/hooks/useEvents"
 
-import { showInfo } from "@/lib/sweetalert"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -60,8 +59,6 @@ export function RsvpDialog({
             onSubmit={(e) => {
               e.preventDefault()
               onSubmit({ name, email, guests, note: note || undefined })
-              showInfo("Feature unavailable: system under maintenance.")
-              onOpenChange(false)
             }}
           >
             <div>

@@ -142,6 +142,7 @@ export interface Ticket {
   price: number
   currency: string
   capacity: number | null
+  quantity?: number | null
   is_active: boolean
   is_sold_out: boolean
   available_until: string | null

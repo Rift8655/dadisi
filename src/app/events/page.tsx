@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo } from "react"
 import { useRouter } from "next/navigation"
-import { isSameDay } from "date-fns"
+import { isSameDay, format } from "date-fns"
 import { Search, Calendar, MapPin, Filter, Grid, List, Loader2 } from "lucide-react"
 import { EventCalendar, type CalendarEvent, type EventCategory } from "@/components/EventCalendar"
 import { EventCard } from "@/components/EventCard"

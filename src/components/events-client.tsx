@@ -2,12 +2,11 @@
 
 import { useState } from "react"
 import Image from "next/image"
-import { useEvents, useRsvp } from "@/hooks/useEvents"
+import { Calendar, Loader2 } from "lucide-react"
+import { useEvents, useRsvp, RSVPDetails } from "@/hooks/useEvents"
 import type { Event } from "@/schemas/event"
-import { RSVPDetails } from "@/store/useRsvpStore"
 
 import { formatDate } from "@/lib/utils"
-// import { showInfo } from "@/lib/sweetalert"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -19,21 +18,24 @@ import {
 import RsvpDialog from "@/components/rsvp-dialog"
 import Swal from "sweetalert2"
 
-function getStatus(start: string, end?: string | null) {
-  const now = new Date()
-  const s = new Date(start)
-  const e = end ? new Date(end) : new Date(s.getTime() + 2 * 60 * 60 * 1000) // default 2h
-  if (now < s) return "Upcoming" as const
-  if (now >= s && now <= e) return "Ongoing" as const
-  return "Past" as const
-}
-
 export function EventsClient() {
-  const { data: events = [], isLoading } = useEvents()
+  const { data: response, isLoading } = useEvents()
+  const events = response?.data || []
   const rsvpMut = useRsvp()
   
   const [open, setOpen] = useState(false)
   const [activeId, setActiveId] = useState<number | null>(null)
+
+  const getStatus = (start: string, end?: string | null) => {
+    const now = new Date()
+    const s = new Date(start)
+    const e = end ? new Date(end) : null
+
+    if (now < s) return "Upcoming"
+    if (e && now > e) return "Past"
+    if (!e && now > new Date(s.getTime() + 3 * 3600 * 1000)) return "Past"
+    return "Ongoing"
+  }
 
   const onSubmit = async (details: RSVPDetails) => {
     if (activeId == null) return
@@ -60,7 +62,11 @@ export function EventsClient() {
   }
 
   if (isLoading) {
-    return <div>Loading events...</div>
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    )
   }
 
   return (
@@ -79,7 +85,7 @@ export function EventsClient() {
                 </span>
               </CardTitle>
               <div className="flex items-center justify-between">
-                <CardDescription>{e.location || "Virtual"}</CardDescription>
+                <CardDescription>{e.venue || "Virtual"}</CardDescription>
                 <span
                   className={
                     status === "Ongoing"
@@ -94,10 +100,10 @@ export function EventsClient() {
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
-              {e.cover_image && (
+              {e.image_url && (
                 <div className="relative aspect-video w-full">
                   <Image
-                    src={e.cover_image}
+                    src={e.image_url}
                     alt={e.title}
                     fill
                     unoptimized
@@ -109,18 +115,26 @@ export function EventsClient() {
               {!e.is_attending ? (
                 <Button
                   disabled={isPast || rsvpMut.isPending}
+                  className="w-full"
                   onClick={() => {
                     setActiveId(e.id)
                     setOpen(true)
                   }}
                 >
-                  {isPast ? "Closed" : "RSVP"}
+                  {rsvpMut.isPending && activeId === e.id ? (
+                    <span className="flex items-center gap-2">
+                      <Loader2 className="h-4 w-4 animate-spin" /> Processing...
+                    </span>
+                  ) : isPast ? (
+                    "Closed"
+                  ) : (
+                    "RSVP Now"
+                  )}
                 </Button>
               ) : (
-                <div className="flex items-center gap-2">
-                  <Button variant="secondary" disabled>RSVP’d</Button>
-                  {/* Cancel logic could be added here if API supports it */}
-                </div>
+                <Button variant="secondary" className="w-full" disabled>
+                  RSVP’d
+                </Button>
               )}
             </CardContent>
           </Card>
@@ -128,7 +142,7 @@ export function EventsClient() {
       })}
       {!isLoading && events.length === 0 && (
         <div className="col-span-full py-10 text-center text-muted-foreground">
-           No upcoming events.
+           No upcoming events found.
         </div>
       )}
     </div>

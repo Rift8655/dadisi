@@ -9,6 +9,7 @@ import { Footer } from "@/components/footer"
 import { Navbar } from "@/components/navbar"
 import { ThemeProvider } from "@/components/theme-provider"
 import { QueryProvider } from "@/components/QueryProvider"
+import { SessionRefresher } from "@/providers/session-refresher"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -83,6 +84,7 @@ export default function RootLayout({ children }: RootLayoutProps) {
           disableTransitionOnChange
         >
           <QueryProvider>
+            <SessionRefresher />
             <Navbar />
             <main className="min-h-[calc(100vh-7rem)]">{children}</main>
             <Footer />

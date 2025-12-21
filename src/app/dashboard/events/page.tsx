@@ -33,8 +33,8 @@ export default function EventsPage() {
   const { data: events = [], isLoading: loading } = useQuery({
     queryKey: ["user-events"],
     queryFn: async () => {
-      const eventsData = await eventsApi.list({ page: 1 })
-      const eventsList = Array.isArray(eventsData) ? eventsData : []
+      const response = await eventsApi.list({ page: 1 })
+      const eventsList = response?.data || []
       
       const now = new Date()
       return eventsList.map((e: any) => {

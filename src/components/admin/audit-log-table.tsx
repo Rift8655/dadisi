@@ -50,13 +50,13 @@ export function AuditLogTable({
                   <tr className="border-b hover:bg-gray-50 dark:hover:bg-gray-900">
                     <td className="px-4 py-2">
                       <div className="font-medium">
-                        {log.user?.name || "Unknown"}
+                        {log.user?.username || "Unknown"}
                       </div>
                       <div className="text-xs text-gray-500">
                         {log.user?.email}
                       </div>
                     </td>
-                    <td className="px-4 py-2 font-mono text-xs">{log.model}</td>
+                    <td className="px-4 py-2 font-mono text-xs">{log.model_type}</td>
                     <td className="px-4 py-2">
                       <span className="inline-block rounded bg-blue-100 px-2 py-1 text-xs font-medium text-blue-800 dark:bg-blue-900 dark:text-blue-100">
                         {log.action}
@@ -87,7 +87,7 @@ export function AuditLogTable({
                           <div>
                             <h4 className="mb-2 font-semibold">Changes:</h4>
                             <pre className="max-h-48 overflow-auto rounded border bg-white p-2 text-xs dark:bg-gray-950">
-                              {JSON.stringify(log.changes, null, 2)}
+                              {JSON.stringify({ old: log.old_values, new: log.new_values }, null, 2)}
                             </pre>
                           </div>
                           {log.user_agent && (

@@ -21,7 +21,7 @@ export default function ForgotPasswordPage() {
     
     setLoading(true)
     try {
-      await authApi.forgotPassword(email)
+      await authApi.sendResetEmail({ email })
       setSuccess(true)
       Swal.fire("Success", "Password reset link sent to your email.", "success")
     } catch (error: unknown) {

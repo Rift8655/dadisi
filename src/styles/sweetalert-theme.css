@@ -161,6 +161,7 @@
 /* Backdrop styling */
 .swal2-container {
   backdrop-filter: blur(4px);
+  z-index: 99999 !important;
 }
 
 /* Responsive adjustments */

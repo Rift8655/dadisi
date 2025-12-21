@@ -112,7 +112,7 @@ export function PlanFormDialog({
         
         const nameVal = (() => {
           const n = (initialData as any)?.name
-          if (typeof n === 'object' && n !== null) return (n as Record<string, unknown>)?.en ?? ""
+          if (typeof n === 'object' && n !== null) return String((n as Record<string, unknown>)?.en ?? "")
           if (typeof n === 'string') return n
           return ""
         })()
@@ -121,7 +121,7 @@ export function PlanFormDialog({
         let descriptionVal = ""
         const desc = (initialData as any)?.description
         if (typeof desc === 'object' && desc !== null) {
-          descriptionVal = (desc as Record<string, unknown>)?.en ?? ""
+          descriptionVal = String((desc as Record<string, unknown>)?.en ?? "")
         } else if (typeof desc === 'string') {
           descriptionVal = desc
         }
@@ -356,8 +356,8 @@ export function PlanFormDialog({
             <div className="border-t pt-4">
               <h3 className="mb-4 text-sm font-medium">Promotions (Optional)</h3>
               <div className="grid grid-cols-2 gap-4">
-                 <CardSection title="Monthly Discount" form={form} path="monthly_promotion" />
-                 <CardSection title="Yearly Discount" form={form} path="yearly_promotion" />
+                 <MonthlyPromotionSection form={form} />
+                 <YearlyPromotionSection form={form} />
               </div>
             </div>
 
@@ -377,34 +377,34 @@ export function PlanFormDialog({
   )
 }
 
-function CardSection({ title, form, path }: { title: string, form: UseFormReturn<AdminPlanFormValues>, path: string }) {
-  const enabled = !!form.watch(path)
+function MonthlyPromotionSection({ form }: { form: UseFormReturn<AdminPlanFormValues> }) {
+  const enabled = !!form.watch("monthly_promotion")
 
   const toggle = (checked: boolean) => {
     if (checked) {
-      form.setValue(path, { discount_percent: 0, expires_at: null })
+      form.setValue("monthly_promotion", { discount_percent: 0, expires_at: null })
     } else {
-      form.setValue(path, null)
+      form.setValue("monthly_promotion", null)
     }
   }
 
   return (
     <div className="rounded-md border p-4 space-y-4">
        <div className="flex items-center space-x-2">
-          <Checkbox checked={enabled} onCheckedChange={toggle} id={`toggle-${path}`} />
-          <Label htmlFor={`toggle-${path}`}>{title}</Label>
+          <Checkbox checked={enabled} onCheckedChange={toggle} id="toggle-monthly" />
+          <Label htmlFor="toggle-monthly">Monthly Discount</Label>
        </div>
        
        {enabled && (
          <div className="space-y-3 pl-6">
             <FormField
               control={form.control}
-              name={`${path}.discount_percent`}
+              name="monthly_promotion.discount_percent"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel className="text-xs">Discount %</FormLabel>
                   <FormControl>
-                    <Input type="number" min="0" max="100" {...field} />
+                    <Input type="number" min="0" max="100" {...field} value={field.value ?? 0} onChange={e => field.onChange(Number(e.target.value))} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -412,12 +412,64 @@ function CardSection({ title, form, path }: { title: string, form: UseFormReturn
             />
             <FormField
               control={form.control}
-              name={`${path}.expires_at`}
+              name="monthly_promotion.expires_at"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel className="text-xs">Expires At (ISO Date)</FormLabel>
                   <FormControl>
-                    <Input type="datetime-local" {...field} value={field.value ? field.value.slice(0, 16) : ""} />
+                    <Input type="datetime-local" {...field} value={field.value ? String(field.value).slice(0, 16) : ""} onChange={e => field.onChange(e.target.value || null)} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+         </div>
+       )}
+    </div>
+  )
+}
+
+function YearlyPromotionSection({ form }: { form: UseFormReturn<AdminPlanFormValues> }) {
+  const enabled = !!form.watch("yearly_promotion")
+
+  const toggle = (checked: boolean) => {
+    if (checked) {
+      form.setValue("yearly_promotion", { discount_percent: 0, expires_at: null })
+    } else {
+      form.setValue("yearly_promotion", null)
+    }
+  }
+
+  return (
+    <div className="rounded-md border p-4 space-y-4">
+       <div className="flex items-center space-x-2">
+          <Checkbox checked={enabled} onCheckedChange={toggle} id="toggle-yearly" />
+          <Label htmlFor="toggle-yearly">Yearly Discount</Label>
+       </div>
+       
+       {enabled && (
+         <div className="space-y-3 pl-6">
+            <FormField
+              control={form.control}
+              name="yearly_promotion.discount_percent"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-xs">Discount %</FormLabel>
+                  <FormControl>
+                    <Input type="number" min="0" max="100" {...field} value={field.value ?? 0} onChange={e => field.onChange(Number(e.target.value))} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="yearly_promotion.expires_at"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-xs">Expires At (ISO Date)</FormLabel>
+                  <FormControl>
+                    <Input type="datetime-local" {...field} value={field.value ? String(field.value).slice(0, 16) : ""} onChange={e => field.onChange(e.target.value || null)} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

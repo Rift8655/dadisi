@@ -4,6 +4,7 @@ import { useState } from "react"
 import { createPortal } from "react-dom"
 
 import { useAuth } from "@/store/auth"
+import { authApi } from "@/lib/api"
 import { showError, showSuccess } from "@/lib/sweetalert"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -23,8 +24,6 @@ export function ChangePasswordDialog({
   const [currentPassword, setCurrentPassword] = useState("")
   const [newPassword, setNewPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
-
-  const changePassword = useAuth((s) => s.changePassword)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -49,7 +48,7 @@ export function ChangePasswordDialog({
     setIsLoading(true)
 
     try {
-      await changePassword({
+      await authApi.changePassword({
         current_password: currentPassword,
         new_password: newPassword,
         new_password_confirmation: confirmPassword,

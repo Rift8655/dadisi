@@ -1,6 +1,5 @@
-import { Permission, Role, useAuth } from "@/store/auth"
-
-import { AdminUser } from "@/types/admin"
+import { useAuth } from "@/store/auth"
+import { AdminPermission, AdminRole, AdminUser } from "@/types/admin"
 
 /**
  * Check if a user has a specific role
@@ -202,11 +201,11 @@ export function canViewAuditLogs(
  */
 export function getAllPermissions(
   user: AdminUser | null | undefined
-): Permission[] {
+): AdminPermission[] {
   if (!user || !user.roles) return []
-
-  const permissionsMap = new Map<string, Permission>()
-
+ 
+  const permissionsMap = new Map<string, AdminPermission>()
+ 
   for (const role of user.roles) {
     if (role.permissions) {
       for (const perm of role.permissions) {
@@ -214,7 +213,7 @@ export function getAllPermissions(
       }
     }
   }
-
+ 
   return Array.from(permissionsMap.values())
 }
 

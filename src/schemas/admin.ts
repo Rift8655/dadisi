@@ -140,7 +140,7 @@ export const AdminCategorySchema = z.object({
   id: z.number(),
   name: z.string(),
   slug: z.string(),
-  description: z.string().nullable().optional(),
+  description: z.string().nullable().optional().default(null),
   post_count: z.number().optional(),
   created_at: z.string().optional(),
   updated_at: z.string().optional(),

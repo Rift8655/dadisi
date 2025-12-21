@@ -4,11 +4,13 @@ export const EventCategorySchema = z.object({
   id: z.number(),
   name: z.string(),
   slug: z.string(),
-  description: z.string().nullable(),
-  parent_id: z.number().nullable(),
+  description: z.string().nullable().optional(),
+  parent_id: z.number().nullable().optional(),
+  image_path: z.string().nullable().optional(),
   image_url: z.string().nullable().optional(),
-  is_active: z.boolean(),
-  sort_order: z.number(),
+  is_active: z.boolean().optional(),
+  sort_order: z.number().optional(),
+  children: z.array(z.any()).optional(),
 })
 
 export const EventTagSchema = z.object({
@@ -48,11 +50,11 @@ export const EventSchema = z.object({
   title: z.string(),
   slug: z.string(),
   description: z.string(),
-  category: EventCategorySchema.optional(),
+  category: EventCategorySchema.nullable().optional(),
   county: z.object({
     id: z.number(),
     name: z.string()
-  }).optional(),
+  }).nullable().optional(),
   venue: z.string().nullable(),
   is_online: z.boolean(),
   online_link: z.string().nullable(),
@@ -71,6 +73,7 @@ export const EventSchema = z.object({
   tickets: z.array(TicketSchema).optional(),
   speakers: z.array(SpeakerSchema).optional(),
   tags: z.array(EventTagSchema).optional(),
+  is_attending: z.boolean().optional(),
   created_at: z.string(),
   updated_at: z.string(),
 })
