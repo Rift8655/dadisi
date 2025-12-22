@@ -14,7 +14,7 @@ import {
   User,
   MapPin,
 } from "lucide-react"
-import { type ForumThread, memberProfileApi } from "@/lib/api"
+import { type ForumThread, countiesApi } from "@/lib/api"
 import { useAuth } from "@/store/auth"
 import {
   useForumCategory,
@@ -65,10 +65,10 @@ export default function CategoryPage({ params }: CategoryPageProps) {
   // Fetch category data using hook
   const { data: category, isLoading, error } = useForumCategory(slug)
 
-  // Fetch counties for the county selector in the dialog
+  // Fetch counties for the county selector in the dialog (public API)
   const { data: countiesData } = useQuery({
     queryKey: ["counties"],
-    queryFn: () => memberProfileApi.getCounties(),
+    queryFn: () => countiesApi.list(),
   })
   const counties = countiesData ?? []
 
@@ -261,7 +261,7 @@ export default function CategoryPage({ params }: CategoryPageProps) {
                     <CardContent className="py-5">
                       <div className="flex items-start gap-4">
                         <Avatar className="h-12 w-12 border-2 border-background shadow-sm">
-                          <AvatarImage src={thread.user?.profile_picture_path || ""} />
+                          <AvatarImage src={thread.user?.profile_picture_path || "/images/default-avatar.png"} />
                           <AvatarFallback className="bg-primary/5 text-primary">
                             <User className="h-6 w-6" />
                           </AvatarFallback>

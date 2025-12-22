@@ -1,10 +1,10 @@
-"use client"
-
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useAuth } from "@/store/auth"
+import { useSidebarStore } from "@/store/sidebar"
 import { cn } from "@/lib/utils"
+/* ... rest of imports ... */
 import { Button } from "@/components/ui/button"
 import { ModeToggle } from "@/components/mode-toggle"
 import { ChevronLeft, ChevronRight, ChevronDown, Menu, X } from "lucide-react"
@@ -25,6 +25,8 @@ import {
   Folder,
   Tag,
   Target,
+  MapPin,
+  FlaskConical,
 } from "lucide-react"
 
 const iconMap: Record<string, any> = {
@@ -42,6 +44,8 @@ const iconMap: Record<string, any> = {
   folder: Folder,
   tag: Tag,
   target: Target,
+  "map-pin": MapPin,
+  flask: FlaskConical,
 }
 
 interface LinkItem {
@@ -68,8 +72,7 @@ const NAVBAR_HEIGHT = 56 // h-14 = 3.5rem = 56px
 export default function Sidebar({ role }: SidebarProps) {
   const pathname = usePathname()
   const { adminAccess } = useAuth()
-  const [open, setOpen] = useState(false) // mobile overlay
-  const [collapsed, setCollapsed] = useState(false) // tablet collapse
+  const { isOpen, isCollapsed, setIsOpen, setIsCollapsed, toggleCollapsed } = useSidebarStore()
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set())
 
   // Load link data based on role
@@ -98,42 +101,25 @@ export default function Sidebar({ role }: SidebarProps) {
     }
   }, [pathname, links])
 
-  // Load collapsed state from localStorage on mount
-  useEffect(() => {
-    const saved = localStorage.getItem("sidebar-collapsed")
-    if (saved !== null) {
-      setCollapsed(saved === "true")
-    }
-  }, [])
-
-  // Save collapsed state to localStorage
-  useEffect(() => {
-    if (visible) {
-      localStorage.setItem("sidebar-collapsed", String(collapsed))
-    }
-  }, [collapsed, visible])
-
   // Collapse on tablet widths (≥576 && <768) – auto-collapse for small screens
   useEffect(() => {
     const handleResize = () => {
       const width = window.innerWidth
       if (width >= 576 && width < 768) {
-        setCollapsed(true)
+        setIsCollapsed(true)
       }
     }
     handleResize()
     window.addEventListener("resize", handleResize)
     return () => window.removeEventListener("resize", handleResize)
-  }, [])
+  }, [setIsCollapsed])
 
   // Close mobile overlay on route change
   useEffect(() => {
-    setOpen(false)
-  }, [pathname])
+    setIsOpen(false)
+  }, [pathname, setIsOpen])
 
   if (!visible) return null
-
-  const toggleCollapse = () => setCollapsed((prev) => !prev)
 
   const toggleGroup = (title: string) => {
     setExpandedGroups((prev) => {
@@ -147,9 +133,10 @@ export default function Sidebar({ role }: SidebarProps) {
     })
   }
 
-  const renderLink = (link: LinkItem, onNavigate?: () => void, isChild = false) => {
+  const renderLink = (link: LinkItem, onNavigate?: () => void, isChild = false, forceShowText = false) => {
     const Icon = iconMap[link.icon] || LayoutDashboard
     const active = link.href ? pathname === link.href : false
+    const showText = !isCollapsed || forceShowText
 
     return (
       <Link
@@ -157,15 +144,16 @@ export default function Sidebar({ role }: SidebarProps) {
         href={link.href || "#"}
         onClick={onNavigate}
         className={cn(
-          "flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors duration-300",
+          "flex items-center rounded-md text-sm transition-colors duration-300",
+          showText ? "gap-2 px-3 py-2" : "justify-center py-2",
           "hover:bg-sidebar-hover",
           active ? "bg-sidebar-hover text-sidebar-foreground font-medium" : "text-sidebar-foreground/80",
-          isChild && !collapsed && "pl-8"
+          isChild && showText && "pl-8"
         )}
       >
         <Icon className="h-4 w-4 shrink-0" />
-        {!collapsed && <span className="truncate">{link.title}</span>}
-        {!collapsed && link.badge && (
+        {showText && <span className="truncate">{link.title}</span>}
+        {showText && link.badge && (
           <span className="ml-auto text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">
             {link.badge}
           </span>
@@ -174,7 +162,7 @@ export default function Sidebar({ role }: SidebarProps) {
     )
   }
 
-  const renderGroupOrLink = (link: LinkItem, onNavigate?: () => void) => {
+  const renderGroupOrLink = (link: LinkItem, onNavigate?: () => void, forceShowText = false) => {
     // If it has children, render as collapsible group
     if (link.children && link.children.length > 0) {
       const Icon = iconMap[link.icon] || LayoutDashboard
@@ -182,6 +170,27 @@ export default function Sidebar({ role }: SidebarProps) {
       const hasActiveChild = link.children.some(
         (child) => child.href && pathname.startsWith(child.href)
       )
+      const showText = !isCollapsed || forceShowText
+
+      // When collapsed (and not in mobile overlay), link to first child instead of toggling
+      if (!showText) {
+        const firstChildHref = link.children[0].href || "#"
+        return (
+          <Link
+            key={link.title}
+            href={firstChildHref}
+            onClick={onNavigate}
+            title={link.title}
+            className={cn(
+              "flex items-center justify-center py-2 rounded-md text-sm transition-colors duration-300",
+              "hover:bg-sidebar-hover",
+              hasActiveChild ? "bg-sidebar-hover text-sidebar-foreground font-medium" : "text-sidebar-foreground/80"
+            )}
+          >
+            <Icon className="h-4 w-4 shrink-0" />
+          </Link>
+        )
+      }
 
       return (
         <div key={link.title} className="space-y-1">
@@ -189,14 +198,15 @@ export default function Sidebar({ role }: SidebarProps) {
           <button
             onClick={() => toggleGroup(link.title)}
             className={cn(
-              "w-full flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors duration-300",
+              "w-full flex items-center rounded-md text-sm transition-colors duration-300",
+              showText ? "gap-2 px-3 py-2" : "justify-center py-2",
               "hover:bg-sidebar-hover",
               hasActiveChild ? "text-sidebar-foreground font-medium" : "text-sidebar-foreground/80"
             )}
             aria-expanded={isExpanded}
           >
             <Icon className="h-4 w-4 shrink-0" />
-            {!collapsed && (
+            {showText && (
               <>
                 <span className="truncate flex-1 text-left">{link.title}</span>
                 {link.badge && (
@@ -217,11 +227,11 @@ export default function Sidebar({ role }: SidebarProps) {
           <div
             className={cn(
               "overflow-hidden transition-all duration-300",
-              isExpanded && !collapsed ? "max-h-96 opacity-100" : "max-h-0 opacity-0"
+              isExpanded && showText ? "max-h-96 opacity-100" : "max-h-0 opacity-0"
             )}
           >
             <div className="space-y-1 py-1">
-              {link.children.map((child) => renderLink(child, onNavigate, true))}
+              {link.children.map((child) => renderLink(child, onNavigate, true, forceShowText))}
             </div>
           </div>
         </div>
@@ -229,28 +239,17 @@ export default function Sidebar({ role }: SidebarProps) {
     }
 
     // Regular link without children
-    return renderLink(link, onNavigate)
+    return renderLink(link, onNavigate, false, forceShowText)
   }
 
-  const renderLinks = (onNavigate?: () => void) => (
+  const renderLinks = (onNavigate?: () => void, forceShowText = false) => (
     <nav className="space-y-1" role="navigation" aria-label={`${role} navigation`}>
-      {links.map((link) => renderGroupOrLink(link, onNavigate))}
+      {links.map((link) => renderGroupOrLink(link, onNavigate, forceShowText))}
     </nav>
   )
 
   return (
     <>
-      {/* Mobile hamburger - only visible on small screens */}
-      <button
-        className="fixed left-4 z-50 md:hidden p-2 rounded-md bg-muted hover:bg-muted/80 transition-colors duration-300"
-        style={{ top: NAVBAR_HEIGHT + 16 }}
-        aria-label="Toggle sidebar"
-        aria-expanded={open}
-        onClick={() => setOpen(true)}
-      >
-        <Menu className="h-5 w-5" />
-      </button>
-
       {/* Desktop / Tablet sidebar - fixed positioning */}
       <aside
         className={cn(
@@ -259,14 +258,14 @@ export default function Sidebar({ role }: SidebarProps) {
         style={{
           top: NAVBAR_HEIGHT,
           bottom: 0,
-          width: collapsed ? SIDEBAR_COLLAPSED_WIDTH : SIDEBAR_WIDTH,
+          width: isCollapsed ? SIDEBAR_COLLAPSED_WIDTH : SIDEBAR_WIDTH,
         }}
         data-role={role}
         aria-label={`${role === "admin" ? "Admin" : "User"} Dashboard Sidebar`}
       >
         {/* Header with collapse toggle */}
-        <div className="flex items-center justify-between p-4 border-b border-sidebar-border">
-          {!collapsed && (
+        <div className={cn("flex items-center border-b border-sidebar-border", isCollapsed ? "justify-center p-2" : "justify-between p-4")}>
+          {!isCollapsed && (
             <h3 className="text-sm font-semibold truncate">
               {role === "admin" ? "Admin" : "Dashboard"}
             </h3>
@@ -274,12 +273,12 @@ export default function Sidebar({ role }: SidebarProps) {
           <Button
             variant="ghost"
             size="icon"
-            onClick={toggleCollapse}
-            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-            aria-expanded={!collapsed}
-            className={cn("h-8 w-8 shrink-0", collapsed && "mx-auto")}
+            onClick={toggleCollapsed}
+            aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+            aria-expanded={!isCollapsed}
+            className="h-8 w-8 shrink-0"
           >
-            {collapsed ? (
+            {isCollapsed ? (
               <ChevronRight className="h-4 w-4" />
             ) : (
               <ChevronLeft className="h-4 w-4" />
@@ -288,26 +287,26 @@ export default function Sidebar({ role }: SidebarProps) {
         </div>
 
         {/* Navigation links */}
-        <div className="flex-1 overflow-y-auto p-4">
+        <div className={cn("flex-1 overflow-y-auto", isCollapsed ? "p-2" : "p-4")}>
           {renderLinks()}
         </div>
 
         {/* Footer with Theme Toggle */}
-        <div className="p-4 border-t border-sidebar-border flex items-center justify-between">
-          {!collapsed && <span className="text-xs text-muted-foreground">Theme</span>}
-          <div className={cn(collapsed && "mx-auto")}>
+        <div className={cn("border-t border-sidebar-border flex items-center", isCollapsed ? "justify-center p-2" : "justify-between p-4")}>
+          {!isCollapsed && <span className="text-xs text-muted-foreground">Theme</span>}
+          <div>
             <ModeToggle />
           </div>
         </div>
       </aside>
 
       {/* Mobile overlay - slides in from left */}
-      {open && (
+      {isOpen && (
         <div className="fixed inset-0 z-50 md:hidden">
           {/* Backdrop */}
           <div
             className="absolute inset-0 bg-black/40 transition-opacity duration-300"
-            onClick={() => setOpen(false)}
+            onClick={() => setIsOpen(false)}
             aria-hidden="true"
           />
           {/* Sidebar panel - 80% width */}
@@ -325,13 +324,13 @@ export default function Sidebar({ role }: SidebarProps) {
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={() => setOpen(false)}
+                onClick={() => setIsOpen(false)}
                 aria-label="Close menu"
               >
                 <X className="h-5 w-5" />
               </Button>
             </div>
-            {renderLinks(() => setOpen(false))}
+            {renderLinks(() => setIsOpen(false), true)}
             <div className="mt-auto pt-4 border-t border-sidebar-border flex items-center justify-between">
               <span className="text-sm font-medium">Theme</span>
               <ModeToggle />

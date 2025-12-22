@@ -350,7 +350,7 @@ export default function CountyHubPage({ params }: CountyHubPageProps) {
                   {group.members?.slice(0, 10).map((member: any) => (
                     <div key={member.id} className="flex items-center gap-3">
                       <Avatar className="h-8 w-8">
-                        <AvatarImage src={member.profile_picture ?? undefined} />
+                        <AvatarImage src={member.profile_picture ?? "/images/default-avatar.png"} />
                         <AvatarFallback>
                           {member.username?.[0]?.toUpperCase() || "U"}
                         </AvatarFallback>

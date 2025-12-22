@@ -71,13 +71,13 @@ export default function SubscriptionPage() {
       const plansList = Array.isArray(plansData) ? plansData : []
       return plansList.map((p: any) => ({
         id: p.id,
-        name: p.name,
+        name: getLocalizedValue(p.name),
         slug: p.slug,
-        description: p.description,
+        description: getLocalizedValue(p.description),
         price_monthly: p.price_monthly || p.price || 0,
         price_yearly: p.price_yearly || (p.price || 0) * 10,
         currency: p.currency || "KES",
-        features: p.features || [],
+        features: (p.features || []).map((f: any) => getLocalizedValue(typeof f === "object" ? f.name : f)),
         is_popular: p.is_popular,
       })) as Plan[]
     },
@@ -101,6 +101,14 @@ export default function SubscriptionPage() {
       currency: currency,
       minimumFractionDigits: 0,
     }).format(amount)
+  }
+
+  const getLocalizedValue = (value: any): string => {
+    if (typeof value === "string") return value
+    if (typeof value === "object" && value !== null) {
+      return value.en || Object.values(value)[0] as string || ""
+    }
+    return ""
   }
 
   const getStatusBadge = (status: string) => {
@@ -143,7 +151,7 @@ export default function SubscriptionPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle className="flex items-center gap-2">
-                    {subscription.plan.name} Plan
+                    {getLocalizedValue(subscription.plan.name)} Plan
                     {getStatusBadge(subscription.status)}
                   </CardTitle>
                   <CardDescription>
@@ -206,7 +214,7 @@ export default function SubscriptionPage() {
                           d="M5 13l4 4L19 7"
                         />
                       </svg>
-                      {feature}
+                      {getLocalizedValue(feature)}
                     </li>
                   ))}
                 </ul>

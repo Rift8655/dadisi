@@ -35,6 +35,15 @@ export interface UIPermissions {
     can_view_reports: boolean;
     can_manage_plans: boolean;
     
+    // Lab Space Booking
+    can_view_lab_spaces: boolean;
+    can_manage_lab_spaces: boolean;
+    can_view_lab_bookings: boolean;
+    can_approve_lab_bookings: boolean;
+    can_manage_lab_maintenance: boolean;
+    can_view_lab_reports: boolean;
+    can_mark_lab_attendance: boolean;
+    
     // General Admin
     can_access_admin_panel: boolean;
 }

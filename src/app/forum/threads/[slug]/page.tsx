@@ -199,7 +199,7 @@ export default function ThreadPage({ params }: ThreadPageProps) {
                   <CardTitle className="text-xl md:text-2xl">{thread.title}</CardTitle>
                   <div className="flex items-center gap-2 mt-2 text-sm text-muted-foreground">
                     <Avatar className="h-6 w-6">
-                      <AvatarImage src={thread.user?.profile_picture_path || ""} />
+                      <AvatarImage src={thread.user?.profile_picture_path || "/images/default-avatar.png"} />
                       <AvatarFallback>
                         <User className="h-3 w-3" />
                       </AvatarFallback>
@@ -274,7 +274,7 @@ export default function ThreadPage({ params }: ThreadPageProps) {
                     <CardContent className="pt-4">
                       <div className="flex items-start gap-4">
                         <Avatar className="h-10 w-10">
-                          <AvatarImage src={post.user?.profile_picture_path || ""} />
+                          <AvatarImage src={post.user?.profile_picture_path || "/images/default-avatar.png"} />
                           <AvatarFallback>
                             <User className="h-5 w-5" />
                           </AvatarFallback>
@@ -381,7 +381,7 @@ export default function ThreadPage({ params }: ThreadPageProps) {
               <CardContent className="pt-4">
                 <div className="flex items-start gap-4">
                   <Avatar className="h-10 w-10">
-                    <AvatarImage src={user?.profile_picture_url || ""} />
+                    <AvatarImage src={user?.profile_picture_url || "/images/default-avatar.png"} />
                     <AvatarFallback>
                       <User className="h-5 w-5" />
                     </AvatarFallback>

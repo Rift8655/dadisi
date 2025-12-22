@@ -35,6 +35,15 @@ export const UiPermissionsSchema = z.object({
   can_view_reports: z.boolean().default(false),
   can_manage_plans: z.boolean().default(false),
   
+  // Lab Space Booking
+  can_view_lab_spaces: z.boolean().default(false),
+  can_manage_lab_spaces: z.boolean().default(false),
+  can_view_lab_bookings: z.boolean().default(false),
+  can_approve_lab_bookings: z.boolean().default(false),
+  can_manage_lab_maintenance: z.boolean().default(false),
+  can_view_lab_reports: z.boolean().default(false),
+  can_mark_lab_attendance: z.boolean().default(false),
+  
   // General Admin
   can_access_admin_panel: z.boolean().default(false),
 });

@@ -17,6 +17,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import AuthDialog from "@/components/auth-dialog"
 import { ModeToggle } from "@/components/mode-toggle"
 
@@ -24,6 +25,7 @@ const links = [
   { href: "/", label: "Home" },
   { href: "/membership", label: "Membership" },
   { href: "/events", label: "Events" },
+  { href: "/spaces", label: "Lab Spaces" },
   { href: "/blog", label: "Blog" },
   { href: "/forum", label: "Forum" },
   { href: "/donations", label: "Donations" },
@@ -104,9 +106,14 @@ export function Navbar() {
           {user ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline">
-                  <User className="mr-2 h-4 w-4" />
-                  {user.username}
+                <Button variant="outline" className="gap-2">
+                  <Avatar className="h-6 w-6">
+                    <AvatarImage src={user.profile_picture_url || "/images/default-avatar.png"} />
+                    <AvatarFallback className="bg-primary/10 text-primary text-xs">
+                      {user.username?.slice(0, 2).toUpperCase() || "U"}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span className="hidden sm:inline">{user.username}</span>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">

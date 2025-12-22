@@ -73,7 +73,7 @@ export default function Home() {
             },
             {
               title: "Mobile Lab",
-              img: "https://images.unsplash.com/photo-1556157382-97eda2d62296?auto=format&fit=crop&w=1200&q=60",
+              img: "/images/Mobile_Lab.jpg",
             },
           ].map((f) => (
             <Card key={f.title}>

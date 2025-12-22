@@ -83,6 +83,12 @@
     "badge": null
   },
   {
+    "title": "Counties",
+    "href": "/admin/counties",
+    "icon": "map-pin",
+    "badge": null
+  },
+  {
     "title": "System Settings",
     "href": "/admin/system-settings",
     "icon": "settings",

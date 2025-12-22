@@ -54,14 +54,14 @@ export function ProfilePictureUpload() {
     if (profile?.first_name && profile?.last_name) {
         return `${profile.first_name[0]}${profile.last_name[0]}`.toUpperCase()
     }
-    return user.username.substring(0, 2).toUpperCase()
+    return user.username?.substring(0, 2).toUpperCase() ?? "U"
   }
 
   return (
     <div className="flex flex-col items-center gap-4">
       <div className="relative group">
         <Avatar className="h-32 w-32 border-4 border-background shadow-xl cursor-pointer" onClick={triggerFileInput}>
-          <AvatarImage src={preview || user?.profile_picture_url || "/placeholder-avatar.png"} alt="Profile Picture" />
+          <AvatarImage src={preview || user?.profile_picture_url || "/images/default-avatar.png"} alt="Profile Picture" />
           <AvatarFallback className="text-2xl bg-primary/10 text-primary font-bold">
             {getInitials()}
           </AvatarFallback>

@@ -292,7 +292,7 @@ export default function MessagesPage() {
                     >
                       <div className="flex items-center gap-3">
                         <Avatar className="h-10 w-10">
-                          <AvatarImage src={conv.partner.profile_picture_path ?? undefined} />
+                          <AvatarImage src={conv.partner.profile_picture_path ?? "/images/default-avatar.png"} />
                           <AvatarFallback>
                             <User className="h-5 w-5" />
                           </AvatarFallback>
@@ -339,7 +339,7 @@ export default function MessagesPage() {
                 <CardHeader className="py-3 border-b">
                   <div className="flex items-center gap-3">
                     <Avatar className="h-8 w-8">
-                      <AvatarImage src={selectedConversation?.partner.profile_picture_path ?? undefined} />
+                      <AvatarImage src={selectedConversation?.partner.profile_picture_path ?? "/images/default-avatar.png"} />
                       <AvatarFallback>
                         <User className="h-4 w-4" />
                       </AvatarFallback>

@@ -44,7 +44,7 @@ function UserAvatar({ username, isOnline, src }: { username: string; isOnline?: 
   return (
     <div className="relative">
       <Avatar className="h-10 w-10">
-        <AvatarImage src={src ?? undefined} />
+        <AvatarImage src={src ?? "/images/default-avatar.png"} />
         <AvatarFallback>
           {username.charAt(0).toUpperCase()}
         </AvatarFallback>

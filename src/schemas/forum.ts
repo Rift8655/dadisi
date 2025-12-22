@@ -22,7 +22,7 @@ export const ForumThreadSchema = z.object({
   county_id: z.number().nullable().optional(),
   title: z.string(),
   slug: z.string(),
-  content: z.string().optional(),
+  content: z.string().nullable().optional(),
   is_pinned: z.boolean(),
   is_locked: z.boolean(),
   views_count: z.number().optional(),
@@ -30,7 +30,7 @@ export const ForumThreadSchema = z.object({
   reply_count: z.number().optional(),
   view_count: z.number().optional(),
   created_at: z.string(),
-  updated_at: z.string().optional(),
+  updated_at: z.string().nullable().optional(),
   user: z.object({
     id: z.number(),
     username: z.string(),
@@ -40,8 +40,8 @@ export const ForumThreadSchema = z.object({
     id: z.number(),
     name: z.string(),
   }).nullable().optional(),
-  category: ForumCategoryBaseSchema.optional(),
-})
+  category: ForumCategoryBaseSchema.passthrough().optional(),
+}).passthrough()
 
 // Forum Category Schema with optional children and threads
 export const ForumCategorySchema = ForumCategoryBaseSchema.extend({

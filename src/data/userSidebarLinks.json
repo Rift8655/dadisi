@@ -14,6 +14,7 @@
   },
   { "title": "Donations", "href": "/dashboard/donations", "icon": "creditcard", "badge": null },
   { "title": "My RSVPs", "href": "/dashboard/events", "icon": "calendar", "badge": null },
+  { "title": "Lab Bookings", "href": "/dashboard/bookings", "icon": "flask", "badge": null },
   {
     "title": "Event Organizer",
     "icon": "calendar",

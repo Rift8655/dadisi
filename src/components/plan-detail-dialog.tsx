@@ -58,11 +58,13 @@ export function PlanDetailDialog({ open, onOpenChange, plan }: PlanDetailDialogP
       : `$${val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
   }
 
+  const setAuthDialogOpen = useAuth((s) => s.setAuthDialogOpen)
+
   const handleSubscribe = () => {
     if (!user) {
       showWarning("Please sign in to subscribe.")
       onOpenChange(false)
-      router.push("/login")
+      setAuthDialogOpen(true, "signin")
       return
     }
 

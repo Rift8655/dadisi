@@ -1,8 +1,10 @@
 "use client"
 
 import { useState, useEffect } from "react"
-
 import Sidebar from "@/components/Sidebar"
+import { useSidebarStore } from "@/store/sidebar"
+import { Button } from "@/components/ui/button"
+import { Menu } from "lucide-react"
 
 // Constants matching Sidebar component
 const SIDEBAR_WIDTH = 250
@@ -19,41 +21,16 @@ export function UserDashboardShell({
   title: string
   children: React.ReactNode
 }) {
-  const [collapsed, setCollapsed] = useState(false)
+  const { isCollapsed, setIsOpen } = useSidebarStore()
   const [isMounted, setIsMounted] = useState(false)
 
-  // Handle hydration - only read from localStorage after mount
+  // Handle hydration
   useEffect(() => {
     setIsMounted(true)
-    const saved = localStorage.getItem("sidebar-collapsed")
-    if (saved !== null) {
-      setCollapsed(saved === "true")
-    }
   }, [])
 
-  // Listen for sidebar state changes
-  useEffect(() => {
-    if (!isMounted) return
-
-    const checkCollapsed = () => {
-      const saved = localStorage.getItem("sidebar-collapsed")
-      if (saved !== null) {
-        setCollapsed(saved === "true")
-      }
-    }
-
-    // Poll for localStorage changes in same tab
-    const interval = setInterval(checkCollapsed, 100)
-    window.addEventListener("storage", checkCollapsed)
-
-    return () => {
-      clearInterval(interval)
-      window.removeEventListener("storage", checkCollapsed)
-    }
-  }, [isMounted])
-
   // Calculate margin based on collapsed state (only on md+ screens)
-  const sidebarMargin = isMounted ? (collapsed ? SIDEBAR_COLLAPSED_WIDTH : SIDEBAR_WIDTH) : SIDEBAR_WIDTH
+  const sidebarMargin = isMounted ? (isCollapsed ? SIDEBAR_COLLAPSED_WIDTH : SIDEBAR_WIDTH) : SIDEBAR_WIDTH
 
   return (
     <div className="min-h-[calc(100vh-56px)]">
@@ -81,7 +58,18 @@ export function UserDashboardShell({
           }
         `}</style>
         <div className="flex items-center justify-between border-b px-4 py-3 lg:px-6">
-          <h1 className="text-xl font-semibold">{title}</h1>
+          <div className="flex items-center gap-3">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="md:hidden"
+              onClick={() => setIsOpen(true)}
+              aria-label="Open menu"
+            >
+              <Menu className="h-5 w-5" />
+            </Button>
+            <h1 className="text-xl font-semibold">{title}</h1>
+          </div>
         </div>
         <div className="p-4 lg:p-6">{children}</div>
       </main>

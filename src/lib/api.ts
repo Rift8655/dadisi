@@ -392,6 +392,15 @@ export const subscriptionsApi = {
     api.post("/api/subscriptions", data),
 }
 
+// Counties API (public read access)
+export const countiesApi = {
+  list: async () => {
+    const res = await apiRequestWithSchema("/api/counties", CountiesWrapper)
+    return res.data
+  },
+  get: (id: number) => api.get<{ data: { id: number; name: string } }>(`/api/counties/${id}`),
+}
+
 // Member Profile API
 // Note: Schemas in memberProfile.ts are exact schemas, but API usually wraps in { data: ... }
 // I'll define wrappers locally if they don't exist
@@ -404,6 +413,7 @@ export const memberProfileApi = {
     return res.data
   },
 
+  // @deprecated - use countiesApi.list() instead
   getCounties: async () => {
     const res = await apiRequestWithSchema("/api/counties", CountiesWrapper)
     return res.data
@@ -820,7 +830,7 @@ export const forumApi = {
   threads: {
     list: (categorySlug: string, params?: { page?: number }) =>
       api.get<{ data: ForumThread[]; meta?: any }>(`/api/forum/categories/${categorySlug}/threads`, { params }),
-    get: (slug: string) => api.get<{ data: ForumThread }>(`/api/forum/threads/${slug}`),
+    get: (slug: string) => api.get<{ thread: ForumThread; posts: any }>(`/api/forum/threads/${slug}`),
     create: (categorySlug: string, data: { title: string; content: string; county_id?: number }) =>
       api.post<{ data: ForumThread }>(`/api/forum/categories/${categorySlug}/threads`, data),
     update: (slug: string, data: { title?: string; content?: string }) =>
@@ -874,4 +884,51 @@ export const groupsApi = {
     api.post<{ message: string }>(`/api/groups/${slug}/leave`),
 }
 
+// Lab Spaces API (public browsing)
+import type {
+  LabSpace,
+  LabBooking,
+  LabQuotaStatus,
+  LabAvailabilityResponse,
+  CreateLabBookingRequest,
+} from "@/types/lab"
+
+export const labSpacesApi = {
+  // List all active lab spaces
+  list: (params?: { type?: string; search?: string }) =>
+    api.get<{ success: boolean; data: LabSpace[] }>("/api/spaces", { params }),
+
+  // Get lab space details by slug
+  get: (slug: string) =>
+    api.get<{ success: boolean; data: LabSpace }>(`/api/spaces/${slug}`),
+
+  // Get availability calendar for a lab space
+  availability: (slug: string, params?: { start?: string; end?: string }) =>
+    api.get<{ success: boolean; data: LabAvailabilityResponse }>(`/api/spaces/${slug}/availability`, { params }),
+}
+
+// Lab Bookings API (authenticated)
+export const labBookingsApi = {
+  // Get user's quota status
+  getQuota: () =>
+    api.get<{ success: boolean; data: LabQuotaStatus }>("/api/bookings/quota"),
+
+  // List user's bookings
+  list: (params?: { status?: string; upcoming?: boolean }) =>
+    api.get<{ success: boolean; data: LabBooking[] }>("/api/bookings", { params }),
+
+  // Get booking details
+  get: (id: number) =>
+    api.get<{ success: boolean; data: LabBooking }>(`/api/bookings/${id}`),
+
+  // Create a new booking
+  create: (data: CreateLabBookingRequest) =>
+    api.post<{ success: boolean; message: string; data: LabBooking }>("/api/bookings", data),
+
+  // Cancel a booking
+  cancel: (id: number) =>
+    api.delete<{ success: boolean; message: string; data: LabBooking }>(`/api/bookings/${id}`),
+}
+
 export default api
+

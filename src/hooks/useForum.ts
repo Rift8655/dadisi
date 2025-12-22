@@ -73,10 +73,18 @@ export function useForumThread(slug: string) {
     queryKey: ["forum-thread", slug],
     queryFn: async () => {
       const response = await forumApi.threads.get(slug)
-      const validated = ForumThreadSchema.safeParse(response.data)
+      // Backend returns { thread: ..., posts: ... } not { data: ... }
+      const threadData = response.thread
+      if (!threadData) {
+        throw new Error("Thread not found")
+      }
+      const validated = ForumThreadSchema.safeParse(threadData)
       if (!validated.success) {
-        console.error("Forum thread validation failed:", validated.error.format())
-        return response.data as ForumThread
+        // Log issues but don't fail - just use raw data
+        if (process.env.NODE_ENV === "development") {
+          console.warn("Forum thread schema mismatch (using raw data):", validated.error.issues)
+        }
+        return threadData as ForumThread
       }
       return validated.data
     },

@@ -369,6 +369,61 @@ export const donationAdminApi = {
   }>("/api/admin/donations/stats"),
 }
 
+// Counties Admin API
+export const countiesAdminApi = {
+  create: (data: { name: string }) => api.post<{ data: { id: number; name: string }; message: string }>("/api/counties", data),
+  update: (id: number, data: { name: string }) => api.put<{ data: { id: number; name: string }; message: string }>(`/api/counties/${id}`, data),
+  delete: (id: number) => api.delete<{ message: string }>(`/api/counties/${id}`),
+}
+
+// Lab Spaces Admin API
+import type { LabSpace, LabBooking, AdminLabBookingFilters } from "@/types/lab"
+
+export const labSpacesAdminApi = {
+  list: (params?: { type?: string; active?: boolean; per_page?: number; page?: number }) =>
+    api.get<{ success: boolean; data: LabSpace[]; pagination?: any }>("/api/admin/spaces", { 
+      params: params as Record<string, string | number | boolean> 
+    }),
+  
+  get: (id: number) =>
+    api.get<{ success: boolean; data: LabSpace }>(`/api/admin/spaces/${id}`),
+  
+  create: (data: Partial<LabSpace>) =>
+    api.post<{ success: boolean; message: string; data: LabSpace }>("/api/admin/spaces", data),
+  
+  update: (id: number, data: Partial<LabSpace>) =>
+    api.put<{ success: boolean; message: string; data: LabSpace }>(`/api/admin/spaces/${id}`, data),
+  
+  delete: (id: number) =>
+    api.delete<{ success: boolean; message: string }>(`/api/admin/spaces/${id}`),
+}
+
+// Lab Bookings Admin API
+export const labBookingsAdminApi = {
+  list: (params?: AdminLabBookingFilters) =>
+    api.get<{ success: boolean; data: LabBooking[]; pagination?: any }>("/api/admin/lab-bookings", { 
+      params: params as Record<string, string | number | boolean> 
+    }),
+  
+  get: (id: number) =>
+    api.get<{ success: boolean; data: LabBooking }>(`/api/admin/lab-bookings/${id}`),
+  
+  approve: (id: number, data?: { admin_notes?: string }) =>
+    api.post<{ success: boolean; message: string; data: LabBooking }>(`/api/admin/lab-bookings/${id}/approve`, data || {}),
+  
+  reject: (id: number, data: { rejection_reason: string }) =>
+    api.post<{ success: boolean; message: string; data: LabBooking }>(`/api/admin/lab-bookings/${id}/reject`, data),
+  
+  checkIn: (id: number) =>
+    api.post<{ success: boolean; message: string; data: LabBooking }>(`/api/admin/lab-bookings/${id}/check-in`),
+  
+  checkOut: (id: number) =>
+    api.post<{ success: boolean; message: string; data: LabBooking }>(`/api/admin/lab-bookings/${id}/check-out`),
+  
+  markNoShow: (id: number) =>
+    api.post<{ success: boolean; message: string; data: LabBooking }>(`/api/admin/lab-bookings/${id}/no-show`),
+}
+
 // Bundle everything into adminApi for backward compatibility and convenience
 export const adminApi = {
   getMenu: async () => {
@@ -389,5 +444,8 @@ export const adminApi = {
   systemSettings: systemSettingsApi,
   campaigns: campaignAdminApi,
   donations: donationAdminApi,
+  counties: countiesAdminApi,
+  labSpaces: labSpacesAdminApi,
+  labBookings: labBookingsAdminApi,
 }
 
