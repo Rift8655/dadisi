@@ -1,6 +1,17 @@
+"use client"
+
 import Link from "next/link"
+import { usePathname } from "next/navigation"
 
 export function Footer() {
+  const pathname = usePathname()
+
+  // Hide footer on dashboard and admin pages
+  const isDashboard = pathname === "/admin" || pathname.startsWith("/admin/") ||
+                      pathname === "/dashboard" || pathname.startsWith("/dashboard/")
+
+  if (isDashboard) return null
+
   return (
     <footer className="border-t">
       <div className="container grid gap-4 py-8 text-sm sm:grid-cols-3">

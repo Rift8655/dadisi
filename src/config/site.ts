@@ -12,7 +12,7 @@ export const siteConfig: SiteConfig = {
     "STEM education Nairobi",
     "Citizen Science",
     "Innovation",
-    "Education"
+    "Education",
   ],
   url: {
     base: env.NEXT_PUBLIC_APP_URL,

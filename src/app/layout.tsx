@@ -5,7 +5,11 @@ import { Inter } from "next/font/google"
 
 import { siteConfig } from "@/config/site"
 import { cn } from "@/lib/utils"
+import { Footer } from "@/components/footer"
+import { Navbar } from "@/components/navbar"
 import { ThemeProvider } from "@/components/theme-provider"
+import { QueryProvider } from "@/components/QueryProvider"
+import { SessionRefresher } from "@/providers/session-refresher"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -52,7 +56,7 @@ export const metadata: Metadata = {
     creator: "@_rdev7",
   },
   icons: {
-    icon: "/favicon.ico",
+    icon: "https://cdn.builder.io/api/v1/image/assets%2F8caa41cbd5bc4e10ad738e7eb66402fc%2F23b33b0948e24c00a9df68acee6d9a77?format=webp&width=128",
   },
 }
 
@@ -62,10 +66,6 @@ export const viewport: Viewport = {
     { media: "(prefers-color-scheme: dark)", color: "black" },
   ],
 }
-
-import { Navbar } from "@/components/navbar"
-import { Footer } from "@/components/footer"
-import Toaster from "@/components/toaster"
 
 export default function RootLayout({ children }: RootLayoutProps) {
   return (
@@ -83,11 +83,12 @@ export default function RootLayout({ children }: RootLayoutProps) {
           enableSystem
           disableTransitionOnChange
         >
-          <Navbar />
-          <main className="min-h-[calc(100vh-7rem)]">{children}</main>
-          <Footer />
-          <div id="toaster-root" />
-          <Toaster />
+          <QueryProvider>
+            <SessionRefresher />
+            <Navbar />
+            <main className="min-h-[calc(100vh-7rem)]">{children}</main>
+            <Footer />
+          </QueryProvider>
         </ThemeProvider>
       </body>
     </html>

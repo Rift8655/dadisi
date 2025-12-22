@@ -1,16 +1,66 @@
 "use client"
+
 import { useState } from "react"
+import { useRouter } from "next/navigation"
+import { useCreateDonation } from "@/hooks/useDonations"
+import { useDonationStore } from "@/store/donations"
+import Swal from "sweetalert2"
+
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { useToastStore } from "@/store/useToastStore"
 
-export function DonationsClient({ config }: { config: { presetAmounts: number[]; currency: string; thankYouMessage: string } }) {
+const DEFAULT_CONFIG = {
+  presetAmounts: [500, 1000, 2000, 5000, 10000],
+  currency: "KES",
+}
+
+export function DonationsClient({
+  config = DEFAULT_CONFIG,
+}: {
+  config?: { presetAmounts: number[]; currency: string; thankYouMessage?: string }
+}) {
+  const router = useRouter()
+  const createMut = useCreateDonation()
+  const { setLastDonation } = useDonationStore()
+
   const [amount, setAmount] = useState<number | "">(config.presetAmounts[0])
-  const [name, setName] = useState("")
+  const [firstName, setFirstName] = useState("")
+  const [lastName, setLastName] = useState("")
+  const [email, setEmail] = useState("")
   const [message, setMessage] = useState("")
-  const show = useToastStore((s) => s.show)
+
+  const handleDonate = async () => {
+    const amt = typeof amount === "number" ? amount : 0
+    if (amt <= 0 || !email || !firstName || !lastName) {
+      Swal.fire("Error", "Please fill in all required fields", "warning")
+      return
+    }
+
+    try {
+      const res = await createMut.mutateAsync({
+        amount: amt,
+        currency: config.currency,
+        email,
+        first_name: firstName,
+        last_name: lastName,
+        message: message || undefined,
+        is_anonymous: false,
+      })
+      
+      const data = (res as any).data ?? res // normalize response
+      if (data.redirect_url) {
+        setLastDonation({ amount: amt, currency: config.currency, name: firstName })
+        window.location.href = data.redirect_url
+      } else {
+        Swal.fire("Success", "Donation recorded (manual bank transfer)", "success")
+      }
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err ?? "Failed to process donation")
+      Swal.fire("Error", message, "error")
+    }
+  }
 
   return (
     <div>
@@ -19,7 +69,11 @@ export function DonationsClient({ config }: { config: { presetAmounts: number[];
           <Label className="mb-1 block">Amount ({config.currency})</Label>
           <div className="flex flex-wrap gap-2">
             {config.presetAmounts.map((a) => (
-              <Button key={a} variant={amount === a ? "default" : "outline"} onClick={() => setAmount(a)}>
+              <Button
+                key={a}
+                variant={amount === a ? "default" : "outline"}
+                onClick={() => setAmount(a)}
+              >
                 {a}
               </Button>
             ))}
@@ -27,28 +81,62 @@ export function DonationsClient({ config }: { config: { presetAmounts: number[];
               type="number"
               placeholder="Custom"
               value={amount === "" ? "" : amount}
-              onChange={(e) => setAmount(e.target.value ? Number(e.target.value) : "")}
+              onChange={(e) =>
+                setAmount(e.target.value ? Number(e.target.value) : "")
+              }
               className="w-28"
             />
           </div>
         </div>
-        <div>
-          <Label htmlFor="name" className="mb-1 block">Name (optional)</Label>
-          <Input id="name" value={name} onChange={(e) => setName(e.target.value)} />
+        
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <Label htmlFor="fname" className="mb-1 block">First Name <span className="text-red-500">*</span></Label>
+            <Input
+              id="fname"
+              value={firstName}
+              onChange={(e) => setFirstName(e.target.value)}
+              required
+            />
+          </div>
+          <div>
+            <Label htmlFor="lname" className="mb-1 block">Last Name <span className="text-red-500">*</span></Label>
+            <Input
+              id="lname"
+              value={lastName}
+              onChange={(e) => setLastName(e.target.value)}
+              required
+            />
+          </div>
         </div>
+
         <div>
-          <Label htmlFor="msg" className="mb-1 block">Message (optional)</Label>
-          <Textarea id="msg" value={message} onChange={(e) => setMessage(e.target.value)} />
+          <Label htmlFor="email" className="mb-1 block">Email <span className="text-red-500">*</span></Label>
+          <Input
+            id="email"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+          />
+        </div>
+
+        <div>
+          <Label htmlFor="msg" className="mb-1 block">
+            Message (optional)
+          </Label>
+          <Textarea
+            id="msg"
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+          />
         </div>
         <Button
-          onClick={() => {
-            const amt = typeof amount === "number" ? amount : 0
-            if (amt <= 0) return
-            show("Feature unavailable: system under maintenance.")
-          }}
-          disabled={!(typeof amount === "number" && amount > 0)}
+          onClick={handleDonate}
+          disabled={!(typeof amount === "number" && amount > 0) || createMut.isPending}
+          className="w-full"
         >
-          Donate
+          {createMut.isPending ? "Processing..." : "Donate Now"}
         </Button>
       </div>
     </div>

@@ -56,3 +56,51 @@ pnpm format:check
 ```bash
 pnpm format
 ```
+
+## Local development quick start (Windows / WSL / Linux)
+
+Follow these steps to run the frontend locally.
+
+1. Install dependencies
+
+```powershell
+cd frontend
+pnpm install
+```
+
+2. Copy environment example and edit
+
+```powershell
+copy .env.example .env.local
+notepad .env.local
+```
+
+3. Set API base URL (example)
+
+In `.env.local` set:
+
+```
+NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
+```
+
+4. Start the dev server
+
+```powershell
+pnpm dev
+```
+
+5. Build and preview locally
+
+```powershell
+pnpm build
+pnpm preview
+```
+
+6. Run lint and tests
+
+```powershell
+pnpm lint
+pnpm test
+```
+
+If you'd like, I can wire up the frontend CI to Vercel and create the initial app shell (work item 272) or implement the frontend auth (work item 273). Which should I do next?
