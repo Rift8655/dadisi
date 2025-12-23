@@ -56,7 +56,7 @@ export default function LabSpacesPage() {
   })
 
   // Fetch quota (only if authenticated)
-  const { data: quota } = useLabQuota()
+  const { data: quota } = useLabQuota({ enabled: isAuthenticated })
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/30">
@@ -185,6 +185,8 @@ export default function LabSpacesPage() {
 
 // Lab Space Card Component
 function LabSpaceCard({ space }: { space: LabSpace }) {
+  const isLocal = process.env.NEXT_PUBLIC_BACKEND_APP_URL?.includes("localhost") || 
+                  process.env.NEXT_PUBLIC_BACKEND_APP_URL?.includes("127.0.0.1")
   const icon = SPACE_ICONS[space.type]
   const gradient = SPACE_COLORS[space.type]
 
@@ -197,6 +199,7 @@ function LabSpaceCard({ space }: { space: LabSpace }) {
             src={space.image_url}
             alt={space.name}
             fill
+            unoptimized={isLocal}
             className="object-cover opacity-40"
           />
         ) : null}

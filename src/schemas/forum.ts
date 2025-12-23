@@ -3,7 +3,7 @@ import { z } from "zod"
 // Base Forum Category Schema (without children to avoid recursive type issues)
 const ForumCategoryBaseSchema = z.object({
   id: z.number(),
-  parent_id: z.number().nullable(),
+  parent_id: z.number().nullable().optional(),
   name: z.string(),
   slug: z.string(),
   description: z.string().nullable(),
@@ -92,8 +92,24 @@ export const GroupSchema = z.object({
 
 export const GroupsSchema = z.array(GroupSchema)
 
+// Forum Tag Schema
+export const ForumTagSchema = z.object({
+  id: z.number(),
+  name: z.string(),
+  slug: z.string(),
+  color: z.string().nullable().optional(),
+  description: z.string().nullable().optional(),
+  usage_count: z.number().optional(),
+  created_at: z.string().optional(),
+  updated_at: z.string().optional(),
+})
+
+export const ForumTagsSchema = z.array(ForumTagSchema)
+
 // Inferred Types
 export type ForumCategory = z.infer<typeof ForumCategorySchema>
 export type ForumThread = z.infer<typeof ForumThreadSchema>
 export type ForumPost = z.infer<typeof ForumPostSchema>
 export type Group = z.infer<typeof GroupSchema>
+export type ForumTag = z.infer<typeof ForumTagSchema>
+

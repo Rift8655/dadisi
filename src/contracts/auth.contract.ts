@@ -43,6 +43,12 @@ export const UiPermissionsSchema = z.object({
   can_manage_lab_maintenance: z.boolean().default(false),
   can_view_lab_reports: z.boolean().default(false),
   can_mark_lab_attendance: z.boolean().default(false),
+
+  // Forum Management
+  can_moderate_forum: z.boolean().default(false),
+  can_manage_forum_tags: z.boolean().default(false),
+  can_manage_forum_categories: z.boolean().default(false),
+  can_manage_groups: z.boolean().default(false),
   
   // General Admin
   can_access_admin_panel: z.boolean().default(false),
@@ -52,6 +58,7 @@ export const MemberProfileSchema = z.object({
   is_staff: z.boolean(),
   first_name: z.string().nullable().optional(),
   last_name: z.string().nullable().optional(),
+  phone_number: z.string().nullable().optional(),
 });
 
 export const AdminMenuItemSchema = z.object({

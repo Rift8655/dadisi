@@ -77,6 +77,8 @@ export default function LabSpaceDetailPage({
 }: { 
   params: Promise<{ slug: string }> 
 }) {
+  const isLocal = process.env.NEXT_PUBLIC_BACKEND_APP_URL?.includes("localhost") || 
+                  process.env.NEXT_PUBLIC_BACKEND_APP_URL?.includes("127.0.0.1")
   const { slug } = use(params)
   const router = useRouter()
   const { isAuthenticated, user } = useAuth()
@@ -91,8 +93,8 @@ export default function LabSpaceDetailPage({
   // Fetch lab space details
   const { data: space, isLoading, error } = useLabSpace(slug)
   
-  // Fetch quota
-  const { data: quota, isLoading: quotaLoading } = useLabQuota()
+  // Fetch quota (only if authenticated)
+  const { data: quota, isLoading: quotaLoading } = useLabQuota({ enabled: isAuthenticated })
   
   // Fetch availability for current month
   const now = new Date()
@@ -188,6 +190,7 @@ export default function LabSpaceDetailPage({
             src={space.image_url}
             alt={space.name}
             fill
+            unoptimized={isLocal}
             className="object-cover opacity-20"
           />
         )}

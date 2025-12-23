@@ -16,6 +16,8 @@ import type { DonationCampaign } from "@/schemas/campaign"
 import Swal from "sweetalert2"
 
 export default function CampaignDetailPage() {
+  const isLocal = process.env.NEXT_PUBLIC_BACKEND_APP_URL?.includes("localhost") || 
+                  process.env.NEXT_PUBLIC_BACKEND_APP_URL?.includes("127.0.0.1")
   const params = useParams()
   const router = useRouter()
   const slug = params.slug as string
@@ -129,6 +131,7 @@ export default function CampaignDetailPage() {
             src={campaign.hero_image_url}
             alt={campaign.title}
             fill
+            unoptimized={isLocal}
             className="object-cover"
             priority
           />

@@ -12,6 +12,8 @@ export default function BlogPostPage({
 }: {
   params: Promise<{ slug: string }>
 }) {
+  const isLocal = process.env.NEXT_PUBLIC_BACKEND_APP_URL?.includes("localhost") || 
+                  process.env.NEXT_PUBLIC_BACKEND_APP_URL?.includes("127.0.0.1")
   const { slug } = use(params)
   const { data: post, isLoading, error } = usePost(slug)
 
@@ -31,7 +33,7 @@ export default function BlogPostPage({
             src={post.featured_image}
             alt={post.title}
             fill
-            unoptimized
+            unoptimized={isLocal}
             className="rounded-md object-cover"
           />
         </div>

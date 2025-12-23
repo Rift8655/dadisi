@@ -44,6 +44,12 @@ export interface UIPermissions {
     can_view_lab_reports: boolean;
     can_mark_lab_attendance: boolean;
     
+    // Forum Management
+    can_moderate_forum: boolean;
+    can_manage_forum_tags: boolean;
+    can_manage_forum_categories: boolean;
+    can_manage_groups: boolean;
+    
     // General Admin
     can_access_admin_panel: boolean;
 }

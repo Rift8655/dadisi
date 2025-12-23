@@ -16,6 +16,8 @@ interface EventCardProps {
 }
 
 export function EventCard({ event, className }: EventCardProps) {
+  const isLocal = process.env.NEXT_PUBLIC_BACKEND_APP_URL?.includes("localhost") || 
+                  process.env.NEXT_PUBLIC_BACKEND_APP_URL?.includes("127.0.0.1")
   const eventDate = new Date(event.starts_at)
   const isFreeEvent = !event.price || event.price === 0
   const isPastEvent = eventDate < new Date()
@@ -33,6 +35,7 @@ export function EventCard({ event, className }: EventCardProps) {
             src={event.image_url}
             alt={event.title}
             fill
+            unoptimized={isLocal}
             className="object-cover transition-transform duration-300 group-hover:scale-105"
           />
         ) : (

@@ -21,6 +21,8 @@ interface BlogCardProps {
 }
 
 export function BlogCard({ post, viewType }: BlogCardProps) {
+  const isLocal = process.env.NEXT_PUBLIC_BACKEND_APP_URL?.includes("localhost") || 
+                  process.env.NEXT_PUBLIC_BACKEND_APP_URL?.includes("127.0.0.1")
   const isListView = viewType === "list"
   
   return (
@@ -42,7 +44,7 @@ export function BlogCard({ post, viewType }: BlogCardProps) {
             src={post.featured_image}
             alt={post.title}
             fill
-            unoptimized
+            unoptimized={isLocal}
             className="object-cover transition-transform group-hover:scale-105"
           />
         </div>

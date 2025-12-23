@@ -1,8 +1,9 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { campaignsApi } from "@/lib/api"
+import { useAuth } from "@/store/auth"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -20,6 +21,7 @@ const PRESET_AMOUNTS = [500, 1000, 2500, 5000, 10000]
 
 export function CampaignDonateForm({ campaign, onSuccess }: CampaignDonateFormProps) {
   const router = useRouter()
+  const { user, isAuthenticated } = useAuth()
   const [loading, setLoading] = useState(false)
   
   const [amount, setAmount] = useState<number | "">(PRESET_AMOUNTS[1])
@@ -28,6 +30,18 @@ export function CampaignDonateForm({ campaign, onSuccess }: CampaignDonateFormPr
   const [email, setEmail] = useState("")
   const [phone, setPhone] = useState("")
   const [message, setMessage] = useState("")
+
+  // Pre-fill form if user is authenticated
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      if (user.member_profile) {
+        setFirstName(prev => prev || user.member_profile?.first_name || "")
+        setLastName(prev => prev || user.member_profile?.last_name || "")
+        setPhone(prev => prev || user.member_profile?.phone_number || "")
+      }
+      setEmail(prev => prev || user.email || "")
+    }
+  }, [isAuthenticated, user])
 
   const effectiveMin = campaign.effective_minimum_amount
   const minDonation = effectiveMin ?? 1

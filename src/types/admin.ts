@@ -224,10 +224,14 @@ export interface AdminWebhookEvent {
 
 export interface ExchangeRate {
   id: number
-  currency_code: string
-  rate: number
-  is_active: boolean
-  updated_at: string
+  from_currency: string
+  to_currency: string
+  rate: string | number
+  inverse_rate: string | number
+  cache_minutes: number
+  last_updated: string
+  created_at?: string
+  updated_at?: string
 }
 
 export interface AdminCategory {

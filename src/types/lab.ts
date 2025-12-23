@@ -64,6 +64,7 @@ export interface LabBooking {
   user?: {
     id: number;
     username: string;
+    name?: string;
     email?: string;
   };
   

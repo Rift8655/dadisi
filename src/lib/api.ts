@@ -40,6 +40,13 @@ import {
   MediaListSchema,
   MediaSchema,
 } from "@/schemas/common"
+import {
+  ForumThread,
+  ForumCategory,
+  ForumPost,
+  ForumTag,
+  Group,
+} from "@/schemas/forum"
 
 // Re-imports for specific types if needed, but Zod inference is better.
 
@@ -773,63 +780,28 @@ export const messageApi = {
 }
 
 // Forum API
-export interface ForumCategory {
-  id: number
-  name: string
-  slug: string
-  description: string | null
-  icon: string | null
-  color: string | null
-  threads_count: number
-  posts_count: number
-  is_active: boolean
-  order: number
-  parent_id?: number | null
-  children?: ForumCategory[]
-  threads?: ForumThread[]
-}
 
-export interface ForumThread {
-  id: number
-  title: string
-  slug: string
-  content: string
-  user_id: number
-  category_id: number
-  county_id: number | null
-  is_pinned: boolean
-  is_locked: boolean
-  reply_count: number
-  view_count: number
-  created_at: string
-  updated_at: string
-  user?: { id: number; username: string; profile_picture_path: string | null }
-  category?: ForumCategory
-  county?: { id: number; name: string }
-}
-
-export interface ForumPost {
-  id: number
-  content: string
-  thread_id: number
-  user_id: number
-  parent_id: number | null
-  created_at: string
-  updated_at: string
-  user?: { id: number; username: string }
-}
 
 export const forumApi = {
   // Categories
   categories: {
     list: () => api.get<{ data: ForumCategory[] }>("/api/forum/categories"),
     get: (slug: string) => api.get<{ data: ForumCategory }>(`/api/forum/categories/${slug}`),
+    create: (data: { name: string; description: string; color?: string; icon?: string; order?: number }) =>
+      api.post<{ data: ForumCategory }>("/api/forum/categories", data),
+    update: (slug: string, data: { name?: string; description?: string; color?: string; icon?: string; order?: number }) =>
+      api.put<{ data: ForumCategory }>(`/api/forum/categories/${slug}`, data),
+    delete: (slug: string) => api.delete(`/api/forum/categories/${slug}`),
   },
 
   // Threads
   threads: {
+    // List threads within a specific category
     list: (categorySlug: string, params?: { page?: number }) =>
       api.get<{ data: ForumThread[]; meta?: any }>(`/api/forum/categories/${categorySlug}/threads`, { params }),
+    // List ALL threads across all categories (for Recent page)
+    listAll: (params?: { page?: number; per_page?: number }) =>
+      api.get<{ data: ForumThread[]; meta?: any; links?: any; current_page?: number; last_page?: number }>("/api/forum/threads", { params }),
     get: (slug: string) => api.get<{ thread: ForumThread; posts: any }>(`/api/forum/threads/${slug}`),
     create: (categorySlug: string, data: { title: string; content: string; county_id?: number }) =>
       api.post<{ data: ForumThread }>(`/api/forum/categories/${categorySlug}/threads`, data),
@@ -852,20 +824,84 @@ export const forumApi = {
       api.put<{ data: ForumPost }>(`/api/forum/posts/${id}`, data),
     delete: (id: number) => api.delete(`/api/forum/posts/${id}`),
   },
+
+  // Tags
+  tags: {
+    list: (params?: { search?: string; sort?: string }) =>
+      api.get<{ data: ForumTag[] }>("/api/forum/tags", { params }),
+    get: (slug: string, params?: { page?: number; per_page?: number }) =>
+      api.get<{ tag: ForumTag; threads: { data: ForumThread[]; current_page: number; last_page: number } }>(`/api/forum/tags/${slug}`, { params }),
+    create: (data: { name: string; color: string; description?: string }) =>
+      api.post<{ data: ForumTag }>("/api/forum/tags", data),
+    update: (id: number, data: { name?: string; color?: string; description?: string }) =>
+      api.put<{ data: ForumTag }>(`/api/forum/tags/${id}`, data),
+    delete: (id: number) => api.delete(`/api/forum/tags/${id}`),
+  },
+
+  // Users (member directory)
+  users: {
+    list: (params?: { search?: string; sort?: string; page?: number; per_page?: number }) =>
+      api.get<{ data: ForumUser[]; current_page: number; last_page: number }>("/api/forum/users", { params }),
+  },
 }
 
-// Groups API (county-based networking hubs)
-export interface Group {
+// Forum User type for directory
+export interface ForumUser {
   id: number
-  name: string
-  slug: string
-  description: string | null
-  county_id: number | null
-  county?: { id: number; name: string }
-  image_path: string | null
-  member_count: number
-  is_member?: boolean
+  username: string
+  profile_picture_url: string | null
+  joined_at: string
+  thread_count: number
+  post_count: number
+  total_contributions: number
 }
+
+// Public Profile type
+export interface PublicProfile {
+  id: number
+  username: string
+  profile_picture_url: string | null
+  joined_at?: string
+  thread_count?: number
+  post_count?: number
+  bio?: string | null
+  location?: string
+  interests?: string[]
+  occupation?: string
+  email?: string
+}
+
+// Privacy Settings type
+export interface PrivacySettings {
+  public_profile_enabled: boolean
+  public_bio: string | null
+  show_email: boolean
+  show_location: boolean
+  show_join_date: boolean
+  show_post_count: boolean
+  show_interests: boolean
+  show_occupation: boolean
+}
+
+// Public Profile API
+export const publicProfileApi = {
+  // Get user's public profile
+  get: (username: string) =>
+    api.get<{ data: PublicProfile }>(`/api/users/${username}/public`),
+
+  // Get own privacy settings
+  getPrivacySettings: () =>
+    api.get<{ data: PrivacySettings }>("/api/profile/privacy-settings"),
+
+  // Update own privacy settings
+  updatePrivacySettings: (data: Partial<PrivacySettings>) =>
+    api.put<{ data: PrivacySettings; message: string }>("/api/profile/privacy-settings", data),
+
+  // Preview own public profile
+  preview: () =>
+    api.get<{ data: PublicProfile }>("/api/profile/preview"),
+}
+
 
 export const groupsApi = {
   list: (params?: { county_id?: number; search?: string; per_page?: number }) =>

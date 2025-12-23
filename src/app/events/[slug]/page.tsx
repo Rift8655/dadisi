@@ -42,6 +42,8 @@ interface EventDetailPageProps {
 }
 
 export default function EventDetailPage({ params }: EventDetailPageProps) {
+  const isLocal = process.env.NEXT_PUBLIC_BACKEND_APP_URL?.includes("localhost") || 
+                  process.env.NEXT_PUBLIC_BACKEND_APP_URL?.includes("127.0.0.1")
   const { slug } = use(params)
   const router = useRouter()
   const { isAuthenticated } = useAuth()
@@ -167,6 +169,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                   src={event.image_url}
                   alt={event.title}
                   fill
+                  unoptimized={isLocal}
                   className="object-cover"
                   priority
                 />
@@ -245,6 +248,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                             alt={speaker.name}
                             width={64}
                             height={64}
+                            unoptimized={isLocal}
                             className="object-cover w-full h-full"
                           />
                         ) : (

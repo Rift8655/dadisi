@@ -19,6 +19,8 @@ import RsvpDialog from "@/components/rsvp-dialog"
 import Swal from "sweetalert2"
 
 export function EventsClient() {
+  const isLocal = process.env.NEXT_PUBLIC_BACKEND_APP_URL?.includes("localhost") || 
+                  process.env.NEXT_PUBLIC_BACKEND_APP_URL?.includes("127.0.0.1")
   const { data: response, isLoading } = useEvents()
   const events = response?.data || []
   const rsvpMut = useRsvp()
@@ -106,7 +108,7 @@ export function EventsClient() {
                     src={e.image_url}
                     alt={e.title}
                     fill
-                    unoptimized
+                    unoptimized={isLocal}
                     className="rounded-md object-cover"
                   />
                 </div>

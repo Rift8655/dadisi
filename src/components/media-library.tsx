@@ -16,6 +16,8 @@ interface MediaLibraryProps {
 }
 
 export function MediaLibrary({ onSelect }: MediaLibraryProps) {
+  const isLocal = process.env.NEXT_PUBLIC_BACKEND_APP_URL?.includes("localhost") || 
+                  process.env.NEXT_PUBLIC_BACKEND_APP_URL?.includes("127.0.0.1")
   const { data: media = [], isLoading } = useMedia()
   const uploadMut = useUploadMedia()
   const deleteMut = useDeleteMedia()

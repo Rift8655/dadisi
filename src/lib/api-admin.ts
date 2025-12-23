@@ -15,6 +15,7 @@ import {
   AdminTagSchema,
   AdminWebhookEventSchema,
   AdminPlanSchema,
+  ExchangeRateSchema,
 } from "@/schemas/admin"
 import type { 
   AdminUser, 
@@ -26,6 +27,7 @@ import type {
   AdminPermission,
   AdminPost,
   AdminPlan,
+  ExchangeRate,
 } from "@/types/admin"
 
 // User Management API
@@ -422,6 +424,188 @@ export const labBookingsAdminApi = {
   
   markNoShow: (id: number) =>
     api.post<{ success: boolean; message: string; data: LabBooking }>(`/api/admin/lab-bookings/${id}/no-show`),
+
+  stats: (params?: { period?: string; lab_space_id?: number }) =>
+    api.get<{ success: boolean; data: LabBookingStats }>("/api/admin/lab-bookings/stats", {
+      params: params as Record<string, string | number | boolean>
+    }),
+}
+
+// Lab Booking Stats Type
+export interface LabBookingStats {
+  period: string
+  date_range: { from: string; to: string }
+  total_bookings: number
+  by_status: {
+    pending: number
+    approved: number
+    rejected: number
+    completed: number
+    no_show: number
+    cancelled: number
+  }
+  hours: {
+    total_booked: number
+    total_used: number
+    average_per_booking: number
+  }
+  attendance: {
+    show_rate: number
+    no_show_count: number
+    completed_count: number
+  }
+  top_spaces: Array<{ space: string; slug: string; bookings: number }>
+  top_users: Array<{ user: string; email: string; bookings: number }>
+}
+
+// Lab Maintenance Block Type
+export interface LabMaintenanceBlock {
+  id: number
+  lab_space_id: number
+  title: string
+  reason: string | null
+  starts_at: string
+  ends_at: string
+  created_by: number
+  created_at?: string
+  updated_at?: string
+  lab_space?: { id: number; name: string; slug: string }
+  creator?: { id: number; username: string }
+}
+
+// Lab Maintenance Admin API
+export const labMaintenanceAdminApi = {
+  list: (params?: { lab_space_id?: number; upcoming?: boolean; per_page?: number; page?: number }) =>
+    api.get<{ success: boolean; data: LabMaintenanceBlock[]; meta?: any }>("/api/admin/lab-maintenance", {
+      params: params as Record<string, string | number | boolean>
+    }),
+
+  get: (id: number) =>
+    api.get<{ success: boolean; data: LabMaintenanceBlock }>(`/api/admin/lab-maintenance/${id}`),
+
+  create: (data: {
+    lab_space_id: number
+    title: string
+    reason?: string
+    starts_at: string
+    ends_at: string
+  }) =>
+    api.post<{ success: boolean; message: string; data: LabMaintenanceBlock }>("/api/admin/lab-maintenance", data),
+
+  update: (id: number, data: Partial<{
+    title: string
+    reason: string
+    starts_at: string
+    ends_at: string
+  }>) =>
+    api.put<{ success: boolean; message: string; data: LabMaintenanceBlock }>(`/api/admin/lab-maintenance/${id}`, data),
+
+  delete: (id: number) =>
+    api.delete<{ success: boolean; message: string }>(`/api/admin/lab-maintenance/${id}`),
+}
+
+// Admin Events API
+export interface AdminEventFilters {
+  status?: 'all' | 'draft' | 'pending_approval' | 'published' | 'rejected' | 'cancelled' | 'suspended'
+  event_type?: 'all' | 'organization' | 'user'
+  featured?: boolean
+  organizer_id?: number
+  search?: string
+  upcoming?: boolean
+  sort_by?: 'title' | 'starts_at' | 'status' | 'created_at'
+  sort_dir?: 'asc' | 'desc'
+  page?: number
+  per_page?: number
+}
+
+export interface AdminEventStats {
+  total: number
+  pending_review: number
+  published: number
+  upcoming: number
+  featured: number
+  organization_events: number
+  user_events: number
+}
+
+export const eventsAdminApi = {
+  list: (params?: AdminEventFilters) =>
+    api.get<any>("/api/admin/events", { params: params as Record<string, string | number | boolean> }),
+
+  get: (id: number) =>
+    api.get<any>(`/api/admin/events/${id}`),
+
+  create: (data: Record<string, unknown>) =>
+    api.post<any>("/api/admin/events", data),
+
+  update: (id: number, data: Record<string, unknown>) =>
+    api.put<any>(`/api/admin/events/${id}`, data),
+
+  approve: (id: number) =>
+    api.post<{ message: string }>(`/api/admin/events/${id}/approve`),
+
+  reject: (id: number, data?: { reason?: string }) =>
+    api.post<{ message: string }>(`/api/admin/events/${id}/reject`, data || {}),
+
+  publish: (id: number) =>
+    api.post<{ message: string }>(`/api/admin/events/${id}/publish`),
+
+  cancel: (id: number) =>
+    api.post<{ message: string }>(`/api/admin/events/${id}/cancel`),
+
+  suspend: (id: number) =>
+    api.post<{ message: string }>(`/api/admin/events/${id}/suspend`),
+
+  feature: (id: number, data?: { until?: string }) =>
+    api.post<{ message: string }>(`/api/admin/events/${id}/feature`, data || {}),
+
+  unfeature: (id: number) =>
+    api.post<{ message: string }>(`/api/admin/events/${id}/unfeature`),
+
+  delete: (id: number) =>
+    api.delete<void>(`/api/admin/events/${id}`),
+
+  stats: () =>
+    api.get<AdminEventStats>("/api/admin/events/stats"),
+
+  registrations: (id: number, params?: { status?: string; waitlist?: boolean; page?: number; per_page?: number }) =>
+    api.get<any>(`/api/admin/events/${id}/registrations`, { params: params as Record<string, string | number | boolean> }),
+}
+
+// Finance Payouts API
+export const payoutsAdminApi = {
+  list: (params?: { status?: string; page?: number; per_page?: number }) =>
+    api.get<any>("/api/admin/payouts", { params }),
+
+  get: (id: number) =>
+    api.get<any>(`/api/admin/payouts/${id}`),
+
+  approve: (id: number) =>
+    api.post<any>(`/api/admin/payouts/${id}/approve`),
+
+  complete: (id: number, data?: { reference?: string }) =>
+    api.post<any>(`/api/admin/payouts/${id}/complete`, data),
+
+  reject: (id: number, reason: string) =>
+    api.post<any>(`/api/admin/payouts/${id}/reject`, { reason }),
+}
+
+// Forum Stats
+export const forumAdminApi = {
+  stats: () => api.get<any>("/api/admin/forum/stats"),
+}
+
+// Forum Groups Management
+export const groupsApi = {
+  list: (params?: { search?: string; active?: boolean; page?: number; per_page?: number }) =>
+    api.get<any>("/api/admin/groups", { params }),
+  update: (id: number, data: { name?: string; description?: string; is_active?: boolean; is_private?: boolean }) =>
+    api.put<any>(`/api/admin/groups/${id}`, data),
+  delete: (id: number) => api.delete<any>(`/api/admin/groups/${id}`),
+  members: (id: number, params?: { page?: number; per_page?: number }) =>
+    api.get<any>(`/api/admin/groups/${id}/members`, { params }),
+  removeMember: (groupId: number, userId: number) =>
+    api.delete<any>(`/api/admin/groups/${groupId}/members/${userId}`),
 }
 
 // Bundle everything into adminApi for backward compatibility and convenience
@@ -447,5 +631,9 @@ export const adminApi = {
   counties: countiesAdminApi,
   labSpaces: labSpacesAdminApi,
   labBookings: labBookingsAdminApi,
+  events: eventsAdminApi,
+  groups: groupsApi,
+  forum: forumAdminApi,
+  payouts: payoutsAdminApi,
 }
 

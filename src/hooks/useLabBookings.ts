@@ -68,14 +68,18 @@ export function useLabSpaceAvailability(
 
 /**
  * Fetch user's lab hours quota status
+ * Only runs when enabled (should be set to isAuthenticated)
  */
-export function useLabQuota() {
+export function useLabQuota(options?: { enabled?: boolean }) {
+  const enabled = options?.enabled ?? true
+  
   return useQuery({
     queryKey: ["lab-quota"],
     queryFn: async () => {
       const res = await labBookingsApi.getQuota()
       return res.data
     },
+    enabled,
     staleTime: 30 * 1000, // 30 seconds
   })
 }

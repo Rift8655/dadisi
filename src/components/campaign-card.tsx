@@ -14,6 +14,8 @@ interface CampaignCardProps {
 }
 
 export function CampaignCard({ campaign }: CampaignCardProps) {
+  const isLocal = process.env.NEXT_PUBLIC_BACKEND_APP_URL?.includes("localhost") || 
+                  process.env.NEXT_PUBLIC_BACKEND_APP_URL?.includes("127.0.0.1")
   const isCompleted = campaign.status === "completed"
   const isGoalReached = campaign.is_goal_reached
   
@@ -35,6 +37,7 @@ export function CampaignCard({ campaign }: CampaignCardProps) {
             src={campaign.hero_image_url}
             alt={campaign.title}
             fill
+            unoptimized={isLocal}
             className="object-cover group-hover:scale-105 transition-transform duration-500"
           />
         ) : (

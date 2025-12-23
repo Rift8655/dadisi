@@ -43,6 +43,8 @@ export function FeaturedImageUpload({
   onChange,
   onImagesChange,
 }: FeaturedImageUploadProps) {
+  const isLocal = process.env.NEXT_PUBLIC_BACKEND_APP_URL?.includes("localhost") || 
+                  process.env.NEXT_PUBLIC_BACKEND_APP_URL?.includes("127.0.0.1")
   const [images, setImages] = useState<UploadedImage[]>(() => {
     // Initialize with existing hero image if present
     if (value) {
@@ -210,6 +212,7 @@ export function FeaturedImageUpload({
                     src={image.url}
                     alt={image.file_name}
                     fill
+                    unoptimized={isLocal}
                     className="object-cover"
                     sizes="(max-width: 768px) 50vw, 200px"
                   />
