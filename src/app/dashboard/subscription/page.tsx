@@ -1,14 +1,14 @@
 "use client"
 
 import { useState } from "react"
-import { useQuery } from "@tanstack/react-query"
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import Link from "next/link"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { UserDashboardShell } from "@/components/user-dashboard-shell"
 import { useAuth } from "@/store/auth"
-import { plansApi } from "@/lib/api"
+import { plansApi, subscriptionsApi } from "@/lib/api"
 
 interface Plan {
   id: number
@@ -22,49 +22,65 @@ interface Plan {
   is_popular?: boolean
 }
 
-interface Subscription {
+interface CurrentSubscription {
   id: number
   plan: Plan
   billing_interval: "monthly" | "yearly"
-  status: "active" | "cancelled" | "expired" | "past_due"
+  status: "active" | "cancelled" | "expired" | "past_due" | "payment_pending"
   current_period_start: string
   current_period_end: string
   cancel_at_period_end: boolean
 }
 
-// Mock subscription - would come from API
-const mockSubscription: Subscription | null = {
-  id: 1,
-  plan: {
-    id: 2,
-    name: "Premium",
-    slug: "premium",
-    description: "Full access to all features",
-    price_monthly: 500,
-    price_yearly: 5000,
-    currency: "KES",
-    features: [
-      "Blog posting access",
-      "Priority event registration",
-      "Exclusive content",
-      "Community chat access",
-      "Early access to new features",
-    ],
-    is_popular: true,
-  },
-  billing_interval: "monthly",
-  status: "active",
-  current_period_start: "2024-12-01",
-  current_period_end: "2025-01-01",
-  cancel_at_period_end: false,
-}
-
 export default function SubscriptionPage() {
-  const { user } = useAuth()
-  const [subscription, setSubscription] = useState<Subscription | null>(mockSubscription)
+  const { user, isAuthenticated } = useAuth()
+  const queryClient = useQueryClient()
   const [showCancelConfirm, setShowCancelConfirm] = useState(false)
 
-  const { data: plans = [], isLoading: loading } = useQuery({
+  // Helper function - defined early to avoid hoisting issues
+  const getLocalizedValue = (value: any): string => {
+    if (typeof value === "string") return value
+    if (typeof value === "object" && value !== null) {
+      return value.en || Object.values(value)[0] as string || ""
+    }
+    return ""
+  }
+
+  // Fetch current subscription from API
+  const { data: subscriptionData, isLoading: subscriptionLoading } = useQuery({
+    queryKey: ["current-subscription"],
+    queryFn: async () => {
+      const res = await subscriptionsApi.current()
+      return res.data
+    },
+    enabled: isAuthenticated,
+  })
+
+  // Transform API response to component format
+  const subscription: CurrentSubscription | null = subscriptionData?.subscription && subscriptionData?.plan
+    ? {
+        id: subscriptionData.subscription.id,
+        plan: {
+          id: subscriptionData.plan.id,
+          name: getLocalizedValue(subscriptionData.plan.name),
+          slug: "", // Not provided by API
+          description: getLocalizedValue(subscriptionData.plan.description),
+          price_monthly: subscriptionData.plan.price || 0,
+          price_yearly: (subscriptionData.plan.price || 0) * 10,
+          currency: "KES",
+          features: [], // Will be populated from plans query
+          is_popular: false,
+        },
+        billing_interval: "monthly", // Default, enhance later with enhancement metadata
+        status: (subscriptionData.enhancement?.status as any) || "active",
+        current_period_start: subscriptionData.subscription.starts_at,
+        current_period_end: subscriptionData.subscription.ends_at,
+        cancel_at_period_end: !!subscriptionData.subscription.cancels_at,
+      }
+    : null
+
+  // Fetch plans list
+  const { data: plans = [], isLoading: plansLoading } = useQuery({
     queryKey: ["subscription-plans"],
     queryFn: async () => {
       const plansData = await plansApi.getAll()
@@ -74,20 +90,45 @@ export default function SubscriptionPage() {
         name: getLocalizedValue(p.name),
         slug: p.slug,
         description: getLocalizedValue(p.description),
-        price_monthly: p.price_monthly || p.price || 0,
-        price_yearly: p.price_yearly || (p.price || 0) * 10,
-        currency: p.currency || "KES",
+        // Correctly read price from pricing.kes.base_monthly
+        price_monthly: p.pricing?.kes?.base_monthly ?? p.price_monthly ?? p.price ?? 0,
+        price_yearly: p.pricing?.kes?.base_yearly ?? (p.pricing?.kes?.base_monthly ? p.pricing.kes.base_monthly * 10 : 0),
+        currency: "KES",
         features: (p.features || []).map((f: any) => getLocalizedValue(typeof f === "object" ? f.name : f)),
+        system_features: p.system_features || [],
         is_popular: p.is_popular,
       })) as Plan[]
     },
   })
+
+  // Cancel subscription mutation
+  const cancelMutation = useMutation({
+    mutationFn: (reason?: string) => subscriptionsApi.cancel(reason),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["current-subscription"] })
+      setShowCancelConfirm(false)
+    },
+  })
+
+  const loading = subscriptionLoading || plansLoading
+
+  // Merge plan features from plans list into subscription
+  const subscriptionWithFeatures = subscription
+    ? {
+        ...subscription,
+        plan: {
+          ...subscription.plan,
+          features: plans.find(p => p.id === subscription.plan.id)?.features || subscription.plan.features,
+        },
+      }
+    : null
 
   const formatDate = (dateStr: string) => {
     try {
       return new Date(dateStr).toLocaleDateString("en-US", {
         month: "long",
         day: "numeric",
+
         year: "numeric",
       })
     } catch {
@@ -103,14 +144,6 @@ export default function SubscriptionPage() {
     }).format(amount)
   }
 
-  const getLocalizedValue = (value: any): string => {
-    if (typeof value === "string") return value
-    if (typeof value === "object" && value !== null) {
-      return value.en || Object.values(value)[0] as string || ""
-    }
-    return ""
-  }
-
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "active":
@@ -121,54 +154,51 @@ export default function SubscriptionPage() {
         return <Badge variant="secondary">Expired</Badge>
       case "past_due":
         return <Badge className="bg-red-500/10 text-red-600">Past Due</Badge>
+      case "payment_pending":
+        return <Badge className="bg-blue-500/10 text-blue-600">Payment Pending</Badge>
       default:
         return <Badge variant="outline">{status}</Badge>
     }
   }
 
   const handleCancelSubscription = async () => {
-    // TODO: Call API to cancel subscription
-    setSubscription((prev) =>
-      prev ? { ...prev, cancel_at_period_end: true } : null
-    )
-    setShowCancelConfirm(false)
+    cancelMutation.mutate("")
   }
 
   const handleReactivate = async () => {
-    // TODO: Call API to reactivate subscription
-    setSubscription((prev) =>
-      prev ? { ...prev, cancel_at_period_end: false } : null
-    )
+    // Note: Backend may not support reactivation; implement if supported
+    // For now, just refresh the query
+    queryClient.invalidateQueries({ queryKey: ["current-subscription"] })
   }
 
   return (
     <UserDashboardShell title="Subscription">
       <div className="space-y-6">
         {/* Current Subscription */}
-        {subscription ? (
+        {subscriptionWithFeatures ? (
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle className="flex items-center gap-2">
-                    {getLocalizedValue(subscription.plan.name)} Plan
-                    {getStatusBadge(subscription.status)}
+                    {getLocalizedValue(subscriptionWithFeatures.plan.name)} Plan
+                    {getStatusBadge(subscriptionWithFeatures.status)}
                   </CardTitle>
                   <CardDescription>
-                    {subscription.billing_interval === "monthly" ? "Monthly" : "Yearly"} billing
+                    {subscriptionWithFeatures.billing_interval === "monthly" ? "Monthly" : "Yearly"} billing
                   </CardDescription>
                 </div>
                 <div className="text-right">
                   <p className="text-2xl font-bold">
                     {formatCurrency(
-                      subscription.billing_interval === "monthly"
-                        ? subscription.plan.price_monthly
-                        : subscription.plan.price_yearly,
-                      subscription.plan.currency
+                      subscriptionWithFeatures.billing_interval === "monthly"
+                        ? subscriptionWithFeatures.plan.price_monthly
+                        : subscriptionWithFeatures.plan.price_yearly,
+                      subscriptionWithFeatures.plan.currency
                     )}
                   </p>
                   <p className="text-sm text-muted-foreground">
-                    per {subscription.billing_interval === "monthly" ? "month" : "year"}
+                    per {subscriptionWithFeatures.billing_interval === "monthly" ? "month" : "year"}
                   </p>
                 </div>
               </div>
@@ -180,16 +210,16 @@ export default function SubscriptionPage() {
                   <div>
                     <p className="text-sm text-muted-foreground">Current Period</p>
                     <p className="font-medium">
-                      {formatDate(subscription.current_period_start)} -{" "}
-                      {formatDate(subscription.current_period_end)}
+                      {formatDate(subscriptionWithFeatures.current_period_start)} -{" "}
+                      {formatDate(subscriptionWithFeatures.current_period_end)}
                     </p>
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Next Billing Date</p>
                     <p className="font-medium">
-                      {subscription.cancel_at_period_end
-                        ? "Subscription ends on " + formatDate(subscription.current_period_end)
-                        : formatDate(subscription.current_period_end)}
+                      {subscriptionWithFeatures.cancel_at_period_end
+                        ? "Subscription ends on " + formatDate(subscriptionWithFeatures.current_period_end)
+                        : formatDate(subscriptionWithFeatures.current_period_end)}
                     </p>
                   </div>
                 </div>
@@ -199,7 +229,7 @@ export default function SubscriptionPage() {
               <div>
                 <h4 className="font-medium mb-3">Included in your plan:</h4>
                 <ul className="grid gap-2 sm:grid-cols-2">
-                  {subscription.plan.features.map((feature, index) => (
+                  {subscriptionWithFeatures.plan.features.map((feature, index) => (
                     <li key={index} className="flex items-center gap-2 text-sm">
                       <svg
                         className="h-4 w-4 text-green-500"
@@ -224,7 +254,7 @@ export default function SubscriptionPage() {
               <div className="flex flex-wrap gap-3 border-t pt-4">
                 <Button variant="outline">Change Plan</Button>
                 <Button variant="outline">Update Payment Method</Button>
-                {subscription.cancel_at_period_end ? (
+                {subscriptionWithFeatures.cancel_at_period_end ? (
                   <Button variant="outline" onClick={handleReactivate}>
                     Reactivate Subscription
                   </Button>
@@ -240,11 +270,11 @@ export default function SubscriptionPage() {
               </div>
 
               {/* Cancel Warning */}
-              {subscription.cancel_at_period_end && (
+              {subscriptionWithFeatures.cancel_at_period_end && (
                 <div className="rounded-lg border border-yellow-500/50 bg-yellow-500/10 p-4">
                   <p className="text-sm text-yellow-700 dark:text-yellow-400">
                     Your subscription has been cancelled and will end on{" "}
-                    {formatDate(subscription.current_period_end)}. You can reactivate anytime before
+                    {formatDate(subscriptionWithFeatures.current_period_end)}. You can reactivate anytime before
                     this date.
                   </p>
                 </div>

@@ -34,7 +34,10 @@ export default function DonationsPage() {
         amount: d.amount,
         currency: d.currency || "KES",
         status: d.status === "paid" ? "completed" : d.status,
-        payment_method: "M-Pesa",
+        // Map payment_method: mpesa -> M-Pesa, card -> Card, null -> pending/unknown
+        payment_method: d.payment_method 
+          ? (d.payment_method === "mpesa" ? "M-Pesa" : d.payment_method === "card" ? "Card" : d.payment_method)
+          : "Pending",
         created_at: d.created_at,
         receipt_url: undefined,
         campaign: d.campaign?.title,

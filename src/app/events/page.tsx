@@ -22,12 +22,12 @@ import type { EventCategory as EventCategoryType } from "@/types"
 
 // Default category colors for calendar display
 const CATEGORY_COLORS: Record<string, string> = {
-  "workshop": "bg-blue-500",
-  "conference": "bg-purple-500",
-  "meetup": "bg-green-500",
-  "webinar": "bg-cyan-500",
-  "training": "bg-orange-500",
-  "community": "bg-pink-500",
+  "biotech-health": "bg-sky-600",
+  "community-science": "bg-indigo-600",
+  "education-tutorials": "bg-emerald-600",
+  "environmental-science": "bg-teal-600",
+  "technology-coding": "bg-violet-600",
+  "workshops-hands-on": "bg-amber-600",
   "default": "bg-primary",
 }
 
@@ -277,7 +277,7 @@ export default function EventsPage() {
               : "space-y-4"
             }>
               {events.map((event) => (
-                <EventCard key={event.id} event={event} />
+                <EventCard key={event.id} event={event as any} />
               ))}
             </div>
           )}

@@ -20,6 +20,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import AuthDialog from "@/components/auth-dialog"
 import { ModeToggle } from "@/components/mode-toggle"
+import { NotificationDropdown } from "@/components/notification-dropdown"
 
 const links = [
   { href: "/", label: "Home" },
@@ -103,6 +104,7 @@ export function Navbar() {
           ))}
         </nav>
         <div className="flex items-center gap-2">
+          <NotificationDropdown />
           {user ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>

@@ -608,6 +608,18 @@ export const groupsApi = {
     api.delete<any>(`/api/admin/groups/${groupId}/members/${userId}`),
 }
 
+// System Features API (built-in plan features)
+export const systemFeaturesApi = {
+  list: (params?: { active?: boolean }) =>
+    api.get<any>("/api/admin/system-features", { params }),
+  get: (id: number) =>
+    api.get<any>(`/api/admin/system-features/${id}`),
+  update: (id: number, data: { name?: string; description?: string; default_value?: string; is_active?: boolean; sort_order?: number }) =>
+    api.put<any>(`/api/admin/system-features/${id}`, data),
+  toggle: (id: number) =>
+    api.post<any>(`/api/admin/system-features/${id}/toggle`),
+}
+
 // Bundle everything into adminApi for backward compatibility and convenience
 export const adminApi = {
   getMenu: async () => {
@@ -626,6 +638,7 @@ export const adminApi = {
   blog: blogApi,
   plans: plansApi,
   systemSettings: systemSettingsApi,
+  systemFeatures: systemFeaturesApi,
   campaigns: campaignAdminApi,
   donations: donationAdminApi,
   counties: countiesAdminApi,
@@ -636,4 +649,5 @@ export const adminApi = {
   forum: forumAdminApi,
   payouts: payoutsAdminApi,
 }
+
 

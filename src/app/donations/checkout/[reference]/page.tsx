@@ -64,8 +64,9 @@ export default function DonationCheckoutPage() {
     setProcessing(true)
     try {
       // TODO: In production, this would call Pesapal to get the payment URL
-      // For now, we simulate redirecting to a mock payment page
-      const mockPaymentUrl = `/mock-payment/${donation.reference}`
+      // For now, we simulate redirecting to a mock payment page on the backend
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_APP_URL || "http://localhost:8000"
+      const mockPaymentUrl = `${backendUrl}/mock-payment/${donation.reference}`
       
       showSuccess("Redirecting to payment gateway...")
       

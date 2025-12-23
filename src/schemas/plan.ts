@@ -1,5 +1,42 @@
 import { z } from "zod"
 
+// System Feature Schema (built-in features)
+export const SystemFeatureSchema = z.object({
+  id: z.number(),
+  slug: z.string(),
+  name: z.string(),
+  description: z.string().nullable().optional(),
+  value_type: z.enum(["number", "boolean"]),
+  default_value: z.string(),
+  is_active: z.boolean().optional(),
+  sort_order: z.number().optional(),
+})
+
+export type SystemFeature = z.infer<typeof SystemFeatureSchema>
+
+// System Feature for a Plan (with pivot data)
+export const PlanSystemFeatureSchema = z.object({
+  id: z.number(),
+  slug: z.string(),
+  name: z.string(),
+  value: z.string(),
+  display_name: z.string().optional().nullable(),
+  display_description: z.string().optional().nullable(),
+  value_type: z.enum(["number", "boolean"]),
+})
+
+export type PlanSystemFeature = z.infer<typeof PlanSystemFeatureSchema>
+
+// System Feature input for create/update plan
+export const SystemFeatureInputSchema = z.object({
+  id: z.number(),
+  value: z.string(),
+  display_name: z.string().optional().nullable(),
+  display_description: z.string().optional().nullable(),
+})
+
+export type SystemFeatureInput = z.infer<typeof SystemFeatureInputSchema>
+
 // Base Plan Schema (as used in simple lists)
 export const PlanSchema = z.object({
   id: z.number(),
@@ -13,6 +50,7 @@ export const PlanSchema = z.object({
   interval: z.string().optional(),
   // Add flexible fields for admin view compatibility if needed
   features: z.array(z.any()).optional(),
+  system_features: z.array(PlanSystemFeatureSchema).optional(),
   promotions: z.any().optional(),
   monthly_promotion: z.object({
     discount_percent: z.number(),
@@ -56,7 +94,7 @@ export const PlanPromotionSchema = z.object({
   expires_at: z.string().optional().nullable(),
 })
 
-// Feature schema for plan features with limits
+// Feature schema for plan features with limits (legacy)
 export const PlanFeatureSchema = z.object({
   name: z.string().min(1, "Feature name is required"),
   limit: z.coerce.number().int().min(-1).nullable().optional(), // -1 = unlimited, null = boolean/enabled
@@ -73,8 +111,10 @@ export const AdminPlanFormSchema = z.object({
   // Promotions
   monthly_promotion: PlanPromotionSchema.nullable().optional(),
   yearly_promotion: PlanPromotionSchema.nullable().optional(),
-  // Features as array of objects with name, limit, and description
+  // Features as array of objects with name, limit, and description (legacy)
   features: z.array(PlanFeatureSchema).optional(),
+  // System Features (new built-in features)
+  system_features: z.array(SystemFeatureInputSchema).optional(),
   is_active: z.boolean().default(true),
 })
 
@@ -86,3 +126,4 @@ export const CreateSubscriptionSchema = z.object({
 })
 
 export type CreateSubscriptionPayload = z.infer<typeof CreateSubscriptionSchema>
+

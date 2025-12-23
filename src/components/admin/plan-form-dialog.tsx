@@ -1,10 +1,10 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import type { UseFormReturn } from "react-hook-form"
 import { useForm, useFieldArray } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { Plus, Trash, Loader2 } from "lucide-react"
+import { Plus, Trash, Loader2, Settings2 } from "lucide-react"
 
 import {
   Dialog,
@@ -28,7 +28,9 @@ import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { AdminPlanFormSchema, AdminPlanFormValues, PlanFeature } from "@/schemas/plan"
+import { Switch } from "@/components/ui/switch"
+import { AdminPlanFormSchema, AdminPlanFormValues, PlanFeature, SystemFeatureInput } from "@/schemas/plan"
+import { useSystemFeatures } from "@/hooks/useSystemFeatures"
 
 interface PlanFormDialogProps {
   open: boolean
@@ -56,10 +58,14 @@ export function PlanFormDialog({
       currency: "KES",
       is_active: true,
       features: [],
+      system_features: [],
       monthly_promotion: null,
       yearly_promotion: null,
     },
   })
+
+  // Fetch available system features
+  const { data: availableSystemFeatures = [], isLoading: loadingFeatures } = useSystemFeatures(true)
 
   // Reset/Populate form when opening
   useEffect(() => {
@@ -126,6 +132,16 @@ export function PlanFormDialog({
           descriptionVal = desc
         }
 
+        // Extract system_features from initialData
+        const systemFeatures: SystemFeatureInput[] = Array.isArray((initialData as any)?.system_features)
+          ? (initialData as any).system_features.map((sf: any) => ({
+              id: sf.id,
+              value: sf.value || sf.default_value || "0",
+              display_name: sf.display_name || null,
+              display_description: sf.display_description || null,
+            }))
+          : []
+
         form.reset({
           name: nameVal || "",
           description: descriptionVal,
@@ -133,6 +149,7 @@ export function PlanFormDialog({
           currency: (initialData as any).currency || "KES",
           is_active: (initialData as any).is_active ?? true,
           features: features,
+          system_features: systemFeatures,
           monthly_promotion: (initialData as any).monthly_promotion || null,
           yearly_promotion: (initialData as any).yearly_promotion || null,
         })
@@ -144,6 +161,7 @@ export function PlanFormDialog({
           currency: "KES",
           is_active: true,
           features: [],
+          system_features: [],
           monthly_promotion: null,
           yearly_promotion: null,
         })
@@ -351,6 +369,93 @@ export function PlanFormDialog({
                   <p className="text-sm text-muted-foreground italic">No features added yet.</p>
                 )}
               </div>
+            </div>
+
+            {/* System Features Section */}
+            <div className="border-t pt-4">
+              <div className="flex items-center gap-2 mb-4">
+                <Settings2 className="h-4 w-4" />
+                <h3 className="text-sm font-medium">System Features</h3>
+              </div>
+              <p className="text-xs text-muted-foreground mb-4">
+                Enable built-in features for this plan. These control subscriber access to platform capabilities.
+              </p>
+              {loadingFeatures ? (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Loading features...
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {availableSystemFeatures.map((feature) => {
+                    const currentFeatures = form.watch("system_features") || []
+                    const existingIndex = currentFeatures.findIndex((sf) => sf.id === feature.id)
+                    const isEnabled = existingIndex >= 0
+                    const currentValue = isEnabled ? currentFeatures[existingIndex]?.value : feature.default_value
+
+                    const toggleFeature = (enabled: boolean) => {
+                      const current = form.getValues("system_features") || []
+                      if (enabled) {
+                        form.setValue("system_features", [
+                          ...current,
+                          { id: feature.id, value: feature.default_value, display_name: null, display_description: null }
+                        ])
+                      } else {
+                        form.setValue("system_features", current.filter((sf) => sf.id !== feature.id))
+                      }
+                    }
+
+                    const updateValue = (value: string) => {
+                      const current = form.getValues("system_features") || []
+                      const idx = current.findIndex((sf) => sf.id === feature.id)
+                      if (idx >= 0) {
+                        const updated = [...current]
+                        updated[idx] = { ...updated[idx], value }
+                        form.setValue("system_features", updated)
+                      }
+                    }
+
+                    return (
+                      <div key={feature.id} className="rounded-md border p-3 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <Switch
+                              checked={isEnabled}
+                              onCheckedChange={toggleFeature}
+                            />
+                            <div>
+                              <Label className="font-medium">{feature.name}</Label>
+                              {feature.description && (
+                                <p className="text-xs text-muted-foreground">{feature.description}</p>
+                              )}
+                            </div>
+                          </div>
+                          {isEnabled && feature.value_type === "number" && (
+                            <Input
+                              type="number"
+                              className="w-24"
+                              value={currentValue}
+                              onChange={(e) => updateValue(e.target.value)}
+                              placeholder={feature.value_type === "number" ? "-1" : ""}
+                            />
+                          )}
+                          {isEnabled && feature.value_type === "boolean" && (
+                            <span className="text-xs text-green-600 font-medium">Enabled</span>
+                          )}
+                        </div>
+                        {isEnabled && feature.value_type === "number" && (
+                          <p className="text-xs text-muted-foreground pl-11">
+                            Set to -1 for unlimited
+                          </p>
+                        )}
+                      </div>
+                    )
+                  })}
+                  {availableSystemFeatures.length === 0 && (
+                    <p className="text-sm text-muted-foreground italic">No system features available.</p>
+                  )}
+                </div>
+              )}
             </div>
 
             <div className="border-t pt-4">

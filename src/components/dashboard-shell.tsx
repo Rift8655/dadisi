@@ -14,6 +14,7 @@ import {
   LayoutDashboard,
   Menu,
   MessageCircle,
+  Ticket,
   Users,
   X,
 } from "lucide-react"
@@ -48,6 +49,7 @@ export function DashboardShell({
   const userLinks = [
     { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
     { href: "/dashboard/analytics", label: "Analytics", icon: BarChart2 },
+    { href: "/dashboard/tickets", label: "My Tickets", icon: Ticket },
     { href: "/membership", label: "Membership", icon: Users },
     { href: "/donations", label: "Donations", icon: CreditCard },
     { href: "/events", label: "Events", icon: Calendar },

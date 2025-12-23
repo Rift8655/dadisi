@@ -397,6 +397,73 @@ export const plansApi = {
 export const subscriptionsApi = {
   create: (data: z.infer<typeof CreateSubscriptionSchema>) =>
     api.post("/api/subscriptions", data),
+
+  // Get current user's subscription
+  current: () =>
+    api.get<{
+      success: boolean
+      data: {
+        user_id: number
+        plan: {
+          id: number
+          name: string | { en: string }
+          description?: string | { en: string }
+          price: number
+        } | null
+        subscription: {
+          id: number
+          starts_at: string
+          ends_at: string
+          canceled_at?: string | null
+          cancels_at?: string | null
+        } | null
+        enhancement: {
+          status: string
+          grace_period_ends_at?: string | null
+        } | null
+      }
+    }>("/api/subscriptions/current"),
+
+  // Get subscription status
+  status: () =>
+    api.get<{
+      success: boolean
+      data: {
+        current_status: string
+        status_details: any
+        enhancements: any[]
+        history: any[]
+      }
+    }>("/api/subscriptions/status"),
+
+  // Cancel subscription
+  cancel: (reason?: string) =>
+    api.post<{ success: boolean; message: string }>("/api/subscriptions/cancel", { reason }),
+
+  // Get renewal preferences
+  getRenewalPreferences: () =>
+    api.get<{ success: boolean; data: any }>("/api/subscriptions/renewal-preferences"),
+
+  // Update renewal preferences
+  updateRenewalPreferences: (data: {
+    renewal_type?: "automatic" | "manual"
+    send_renewal_reminders?: boolean
+    reminder_days_before?: number
+    preferred_payment_method?: string
+    auto_switch_to_free_on_expiry?: boolean
+  }) =>
+    api.put<{ success: boolean; message: string; data: any }>("/api/subscriptions/renewal-preferences", data),
+
+  // Initiate payment for subscription
+  initiatePayment: (data: { plan_id: number; billing_period?: "month" | "year"; phone?: string }) =>
+    api.post<{
+      success: boolean
+      data: {
+        transaction_id: string
+        redirect_url: string
+        order_tracking_id?: string
+      }
+    }>("/api/subscriptions/initiate-payment", data),
 }
 
 // Counties API (public read access)
@@ -545,8 +612,13 @@ export const eventsApi = {
   getAttendanceStats: (eventId: number) => 
     api.get<any>(`/api/events/${eventId}/attendance-stats`),
 
+  // Scan RSVP registration (free events)
   scanTicket: (eventId: number, token: string) => 
     api.post<any>(`/api/events/${eventId}/scan`, { token }),
+
+  // Scan paid ticket order (paid events)
+  scanPaidTicket: (eventId: number, qrToken: string) =>
+    api.post<{ success: boolean; message: string; order?: any }>(`/api/events/${eventId}/scan-ticket`, { qr_token: qrToken }),
 }
 
 // Donations API
@@ -966,5 +1038,122 @@ export const labBookingsApi = {
     api.delete<{ success: boolean; message: string; data: LabBooking }>(`/api/bookings/${id}`),
 }
 
+// Event Ticket Orders API
+export interface PurchaseTicketRequest {
+  quantity: number
+  name?: string // Required for guest checkout
+  email?: string // Required for guest checkout
+  phone?: string
+  promo_code?: string
+}
+
+export interface TicketOrderResponse {
+  id: number
+  reference: string
+  total_amount: number
+  original_amount?: number
+  promo_discount?: number
+  subscriber_discount?: number
+  payment_required: boolean
+  redirect_url?: string | null
+  qr_code_token?: string
+}
+
+export interface TicketOrder {
+  id: number
+  reference: string
+  qr_code_token: string
+  quantity: number
+  unit_price: number
+  original_amount: number
+  promo_discount: number
+  subscriber_discount: number
+  total_amount: number
+  currency: string
+  status: 'pending' | 'paid' | 'cancelled' | 'refunded'
+  purchased_at: string | null
+  checked_in_at: string | null
+  event: {
+    id: number
+    title: string
+    slug: string
+    starts_at: string
+    venue?: string
+  }
+  promo_code?: string
+}
+
+export const eventOrdersApi = {
+  // Purchase tickets for an event (supports guest checkout)
+  purchase: (eventId: number, data: PurchaseTicketRequest) =>
+    api.post<{ success: boolean; message: string; data: TicketOrderResponse }>(`/api/events/${eventId}/purchase`, data),
+
+  // Check payment status by order reference
+  checkStatus: (reference: string) =>
+    api.get<{ success: boolean; data: { status: string; paid: boolean; qr_code_token?: string; event: { id: number; title: string; starts_at: string } } }>(`/api/event-orders/status/${reference}`),
+
+  // Get user's purchased tickets
+  myTickets: (params?: { status?: string }) =>
+    api.get<{ success: boolean; data: TicketOrder[]; meta: { current_page: number; last_page: number; total: number } }>("/api/my-tickets", { params }),
+
+  // Get ticket order details
+  get: (orderId: number) =>
+    api.get<{ success: boolean; data: TicketOrder }>(`/api/event-orders/${orderId}`),
+}
+
+// ============= Notifications API =============
+
+export interface AppNotification {
+  id: string
+  type: string
+  data: {
+    type: string
+    title: string
+    message: string
+    link?: string
+    [key: string]: unknown
+  }
+  read_at: string | null
+  created_at: string
+}
+
+export interface NotificationsResponse {
+  success: boolean
+  data: {
+    data: AppNotification[]
+    current_page: number
+    last_page: number
+    total: number
+  }
+  unread_count: number
+}
+
+export const notificationsApi = {
+  // Get all notifications (paginated)
+  list: (params?: { unread_only?: boolean; per_page?: number; page?: number }) =>
+    api.get<NotificationsResponse>("/api/notifications", { params }),
+
+  // Get unread notification count
+  unreadCount: () =>
+    api.get<{ success: boolean; data: { unread_count: number } }>("/api/notifications/unread-count"),
+
+  // Mark a notification as read
+  markAsRead: (id: string) =>
+    api.post<{ success: boolean; message: string }>(`/api/notifications/${id}/read`),
+
+  // Mark all notifications as read
+  markAllAsRead: () =>
+    api.post<{ success: boolean; message: string; data: { marked_count: number } }>("/api/notifications/mark-all-read"),
+
+  // Delete a notification
+  delete: (id: string) =>
+    api.delete<{ success: boolean; message: string }>(`/api/notifications/${id}`),
+
+  // Clear all notifications
+  clearAll: () =>
+    api.post<{ success: boolean; message: string; data: { deleted_count: number } }>("/api/notifications/clear-all"),
+}
+
 export default api
+
 

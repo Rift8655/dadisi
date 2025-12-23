@@ -212,7 +212,7 @@ export function EventCalendar({
 
       {/* Calendar Grid */}
       <div className={cn(
-        "border rounded-lg overflow-hidden bg-background shadow-sm",
+        "border rounded-lg bg-background shadow-sm",
         classNames.calendar
       )}>
         {/* Week Header */}
@@ -246,7 +246,8 @@ export function EventCalendar({
                 className={cn(
                   cellHeight,
                   "border-r border-b last:border-r-0 p-2",
-                  "flex flex-col",
+                  "flex flex-col overflow-visible relative",
+                  "hover:z-50", // Raise z-index when hovering on day cell
                   !isCurrentMonth && "bg-muted/20",
                   classNames.dayCell,
                   !isCurrentMonth && classNames.dayCellOutsideMonth
@@ -268,9 +269,8 @@ export function EventCalendar({
                   </span>
                 </div>
 
-                {/* Events Container - Scrollable */}
                 <div className={cn(
-                  "flex-1 overflow-y-auto space-y-1",
+                  "flex-1 overflow-y-auto space-y-1 has-[.group:hover]:overflow-visible",
                   classNames.eventsContainer
                 )}>
                   {dayEvents.map((event) => {
@@ -293,7 +293,7 @@ export function EventCalendar({
                         </button>
                         
                         {/* Tooltip */}
-                        <div className="absolute left-0 bottom-full mb-2 z-50 hidden group-hover:block w-64 pointer-events-none">
+                        <div className="absolute left-0 bottom-full mb-2 z-[100] hidden group-hover:block w-64 pointer-events-none">
                           <div className="bg-popover text-popover-foreground border rounded-lg shadow-lg p-3 text-sm">
                             <p className="font-semibold mb-1 line-clamp-2">{event.name}</p>
                             {category && (
