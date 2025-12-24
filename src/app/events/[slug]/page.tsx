@@ -357,7 +357,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                         )}
                       </div>
 
-                      {/* RSVP Button */}
+                      {/* RSVP / Buy Button */}
                       <Button
                         className="w-full"
                         size="lg"
@@ -369,7 +369,11 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                         ) : (
                           <Ticket className="h-4 w-4 mr-2" />
                         )}
-                        {isAuthenticated ? "RSVP Now" : "Login to RSVP"}
+                        {!isAuthenticated
+                          ? "Login to Register"
+                          : isFreeEvent
+                          ? "Confirm RSVP"
+                          : "Buy Tickets"}
                       </Button>
 
                       {event.waitlist_enabled && (

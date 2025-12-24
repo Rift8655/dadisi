@@ -14,6 +14,9 @@ interface AuthState {
   uiPermissions: UiPermissions | null;
   adminAccess: AdminAccess | null;
   
+  // Hydration status
+  _hasHydrated: boolean;
+  
   // Actions
   setUser: (user: AuthUser | null) => void;
   updateUser: (user: Partial<AuthUser>) => void;
@@ -83,6 +86,7 @@ export const useAuth = create<AuthState>()(
         expiresAt: null,
         uiPermissions: null,
         adminAccess: null,
+        _hasHydrated: false,
         
         setUser: (user) => set({ 
           user, 
@@ -187,6 +191,9 @@ export const useAuth = create<AuthState>()(
               console.warn("Session expired on rehydration");
               state.logout();
             }
+
+            // Mark as hydrated
+            state._hasHydrated = true;
           }
         }
       }

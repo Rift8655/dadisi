@@ -620,6 +620,24 @@ export const systemFeaturesApi = {
     api.post<any>(`/api/admin/system-features/${id}/toggle`),
 }
 
+// Event Categories Admin API
+export const eventCategoriesAdminApi = {
+  list: async () => {
+    const res = await api.get<{ data: Array<{ id: number; name: string; slug: string; color?: string; description?: string }> }>("/api/event-categories")
+    return res.data || []
+  },
+  get: async (id: number) => {
+    const res = await api.get<{ data: { id: number; name: string; slug: string; color?: string; description?: string } }>(`/api/admin/event-categories/${id}`)
+    return res.data
+  },
+  create: (data: { name: string; color?: string; description?: string }) =>
+    api.post<any>("/api/admin/event-categories", data),
+  update: (id: number, data: { name?: string; color?: string; description?: string }) =>
+    api.put<any>(`/api/admin/event-categories/${id}`, data),
+  delete: (id: number) =>
+    api.delete<any>(`/api/admin/event-categories/${id}`),
+}
+
 // Bundle everything into adminApi for backward compatibility and convenience
 export const adminApi = {
   getMenu: async () => {
@@ -645,9 +663,9 @@ export const adminApi = {
   labSpaces: labSpacesAdminApi,
   labBookings: labBookingsAdminApi,
   events: eventsAdminApi,
+  eventCategories: eventCategoriesAdminApi,
   groups: groupsApi,
   forum: forumAdminApi,
   payouts: payoutsAdminApi,
 }
-
 

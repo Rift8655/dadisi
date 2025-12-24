@@ -1,5 +1,6 @@
 "use client"
 
+import { useState, useRef, useEffect } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { useRouter } from "next/navigation"
 import { useForm, useFieldArray } from "react-hook-form"
@@ -14,6 +15,8 @@ import {
   Users,
   DollarSign,
   Loader2,
+  Upload,
+  X,
   Image as ImageIcon,
 } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -25,17 +28,20 @@ import { Switch } from "@/components/ui/switch"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import { CreateEventSchema, CreateEventInput, TicketInput, SpeakerInput } from "@/schemas/event-form"
-import { eventsApi } from "@/lib/api"
+import { eventsApi, mediaApi } from "@/lib/api"
+import { eventsAdminApi } from "@/lib/api-admin"
 import { api } from "@/lib/api"
 import Swal from "sweetalert2"
+import { toast } from "sonner"
 import type { Event, EventCategory, EventTag, County } from "@/types"
 
 interface EventFormProps {
   initialData?: Event
   isEdit?: boolean
+  isAdmin?: boolean
 }
 
-export function EventForm({ initialData, isEdit = false }: EventFormProps) {
+export function EventForm({ initialData, isEdit = false, isAdmin = false }: EventFormProps) {
   const router = useRouter()
   const queryClient = useQueryClient()
 
@@ -44,7 +50,9 @@ export function EventForm({ initialData, isEdit = false }: EventFormProps) {
     handleSubmit,
     control,
     setValue,
+    getValues,
     watch,
+    reset,
     formState: { errors },
   } = useForm<CreateEventInput>({
     resolver: zodResolver(CreateEventSchema),
@@ -60,10 +68,11 @@ export function EventForm({ initialData, isEdit = false }: EventFormProps) {
       is_online: initialData?.is_online || false,
       venue: initialData?.venue || "",
       online_link: initialData?.online_link || "",
-      county_id: initialData?.county?.id || undefined,
-      capacity: initialData?.capacity || undefined,
+      county_id: initialData?.county?.id || (initialData as any)?.county_id || undefined,
+      capacity: initialData?.capacity?.toString() || "",
       waitlist_enabled: initialData?.waitlist_enabled || false,
-      waitlist_capacity: initialData?.waitlist_capacity || undefined,
+      waitlist_capacity: initialData?.waitlist_capacity?.toString() || "",
+      pricing_type: (initialData?.price && initialData.price > 0) ? "paid" : "free",
       price: initialData?.price || 0,
       currency: initialData?.currency || "KES",
       status: (initialData?.status as "draft" | "published") || "draft",
@@ -87,6 +96,66 @@ export function EventForm({ initialData, isEdit = false }: EventFormProps) {
     },
   })
 
+  // Reset form when initialData changes (for async data loading)
+  useEffect(() => {
+    if (initialData && isEdit) {
+      console.log("[EventForm] Resetting form with initialData:", initialData)
+      console.log("[EventForm] registration_deadline:", initialData.registration_deadline)
+      reset({
+        title: initialData.title || "",
+        description: initialData.description || "",
+        category_id: initialData.category?.id || 0,
+        starts_at: initialData.starts_at ? format(new Date(initialData.starts_at), "yyyy-MM-dd'T'HH:mm") : "",
+        ends_at: initialData.ends_at ? format(new Date(initialData.ends_at), "yyyy-MM-dd'T'HH:mm") : "",
+        registration_deadline: initialData.registration_deadline
+          ? format(new Date(initialData.registration_deadline), "yyyy-MM-dd'T'HH:mm")
+          : "",
+        is_online: initialData.is_online || false,
+        venue: initialData.venue || "",
+        online_link: initialData.online_link || "",
+        county_id: (() => {
+          const countyId = initialData.county?.id || (initialData as any).county_id
+          console.log("[EventForm] county data:", { county: initialData.county, county_id: (initialData as any).county_id, resolved: countyId })
+          return countyId || undefined
+        })(),
+        capacity: initialData.capacity?.toString() || "",
+        waitlist_enabled: initialData.waitlist_enabled || false,
+        waitlist_capacity: initialData.waitlist_capacity?.toString() || "",
+        pricing_type: (initialData.price && Number(initialData.price) > 0) ? "paid" : "free",
+        price: initialData.price || 0,
+        currency: initialData.currency || "KES",
+        status: (initialData.status as "draft" | "published") || "draft",
+        tag_ids: initialData.tags?.map((t) => t.id) || [],
+        tickets: initialData.tickets?.map((t) => ({
+          id: t.id,
+          name: t.name,
+          description: t.description || "",
+          price: Number(t.price),
+          quantity: t.quantity || (t as any).capacity || 0,
+          is_active: t.is_active,
+        })) || [],
+        speakers: initialData.speakers?.map((s) => ({
+          id: s.id,
+          name: s.name,
+          designation: s.designation || "",
+          company: s.company || "",
+          bio: s.bio || "",
+          is_featured: s.is_featured,
+        })) || [],
+      })
+      // Also set the image if exists
+      if (initialData.image_path || initialData.image_url) {
+        let path = initialData.image_path || null
+        if (path && path.startsWith('/')) path = path.substring(1)
+        setImagePath(path)
+        setImagePreview(initialData.image_url || null)
+      } else {
+        setImagePath(null)
+        setImagePreview(null)
+      }
+    }
+  }, [initialData, isEdit, reset])
+
   // Metadata queries
   const { data: categories = [], isLoading: loadingCategories } = useQuery({
     queryKey: ["event-categories"],
@@ -105,17 +174,88 @@ export function EventForm({ initialData, isEdit = false }: EventFormProps) {
 
   const loadingMetadata = loadingCategories || loadingTags || loadingCounties
 
+  // Image upload state
+  const [imagePath, setImagePath] = useState<string | null>(null)
+  const [imagePreview, setImagePreview] = useState<string | null>(null)
+  const [isUploadingImage, setIsUploadingImage] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // Handle image file selection and upload
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please select an image file')
+      return
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Image size must be less than 5MB')
+      return
+    }
+
+    // Show preview
+    const reader = new FileReader()
+    reader.onloadend = () => {
+      setImagePreview(reader.result as string)
+    }
+    reader.readAsDataURL(file)
+
+    // Upload to server
+    setIsUploadingImage(true)
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('collection', 'events')
+      const response = await mediaApi.upload(formData) as any
+      const uploadedPath = response?.data?.file_path || response?.file_path || response?.data?.path || response?.path
+      if (uploadedPath) {
+        // Strip leading slash if present for storage path consistency
+        const cleanPath = uploadedPath.startsWith('/') ? uploadedPath.substring(1) : uploadedPath
+        setImagePath(cleanPath)
+        toast.success('Image uploaded successfully')
+      }
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to upload image')
+      setImagePreview(null)
+    } finally {
+      setIsUploadingImage(false)
+    }
+  }
+
+  const removeImage = () => {
+    setImagePath(null)
+    setImagePreview(null)
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
+    }
+  }
+
   const mutation = useMutation({
     mutationFn: async (data: CreateEventInput) => {
+      // Include image_path in the submission
+      const submitData = { ...data, image_path: imagePath } as any
       if (isEdit && initialData?.id) {
-        return eventsApi.update(initialData.id, data as any)
+        // Use admin API for admin context, otherwise use public API
+        if (isAdmin) {
+          return eventsAdminApi.update(initialData.id, submitData)
+        }
+        return eventsApi.update(initialData.id, submitData)
       } else {
-        return eventsApi.create(data as any)
+        // For creation, admins use admin API
+        if (isAdmin) {
+          return eventsAdminApi.create(submitData)
+        }
+        return eventsApi.create(submitData)
       }
     },
     onSuccess: (_: any, variables: CreateEventInput) => {
       queryClient.invalidateQueries({ queryKey: ["events"] })
       queryClient.invalidateQueries({ queryKey: ["organizer-events"] })
+      queryClient.invalidateQueries({ queryKey: ["admin-events"] })
       Swal.fire({
         icon: "success",
         title: isEdit ? "Event Updated!" : "Event Created!",
@@ -123,7 +263,12 @@ export function EventForm({ initialData, isEdit = false }: EventFormProps) {
         timer: 1500,
         showConfirmButton: false,
       })
-      router.push("/dashboard/organizer/events")
+      // Redirect based on context
+      if (isAdmin) {
+        router.push("/admin/events")
+      } else {
+        router.push("/dashboard/organizer/events")
+      }
     },
     onError: (error: any) => {
       console.error("Event save failed:", error)
@@ -143,6 +288,65 @@ export function EventForm({ initialData, isEdit = false }: EventFormProps) {
 
   const isOnline = watch("is_online")
   const selectedTagIds = watch("tag_ids") || []
+  const pricingType = watch("pricing_type")
+  const basePrice = watch("price")
+  const capacityValue = watch("capacity")
+
+  // Auto-generate General Admission ticket when base price is entered for paid events
+  // Uses 999999 as a sentinel value for "unlimited" when capacity is not set
+  const UNLIMITED_QUANTITY = 999999
+
+  useEffect(() => {
+    console.log("[EventForm] Ticket sync effect:", { pricingType, basePrice, isEdit, ticketCount: getValues("tickets")?.length })
+    
+    // Only run auto-generation logic if it's a paid event with a price
+    if (pricingType === "paid" && basePrice > 0) {
+      const tickets = getValues("tickets") || []
+      const generalAdmissionIndex = tickets.findIndex(t => t.name === "General Admission")
+      const ticketQuantity = capacityValue ? Number(capacityValue) : UNLIMITED_QUANTITY
+      
+      console.log("[EventForm] Ticket sync:", { 
+        tickets: tickets.map(t => ({ name: t.name, price: t.price })),
+        generalAdmissionIndex,
+        basePrice,
+        ticketQuantity
+      })
+      
+      if (tickets.length === 0 && !isEdit) {
+        // CREATE MODE ONLY: No tickets at all - create a General Admission ticket
+        addTicket({
+          name: "General Admission",
+          price: basePrice,
+          quantity: ticketQuantity,
+          is_active: true,
+        })
+      } else if (generalAdmissionIndex !== -1) {
+        // UPDATE: Sync existing General Admission ticket price and quantity
+        setValue(`tickets.${generalAdmissionIndex}.price`, basePrice)
+        setValue(`tickets.${generalAdmissionIndex}.quantity`, ticketQuantity)
+      }
+      // Note: In edit mode with no General Admission ticket, user must manually manage tickets
+    }
+  }, [pricingType, basePrice, addTicket, getValues, setValue, capacityValue, isEdit])
+
+  // Directly sync capacity changes to General Admission ticket quantity
+  useEffect(() => {
+    const tickets = getValues("tickets") || []
+    const generalAdmissionIndex = tickets.findIndex(t => t.name === "General Admission")
+    
+    if (generalAdmissionIndex !== -1) {
+      const newQuantity = capacityValue ? Number(capacityValue) : UNLIMITED_QUANTITY
+      setValue(`tickets.${generalAdmissionIndex}.quantity`, newQuantity)
+    }
+  }, [capacityValue, getValues, setValue])
+
+  // Auto-switch to free pricing when online event is selected (paid not allowed for online)
+  useEffect(() => {
+    if (isOnline && pricingType === "paid") {
+      setValue("pricing_type", "free")
+      setValue("price", 0)
+    }
+  }, [isOnline, pricingType, setValue])
 
   const toggleTag = (tagId: number) => {
     const current = selectedTagIds
@@ -198,6 +402,49 @@ export function EventForm({ initialData, isEdit = false }: EventFormProps) {
               className={errors.description ? "border-destructive" : ""}
             />
             {errors.description && <p className="text-sm text-destructive">{errors.description.message}</p>}
+          </div>
+
+          {/* Event Cover Image */}
+          <div className="space-y-2">
+            <Label>Cover Image</Label>
+            <div className="border-2 border-dashed rounded-lg p-4 transition-colors hover:border-primary/50">
+              {imagePreview ? (
+                <div className="relative">
+                  <img
+                    src={imagePreview}
+                    alt="Event cover preview"
+                    className="w-full h-48 object-cover rounded-md"
+                  />
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="icon"
+                    className="absolute top-2 right-2"
+                    onClick={removeImage}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                  {isUploadingImage && (
+                    <div className="absolute inset-0 bg-black/50 flex items-center justify-center rounded-md">
+                      <Loader2 className="h-8 w-8 animate-spin text-white" />
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <label className="flex flex-col items-center justify-center h-36 cursor-pointer">
+                  <Upload className="h-8 w-8 text-muted-foreground mb-2" />
+                  <span className="text-sm text-muted-foreground">Click to upload cover image</span>
+                  <span className="text-xs text-muted-foreground mt-1">PNG, JPG up to 5MB</span>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleImageUpload}
+                  />
+                </label>
+              )}
+            </div>
           </div>
 
           <div className="space-y-2">
@@ -324,30 +571,68 @@ export function EventForm({ initialData, isEdit = false }: EventFormProps) {
           <CardDescription>Set capacity limits and ticket pricing.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="capacity">Capacity</Label>
-              <Input id="capacity" type="number" {...register("capacity")} placeholder="Leave empty for unlimited" />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="price">Base Price</Label>
-              <Input id="price" type="number" step="0.01" {...register("price")} placeholder="0 for free" />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="currency">Currency</Label>
-              <Select value={watch("currency")} onValueChange={(v) => setValue("currency", v)}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="KES">KES</SelectItem>
-                  <SelectItem value="USD">USD</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="capacity">Capacity</Label>
+            <Input id="capacity" type="number" {...register("capacity")} placeholder="Leave empty for unlimited" />
           </div>
+
+          {/* Free/Paid Toggle */}
+          <div className="space-y-2">
+            <Label>Pricing Type</Label>
+            <div className="flex items-center gap-4">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  value="free"
+                  checked={watch("pricing_type") === "free"}
+                  onChange={() => {
+                    setValue("pricing_type", "free")
+                    setValue("price", 0)
+                  }}
+                  className="accent-primary"
+                />
+                <span>Free Event</span>
+              </label>
+              <label className={`flex items-center gap-2 ${isOnline ? "cursor-not-allowed opacity-50" : "cursor-pointer"}`}>
+                <input
+                  type="radio"
+                  value="paid"
+                  checked={watch("pricing_type") === "paid"}
+                  onChange={() => setValue("pricing_type", "paid")}
+                  className="accent-primary"
+                  disabled={isOnline}
+                />
+                <span>Paid Event</span>
+              </label>
+            </div>
+            {isOnline && (
+              <p className="text-xs text-muted-foreground">Online events can only be free.</p>
+            )}
+          </div>
+
+          {/* Price & Currency - only shown for paid events */}
+          {watch("pricing_type") === "paid" && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="price">Base Price *</Label>
+                <Input id="price" type="number" step="0.01" {...register("price")} placeholder="e.g. 1000" />
+                {errors.price && <p className="text-sm text-destructive">{errors.price.message}</p>}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="currency">Currency</Label>
+                <Select value={watch("currency")} onValueChange={(v) => setValue("currency", v)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="KES">KES</SelectItem>
+                    <SelectItem value="USD">USD</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          )}
 
           <div className="flex items-center space-x-3">
             <Switch
@@ -382,51 +667,55 @@ export function EventForm({ initialData, isEdit = false }: EventFormProps) {
         </CardContent>
       </Card>
 
-      {/* Tickets */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <DollarSign className="h-5 w-5" />
-            Ticket Tiers
-          </CardTitle>
-          <CardDescription>Add different ticket types for your event.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {ticketFields.map((field, index) => (
-            <div key={field.id} className="p-4 border rounded-lg space-y-3">
-              <div className="flex justify-between items-center">
-                <span className="font-medium">Ticket #{index + 1}</span>
-                <Button type="button" variant="ghost" size="sm" onClick={() => removeTicket(index)}>
-                  <Trash2 className="h-4 w-4 text-destructive" />
-                </Button>
+      {/* Tickets - Only shown for paid events */}
+      {watch("pricing_type") === "paid" && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <DollarSign className="h-5 w-5" />
+              Ticket Tiers
+            </CardTitle>
+            <CardDescription>
+              Add different ticket types for your event. If you don't add any, a "General Admission" ticket will be created at your base price.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {ticketFields.map((field, index) => (
+              <div key={field.id} className="p-4 border rounded-lg space-y-3">
+                <div className="flex justify-between items-center">
+                  <span className="font-medium">Ticket #{index + 1}</span>
+                  <Button type="button" variant="ghost" size="sm" onClick={() => removeTicket(index)}>
+                    <Trash2 className="h-4 w-4 text-destructive" />
+                  </Button>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                  <div className="md:col-span-2">
+                    <Label>Name</Label>
+                    <Input {...register(`tickets.${index}.name`)} placeholder="e.g. Early Bird" />
+                  </div>
+                  <div>
+                    <Label>Price</Label>
+                    <Input type="number" step="0.01" {...register(`tickets.${index}.price`)} />
+                  </div>
+                  <div>
+                    <Label>Quantity</Label>
+                    <Input type="number" {...register(`tickets.${index}.quantity`)} />
+                  </div>
+                </div>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-                <div className="md:col-span-2">
-                  <Label>Name</Label>
-                  <Input {...register(`tickets.${index}.name`)} placeholder="e.g. Early Bird" />
-                </div>
-                <div>
-                  <Label>Price</Label>
-                  <Input type="number" step="0.01" {...register(`tickets.${index}.price`)} />
-                </div>
-                <div>
-                  <Label>Quantity</Label>
-                  <Input type="number" {...register(`tickets.${index}.quantity`)} />
-                </div>
-              </div>
-            </div>
-          ))}
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => addTicket({ name: "", price: 0, quantity: 50, is_active: true })}
-            className="w-full"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Add Ticket Tier
-          </Button>
-        </CardContent>
-      </Card>
+            ))}
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => addTicket({ name: "", price: 0, quantity: 50, is_active: true })}
+              className="w-full"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Add Ticket Tier
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Speakers */}
       <Card>

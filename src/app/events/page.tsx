@@ -20,21 +20,8 @@ import { useEvents, useEventCategories, useEventTags } from "@/hooks/useEvents"
 import type { Event } from "@/schemas/event"
 import type { EventCategory as EventCategoryType } from "@/types"
 
-// Default category colors for calendar display
-const CATEGORY_COLORS: Record<string, string> = {
-  "biotech-health": "bg-sky-600",
-  "community-science": "bg-indigo-600",
-  "education-tutorials": "bg-emerald-600",
-  "environmental-science": "bg-teal-600",
-  "technology-coding": "bg-violet-600",
-  "workshops-hands-on": "bg-amber-600",
-  "default": "bg-primary",
-}
-
-function getCategoryColor(categorySlug?: string): string {
-  if (!categorySlug) return CATEGORY_COLORS.default
-  return CATEGORY_COLORS[categorySlug.toLowerCase()] || CATEGORY_COLORS.default
-}
+// Default fallback color for categories without a custom color
+const DEFAULT_CATEGORY_COLOR = "#3B82F6" // Blue
 
 export default function EventsPage() {
   const router = useRouter()
@@ -46,10 +33,13 @@ export default function EventsPage() {
   const [isOnline, setIsOnline] = useState<boolean | undefined>(undefined)
 
   const params = useMemo(() => {
-    const p: Record<string, string | number | boolean | undefined> = { type: eventType }
+    const p: Record<string, string | number | boolean | undefined> = {}
+    // Time-based filtering (upcoming/past/all)
+    if (eventType !== "all") p.timeframe = eventType
     if (selectedCategory !== "all") p.category_id = parseInt(selectedCategory)
     if (searchQuery) p.search = searchQuery
-    if (isOnline !== undefined) p.is_online = isOnline
+    // Online/in-person filtering (use 'type' for this as backend expects)
+    if (isOnline !== undefined) p.type = isOnline ? "online" : "in_person"
     if (selectedCounty !== "all") p.county_id = parseInt(selectedCounty)
     return p
   }, [eventType, selectedCategory, searchQuery, isOnline, selectedCounty])
@@ -68,7 +58,7 @@ export default function EventsPage() {
     return categories.map(cat => ({
       id: cat.id.toString(),
       name: cat.name,
-      color: getCategoryColor(cat.slug),
+      color: (cat as any).color || DEFAULT_CATEGORY_COLOR, // Use color from API or fallback
     }))
   }, [categories])
 
@@ -135,7 +125,10 @@ export default function EventsPage() {
             <div className="flex flex-wrap gap-3">
               {categories.map((category) => (
                 <div key={category.id} className="flex items-center gap-2">
-                  <div className={`w-3 h-3 rounded ${getCategoryColor(category.slug)}`} />
+                  <div 
+                    className="w-3 h-3 rounded"
+                    style={{ backgroundColor: (category as any).color || DEFAULT_CATEGORY_COLOR }}
+                  />
                   <span className="text-sm text-muted-foreground">{category.name}</span>
                 </div>
               ))}

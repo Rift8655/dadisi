@@ -4,9 +4,13 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { useCreateDonation } from "@/hooks/useDonations"
 import { useDonationStore } from "@/store/donations"
+import { useCountiesQuery } from "@/hooks/useMemberProfileQuery"
+import { useAuth } from "@/store/auth"
 import Swal from "sweetalert2"
+import { useEffect } from "react"
 
 import { Button } from "@/components/ui/button"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
@@ -30,6 +34,25 @@ export function DonationsClient({
   const [lastName, setLastName] = useState("")
   const [email, setEmail] = useState("")
   const [message, setMessage] = useState("")
+  const [countyId, setCountyId] = useState<string>("")
+
+  const { data: countiesData } = useCountiesQuery()
+  const counties = Array.isArray(countiesData) ? countiesData : []
+  const { user, isAuthenticated } = useAuth()
+
+  // Pre-fill form if user is authenticated
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      if (user.member_profile) {
+        setFirstName(prev => prev || user.member_profile?.first_name || "")
+        setLastName(prev => prev || user.member_profile?.last_name || "")
+        if ((user.member_profile as any).county_id) {
+          setCountyId(String((user.member_profile as any).county_id))
+        }
+      }
+      setEmail(prev => prev || user.email || "")
+    }
+  }, [isAuthenticated, user])
 
   const handleDonate = async () => {
     const amt = typeof amount === "number" ? amount : 0
@@ -45,6 +68,7 @@ export function DonationsClient({
         email,
         first_name: firstName,
         last_name: lastName,
+        county_id: countyId ? parseInt(countyId, 10) : undefined,
         message: message || undefined,
         is_anonymous: false,
       })
@@ -130,6 +154,25 @@ export function DonationsClient({
             value={message}
             onChange={(e) => setMessage(e.target.value)}
           />
+        </div>
+
+        <div className="space-y-1">
+          <Label htmlFor="county" className="mb-1 block">County (Optional, but recommended)</Label>
+          <Select value={countyId} onValueChange={setCountyId}>
+            <SelectTrigger id="county">
+              <SelectValue placeholder="Select your county" />
+            </SelectTrigger>
+            <SelectContent>
+              {counties.map((county: { id: number; name: string }) => (
+                <SelectItem key={county.id} value={String(county.id)}>
+                  {county.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="text-[10px] text-muted-foreground italic">
+            Required for NGO annual reporting compliance.
+          </p>
         </div>
         <Button
           onClick={handleDonate}

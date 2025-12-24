@@ -3,7 +3,14 @@
   { "title": "Analytics", "href": "/admin/analytics", "icon": "dashboard", "badge": null },
   { "title": "Users", "href": "/admin/users", "icon": "users", "badge": null },
   { "title": "Roles", "href": "/admin/roles", "icon": "shield", "badge": null },
-  { "title": "Events", "href": "/admin/events", "icon": "calendar" },
+  {
+    "title": "Events",
+    "icon": "calendar",
+    "children": [
+      { "title": "All Events", "href": "/admin/events", "icon": "calendar" },
+      { "title": "Categories", "href": "/admin/event-categories", "icon": "folder" }
+    ]
+  },
   {
     "title": "Forum",
     "icon": "messagecircle",

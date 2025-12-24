@@ -12,7 +12,6 @@ export default function AdminEventCreatePage() {
   return (
     <AdminDashboardShell 
       title="Create Organization Event"
-      subtitle="Create a new official Dadisi event"
       actions={
         <Button variant="outline" onClick={() => router.back()}>
           <ChevronLeft className="h-4 w-4 mr-2" /> Back
@@ -20,7 +19,7 @@ export default function AdminEventCreatePage() {
       }
     >
       <div className="max-w-5xl mx-auto">
-        <EventForm />
+        <EventForm isAdmin={true} />
       </div>
     </AdminDashboardShell>
   )

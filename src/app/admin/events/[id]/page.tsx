@@ -19,6 +19,7 @@ import {
   Clock,
   Loader2,
   ExternalLink,
+  Pencil,
 } from "lucide-react"
 import { AdminDashboardShell } from "@/components/admin-dashboard-shell"
 import { useAuth } from "@/store/auth"
@@ -507,6 +508,10 @@ export default function AdminEventDetailPage() {
                     <CardTitle className="text-lg">Actions</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-2">
+                    {/* Edit Button - Always visible */}
+                    <Button variant="outline" className="w-full" onClick={() => router.push(`/admin/events/${eventId}/edit`)}>
+                      <Pencil className="h-4 w-4 mr-2" /> Edit Event
+                    </Button>
                     {event.status === "pending_approval" && (
                       <>
                         <Button className="w-full" onClick={handleApprove}>

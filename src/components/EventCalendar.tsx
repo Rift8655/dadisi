@@ -138,9 +138,14 @@ export function EventCalendar({
     return categories.find((c) => c.id === categoryId)
   }
 
-  // Get category color
+  // Check if color is a hex color (for inline styling) or Tailwind class
+  const isHexColor = (color: string): boolean => {
+    return color.startsWith("#")
+  }
+
+  // Get category color - returns hex or tailwind class
   const getCategoryColor = (categoryId: string): string => {
-    return getCategory(categoryId)?.color || "bg-gray-500"
+    return getCategory(categoryId)?.color || "#6B7280" // gray-500 fallback as hex
   }
 
   // Generate year range (10 years back and forward)
@@ -276,6 +281,7 @@ export function EventCalendar({
                   {dayEvents.map((event) => {
                     const color = getCategoryColor(event.categoryId)
                     const category = getCategory(event.categoryId)
+                    const useInlineStyle = isHexColor(color)
                     return (
                       <div key={event.id} className="relative group">
                         <button
@@ -283,11 +289,12 @@ export function EventCalendar({
                           className={cn(
                             "w-full text-left text-xs px-2 py-1 rounded truncate",
                             "transition-opacity hover:opacity-80",
-                            "font-medium",
+                            "font-medium text-white",
                             eventTextColor,
-                            color,
+                            !useInlineStyle && color,
                             classNames.eventButton
                           )}
+                          style={useInlineStyle ? { backgroundColor: color } : undefined}
                         >
                           {event.name}
                         </button>
@@ -298,7 +305,10 @@ export function EventCalendar({
                             <p className="font-semibold mb-1 line-clamp-2">{event.name}</p>
                             {category && (
                               <div className="flex items-center gap-2 mb-2">
-                                <div className={cn("w-2 h-2 rounded-full", category.color)} />
+                                <div 
+                                  className="w-2 h-2 rounded-full"
+                                  style={isHexColor(category.color) ? { backgroundColor: category.color } : undefined}
+                                />
                                 <span className="text-xs text-muted-foreground">{category.name}</span>
                               </div>
                             )}

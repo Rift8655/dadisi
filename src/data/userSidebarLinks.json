@@ -12,9 +12,16 @@
       { "title": "Tags", "href": "/dashboard/blog/tags", "icon": "tag" }
     ]
   },
-  { "title": "Donations", "href": "/dashboard/donations", "icon": "creditcard", "badge": null },
-  { "title": "My RSVPs", "href": "/dashboard/events", "icon": "calendar", "badge": null },
-  { "title": "Lab Bookings", "href": "/dashboard/bookings", "icon": "flask", "badge": null },
+  {
+    "title": "My Activity",
+    "icon": "calendar",
+    "badge": null,
+    "children": [
+      { "title": "Donations", "href": "/dashboard/donations", "icon": "creditcard" },
+      { "title": "My RSVPs", "href": "/dashboard/events", "icon": "calendar" },
+      { "title": "Lab Bookings", "href": "/dashboard/bookings", "icon": "flask" }
+    ]
+  },
   {
     "title": "Event Organizer",
     "icon": "calendar",

@@ -16,9 +16,11 @@ const SIDEBAR_COLLAPSED_WIDTH = 70
  */
 export function AdminDashboardShell({
   title,
+  actions,
   children,
 }: {
   title: string
+  actions?: React.ReactNode
   children: React.ReactNode
 }) {
   const { isCollapsed, setIsOpen } = useSidebarStore()
@@ -70,6 +72,7 @@ export function AdminDashboardShell({
             </Button>
             <h1 className="text-xl font-semibold">{title}</h1>
           </div>
+          {actions && <div className="flex items-center gap-2">{actions}</div>}
         </div>
         <div className="p-4 lg:p-6">{children}</div>
       </main>

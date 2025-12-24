@@ -9,6 +9,14 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Loader2 } from "lucide-react"
+import { useCountiesQuery } from "@/hooks/useMemberProfileQuery"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import type { DonationCampaign, CampaignDonationInput } from "@/schemas/campaign"
 import Swal from "sweetalert2"
 
@@ -29,7 +37,11 @@ export function CampaignDonateForm({ campaign, onSuccess }: CampaignDonateFormPr
   const [lastName, setLastName] = useState("")
   const [email, setEmail] = useState("")
   const [phone, setPhone] = useState("")
+  const [countyId, setCountyId] = useState<string>("")
   const [message, setMessage] = useState("")
+
+  const { data: countiesData } = useCountiesQuery()
+  const counties = Array.isArray(countiesData) ? countiesData : []
 
   // Pre-fill form if user is authenticated
   useEffect(() => {
@@ -38,6 +50,10 @@ export function CampaignDonateForm({ campaign, onSuccess }: CampaignDonateFormPr
         setFirstName(prev => prev || user.member_profile?.first_name || "")
         setLastName(prev => prev || user.member_profile?.last_name || "")
         setPhone(prev => prev || user.member_profile?.phone_number || "")
+        // If we can get county_id from profile (though contract is sparse)
+        if ((user.member_profile as any).county_id) {
+          setCountyId(String((user.member_profile as any).county_id))
+        }
       }
       setEmail(prev => prev || user.email || "")
     }
@@ -78,6 +94,7 @@ export function CampaignDonateForm({ campaign, onSuccess }: CampaignDonateFormPr
         last_name: lastName,
         email,
         phone_number: phone || undefined,
+        county_id: countyId ? parseInt(countyId, 10) : undefined,
         message: message || undefined,
       }
 
@@ -184,6 +201,22 @@ export function CampaignDonateForm({ campaign, onSuccess }: CampaignDonateFormPr
           onChange={(e) => setPhone(e.target.value)}
           placeholder="+254..."
         />
+      </div>
+
+      <div className="space-y-1">
+        <Label htmlFor="county">County (Optional)</Label>
+        <Select value={countyId} onValueChange={setCountyId}>
+          <SelectTrigger id="county">
+            <SelectValue placeholder="Select your county" />
+          </SelectTrigger>
+          <SelectContent>
+            {counties.map((county: { id: number; name: string }) => (
+              <SelectItem key={county.id} value={String(county.id)}>
+                {county.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       <div className="space-y-1">

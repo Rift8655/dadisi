@@ -99,19 +99,20 @@ async function apiRequest<T = unknown>(
   // Add authorization header if available
   try {
     if (typeof window !== "undefined") {
-      try {
-        const authModule = await import("@/store/auth")
-        const token = authModule.useAuth.getState().token
-        if (token) headers.Authorization = `Bearer ${token}`
-      } catch (e) {
-        // dynamic import failed or not available in this environment; fallback to localStorage
-        const authStorage = localStorage.getItem("auth-storage")
-        if (authStorage) {
-          const authState = JSON.parse(authStorage)
-          const token = authState.state?.token
-          if (token) headers.Authorization = `Bearer ${token}`
+      const authModule = await import("@/store/auth")
+      const authStore = authModule.useAuth
+      
+      // If store hasn't hydrated yet, wait for it (max 2 seconds)
+      if (!authStore.getState()._hasHydrated) {
+        let attempts = 0;
+        while (!authStore.getState()._hasHydrated && attempts < 40) {
+          await new Promise(resolve => setTimeout(resolve, 50));
+          attempts++;
         }
       }
+
+      const token = authStore.getState().token
+      if (token) headers.Authorization = `Bearer ${token}`
     }
   } catch (e) {
     console.error("Failed to read auth token:", e)
@@ -464,6 +465,10 @@ export const subscriptionsApi = {
         order_tracking_id?: string
       }
     }>("/api/subscriptions/initiate-payment", data),
+
+  // Cancel a pending subscription payment
+  cancelPayment: () =>
+    api.post<{ success: boolean; message: string }>("/api/subscriptions/cancel-payment"),
 }
 
 // Counties API (public read access)
@@ -619,6 +624,39 @@ export const eventsApi = {
   // Scan paid ticket order (paid events)
   scanPaidTicket: (eventId: number, qrToken: string) =>
     api.post<{ success: boolean; message: string; order?: any }>(`/api/events/${eventId}/scan-ticket`, { qr_token: qrToken }),
+}
+
+// Registrations API (User's RSVPs)
+export const registrationsApi = {
+  // Get current user's registrations
+  my: () => api.get<{
+    data: Array<{
+      id: number
+      status: "confirmed" | "pending" | "waitlisted" | "cancelled" | "attended"
+      confirmation_code: string
+      qr_code_token?: string
+      event: {
+        id: number
+        title: string
+        description?: string
+        starts_at: string
+        ends_at?: string
+        venue?: string
+        is_online: boolean
+      }
+      ticket: {
+        id: number
+        name: string
+        price: number
+        currency: string
+      }
+      created_at: string
+    }>
+  }>("/api/registrations/my"),
+
+  // Cancel a registration
+  cancel: (registrationId: number) => 
+    api.delete<{ message: string }>(`/api/registrations/${registrationId}`),
 }
 
 // Donations API

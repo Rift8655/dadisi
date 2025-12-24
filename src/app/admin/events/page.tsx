@@ -19,6 +19,8 @@ import {
   User,
   ArrowUpDown,
   Plus,
+  Pencil,
+  Send,
 } from "lucide-react"
 import { AdminDashboardShell } from "@/components/admin-dashboard-shell"
 import { useAuth } from "@/store/auth"
@@ -198,6 +200,15 @@ export default function AdminEventsPage() {
       } catch (e) {
         Swal.fire("Error", "Failed to reject event.", "error")
       }
+    }
+  }
+
+  const handlePublish = async (id: number) => {
+    try {
+      await mutations.publish.mutateAsync(id)
+      Swal.fire("Published!", "Event is now live.", "success")
+    } catch (e) {
+      Swal.fire("Error", "Failed to publish event.", "error")
     }
   }
 
@@ -479,6 +490,9 @@ export default function AdminEventsPage() {
                               <DropdownMenuItem onClick={() => router.push(`/admin/events/${event.id}`)}>
                                 <Eye className="h-4 w-4 mr-2" /> View Details
                               </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => router.push(`/admin/events/${event.id}/edit`)}>
+                                <Pencil className="h-4 w-4 mr-2" /> Edit Event
+                              </DropdownMenuItem>
                               <DropdownMenuSeparator />
                               {event.status === "pending_approval" && (
                                 <>
@@ -489,6 +503,11 @@ export default function AdminEventsPage() {
                                     <X className="h-4 w-4 mr-2" /> Reject
                                   </DropdownMenuItem>
                                 </>
+                              )}
+                              {event.status === "draft" && (
+                                <DropdownMenuItem onClick={() => handlePublish(event.id)}>
+                                  <Send className="h-4 w-4 mr-2" /> Publish
+                                </DropdownMenuItem>
                               )}
                               {event.featured ? (
                                 <DropdownMenuItem onClick={() => handleUnfeature(event.id)}>

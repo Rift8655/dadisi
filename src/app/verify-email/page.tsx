@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { useAuth } from "@/store/auth"
 import { authApi } from "@/lib/api"
 import { showError, showSuccess } from "@/lib/sweetalert"
+import type { AuthUser } from "@/contracts/auth.contract"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -19,7 +20,7 @@ import { Label } from "@/components/ui/label"
 function VerifyEmailContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const { setToken } = useAuth()
+  const { setAuth } = useAuth()
   const [isLoading, setIsLoading] = useState(true)
   const [isVerifying, setIsVerifying] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -39,8 +40,9 @@ function VerifyEmailContent() {
 
       try {
         const response = await authApi.verifyEmail({ code })
-        if (response.token) {
-          await setToken(response.token)
+        if (response.token && response.user) {
+          // Use setAuth to properly set both user and token - this makes the user signed in
+          setAuth(response.user as AuthUser, response.token)
         }
 
         await showSuccess(
@@ -60,7 +62,7 @@ function VerifyEmailContent() {
     }
 
     handleVerifyEmail()
-  }, [searchParams, router, setToken])
+  }, [searchParams, router, setAuth])
 
   const handleManualVerify = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -69,8 +71,9 @@ function VerifyEmailContent() {
 
     try {
       const response = await authApi.verifyEmail({ code: manualCode })
-      if (response.token) {
-        await setToken(response.token)
+      if (response.token && response.user) {
+        // Use setAuth to properly set both user and token - this makes the user signed in
+        setAuth(response.user as AuthUser, response.token)
       }
 
       await showSuccess(

@@ -36,9 +36,19 @@ export const CreateEventSchema = z.object({
   county_id: z.coerce.number().optional(),
   
   // Capacity & Pricing
-  capacity: z.coerce.number().min(1).optional(),
+  capacity: z.string().optional().transform((val) => {
+    if (!val || val.trim() === '') return undefined
+    const num = parseInt(val, 10)
+    return isNaN(num) ? undefined : num
+  }).pipe(z.number().min(1).optional()),
   waitlist_enabled: z.boolean().default(false),
-  waitlist_capacity: z.coerce.number().optional(),
+  waitlist_capacity: z.string().optional().transform((val) => {
+    if (!val || val.trim() === '') return undefined
+    const num = parseInt(val, 10)
+    return isNaN(num) ? undefined : num
+  }).pipe(z.number().min(1).optional()),
+  // Pricing type toggle
+  pricing_type: z.enum(["free", "paid"]).default("free"),
   price: z.coerce.number().min(0).default(0),
   currency: z.string().default("KES"),
   
@@ -76,6 +86,33 @@ export const CreateEventSchema = z.object({
   {
     message: "Online link is required for virtual events",
     path: ["online_link"],
+  }
+).refine(
+  (data) => {
+    // If paid, price must be greater than 0
+    if (data.pricing_type === "paid" && (!data.price || data.price <= 0)) {
+      return false
+    }
+    return true
+  },
+  {
+    message: "Price is required for paid events",
+    path: ["price"],
+  }
+).refine(
+  (data) => {
+    // If capacity is set and tickets are defined, total quantity must not exceed capacity
+    if (data.capacity && data.tickets && data.tickets.length > 0) {
+      const totalQuantity = data.tickets.reduce((sum, t) => sum + (t.quantity || 0), 0)
+      if (totalQuantity > data.capacity) {
+        return false
+      }
+    }
+    return true
+  },
+  {
+    message: "Total ticket quantity cannot exceed event capacity",
+    path: ["tickets"],
   }
 )
 

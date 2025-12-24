@@ -7,7 +7,10 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { UserDashboardShell } from "@/components/user-dashboard-shell"
 import { useAuth } from "@/store/auth"
-import { donationsApi } from "@/lib/api"
+import { donationsApi, api } from "@/lib/api"
+import { RefreshCw, ExternalLink, X } from "lucide-react"
+import Swal from "sweetalert2"
+import { useQueryClient } from "@tanstack/react-query"
 
 interface Donation {
   id: number
@@ -16,12 +19,15 @@ interface Donation {
   status: string
   payment_method: string
   created_at: string
+  reference: string
+  receipt_number?: string
   receipt_url?: string
   campaign?: string
 }
 
 export default function DonationsPage() {
   const { user } = useAuth()
+  const queryClient = useQueryClient()
 
   const { data: donations = [], isLoading: loading } = useQuery({
     queryKey: ["user-donations"],
@@ -39,7 +45,9 @@ export default function DonationsPage() {
           ? (d.payment_method === "mpesa" ? "M-Pesa" : d.payment_method === "card" ? "Card" : d.payment_method)
           : "Pending",
         created_at: d.created_at,
-        receipt_url: undefined,
+        reference: d.reference,
+        receipt_number: d.receipt_number,
+        receipt_url: d.receipt_url,
         campaign: d.campaign?.title,
       })) as Donation[]
     },
@@ -80,6 +88,29 @@ export default function DonationsPage() {
         return <Badge className="bg-red-500/10 text-red-600">Failed</Badge>
       default:
         return <Badge className="bg-muted text-muted-foreground">{status}</Badge>
+    }
+  }
+
+  const handleCancelDonation = async (donation: Donation) => {
+    const result = await Swal.fire({
+      title: "Cancel Donation?",
+      text: `Are you sure you want to cancel this ${formatCurrency(donation.amount, donation.currency)} donation?`,
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#d33",
+      cancelButtonColor: "#3085d6",
+      confirmButtonText: "Yes, cancel it",
+      cancelButtonText: "Keep it",
+    })
+
+    if (result.isConfirmed) {
+      try {
+        await api.delete(`/api/donations/${donation.id}`)
+        queryClient.invalidateQueries({ queryKey: ["user-donations"] })
+        Swal.fire("Cancelled", "Your donation has been cancelled.", "success")
+      } catch (err) {
+        Swal.fire("Error", "Failed to cancel donation. Please try again.", "error")
+      }
     }
   }
 
@@ -162,6 +193,7 @@ export default function DonationsPage() {
                       <th className="pb-3 font-medium">Payment</th>
                       <th className="pb-3 font-medium">Status</th>
                       <th className="pb-3 font-medium">Receipt</th>
+                      <th className="pb-3 font-medium">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y">
@@ -176,13 +208,40 @@ export default function DonationsPage() {
                         <td className="py-3">{getStatusBadge(donation.status)}</td>
                         <td className="py-3">
                           {donation.receipt_url ? (
-                            <Button variant="ghost" size="sm" asChild>
-                              <a href={donation.receipt_url} target="_blank" rel="noopener noreferrer">
-                                Download
-                              </a>
-                            </Button>
+                            <div className="flex flex-col">
+                              <span className="text-xs font-mono">{donation.receipt_number}</span>
+                              <Button variant="link" size="sm" className="h-auto p-0 justify-start h-6" asChild>
+                                <a href={donation.receipt_url} target="_blank" rel="noopener noreferrer">
+                                  Download
+                                </a>
+                              </Button>
+                            </div>
                           ) : (
                             <span className="text-muted-foreground">—</span>
+                          )}
+                        </td>
+                        <td className="py-3">
+                          {donation.status === "pending" && (
+                            <div className="flex items-center gap-2">
+                              <Button variant="outline" size="sm" asChild>
+                                <a href={`/donations/checkout/${donation.reference}`}>
+                                  <ExternalLink className="h-3 w-3 mr-1" />
+                                  Resume
+                                </a>
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-destructive hover:text-destructive"
+                                onClick={() => handleCancelDonation(donation)}
+                              >
+                                <X className="h-3 w-3 mr-1" />
+                                Cancel
+                              </Button>
+                            </div>
+                          )}
+                          {donation.status === "completed" && (
+                            <span className="text-muted-foreground text-xs">—</span>
                           )}
                         </td>
                       </tr>

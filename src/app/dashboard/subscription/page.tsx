@@ -2,13 +2,16 @@
 
 import { useState } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { Clock, XCircle, ExternalLink } from "lucide-react"
 import { UserDashboardShell } from "@/components/user-dashboard-shell"
 import { useAuth } from "@/store/auth"
 import { plansApi, subscriptionsApi } from "@/lib/api"
+import { showError, showSuccess } from "@/lib/sweetalert"
 
 interface Plan {
   id: number
@@ -33,17 +36,36 @@ interface CurrentSubscription {
 }
 
 export default function SubscriptionPage() {
+  const router = useRouter()
   const { user, isAuthenticated } = useAuth()
   const queryClient = useQueryClient()
   const [showCancelConfirm, setShowCancelConfirm] = useState(false)
+  const [upgradingPlanId, setUpgradingPlanId] = useState<number | null>(null)
 
   // Helper function - defined early to avoid hoisting issues
   const getLocalizedValue = (value: any): string => {
-    if (typeof value === "string") return value
+    if (typeof value === "string") {
+      // Try parsing JSON strings like '{"en":"Community"}'
+      try {
+        const parsed = JSON.parse(value)
+        if (typeof parsed === "object" && parsed !== null) {
+          return parsed.en || Object.values(parsed)[0] as string || value
+        }
+        return String(parsed)
+      } catch {
+        return value
+      }
+    }
     if (typeof value === "object" && value !== null) {
       return value.en || Object.values(value)[0] as string || ""
     }
     return ""
+  }
+  
+  // Helper to check if a feature is a quota (machine-readable) vs display feature
+  const isQuotaFeature = (featureName: string): boolean => {
+    const quotaPatterns = ['Monthly Event', 'Event Discount', 'Monthly Blog', 'Lab Hours', 'Forum Posts']
+    return quotaPatterns.some(pattern => featureName.includes(pattern))
   }
 
   // Fetch current subscription from API
@@ -110,6 +132,47 @@ export default function SubscriptionPage() {
     },
   })
 
+  // Upgrade/Select plan - for free plans, call API directly; for paid plans, navigate to checkout
+  const upgradeMutation = useMutation({
+    mutationFn: (planId: number) => subscriptionsApi.initiatePayment({ plan_id: planId, billing_period: "month" }),
+    onSuccess: async () => {
+      await showSuccess("Success", "Plan selected successfully!")
+      queryClient.invalidateQueries({ queryKey: ["current-subscription"] })
+      setUpgradingPlanId(null)
+    },
+    onError: async (error: any) => {
+      await showError("Error", error.message || "Failed to select plan")
+      setUpgradingPlanId(null)
+    },
+  })
+
+  // Cancel pending payment mutation
+  const cancelPaymentMutation = useMutation({
+    mutationFn: () => subscriptionsApi.cancelPayment(),
+    onSuccess: async () => {
+      await showSuccess("Cancelled", "Payment session cancelled successfully.")
+      queryClient.invalidateQueries({ queryKey: ["current-subscription"] })
+    },
+    onError: async (error: any) => {
+      await showError("Error", error.message || "Failed to cancel payment")
+    },
+  })
+
+  const handleSelectPlan = (planId: number, priceMonthly: number) => {
+    if (priceMonthly === 0) {
+      // Free plan - select directly
+      setUpgradingPlanId(planId)
+      upgradeMutation.mutate(planId)
+    } else {
+      // Paid plan - navigate to checkout page
+      router.push(`/checkout/subscription?plan_id=${planId}&billing_interval=monthly`)
+    }
+  }
+
+  const scrollToPlans = () => {
+    document.getElementById("available-plans")?.scrollIntoView({ behavior: "smooth" })
+  }
+
   const loading = subscriptionLoading || plansLoading
 
   // Merge plan features from plans list into subscription
@@ -150,11 +213,14 @@ export default function SubscriptionPage() {
         return <Badge className="bg-green-500/10 text-green-600">Active</Badge>
       case "cancelled":
         return <Badge className="bg-yellow-500/10 text-yellow-600">Cancelled</Badge>
+      case "pending_cancellation":
+        return <Badge className="bg-orange-500/10 text-orange-600">Cancels at Period End</Badge>
       case "expired":
         return <Badge variant="secondary">Expired</Badge>
       case "past_due":
         return <Badge className="bg-red-500/10 text-red-600">Past Due</Badge>
       case "payment_pending":
+      case "pending":
         return <Badge className="bg-blue-500/10 text-blue-600">Payment Pending</Badge>
       default:
         return <Badge variant="outline">{status}</Badge>
@@ -174,6 +240,96 @@ export default function SubscriptionPage() {
   return (
     <UserDashboardShell title="Subscription">
       <div className="space-y-6">
+        {/* Pending Payment Alert */}
+        {subscriptionWithFeatures && (subscriptionWithFeatures.status === "payment_pending" || subscriptionWithFeatures.status === "pending") && (
+          <Alert className="border-blue-200 bg-blue-50 text-blue-900">
+            <Clock className="h-4 w-4 text-blue-600" />
+            <AlertTitle className="font-semibold">Payment Pending</AlertTitle>
+            <AlertDescription className="mt-2 space-y-3">
+              <p>
+                You have a pending payment for the <strong>{getLocalizedValue(subscriptionWithFeatures.plan.name)}</strong> plan. 
+                Please complete your payment to activate your subscription.
+              </p>
+              <div className="flex flex-wrap gap-2 pt-1">
+                <Button 
+                  size="sm" 
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                  onClick={() => router.push(`/checkout/subscription?plan_id=${subscriptionWithFeatures.plan.id}&billing_interval=${subscriptionWithFeatures.billing_interval}`)}
+                >
+                  <ExternalLink className="mr-2 h-4 w-4" />
+                  Resume Payment
+                </Button>
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                   className="border-blue-300 text-blue-700 hover:bg-blue-100"
+                  onClick={() => cancelPaymentMutation.mutate()}
+                  disabled={cancelPaymentMutation.isPending}
+                >
+                  <XCircle className="mr-2 h-4 w-4" />
+                  {cancelPaymentMutation.isPending ? "Cancelling..." : "Cancel Payment Session"}
+                </Button>
+              </div>
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {/* Renewal Expiry Warning - shows 14 days before expiry */}
+        {subscriptionWithFeatures && 
+         subscriptionWithFeatures.status === "active" && 
+         subscriptionWithFeatures.plan.price_monthly > 0 &&
+         subscriptionWithFeatures.current_period_end && 
+         new Date(subscriptionWithFeatures.current_period_end) <= new Date(Date.now() + 14 * 24 * 60 * 60 * 1000) && (
+          <Alert className="border-amber-200 bg-amber-50 text-amber-900">
+            <Clock className="h-4 w-4 text-amber-600" />
+            <AlertTitle className="font-semibold">Subscription Expiring Soon</AlertTitle>
+            <AlertDescription className="mt-2 space-y-3">
+              <p>
+                Your <strong>{getLocalizedValue(subscriptionWithFeatures.plan.name)}</strong> subscription expires on{" "}
+                <strong>{formatDate(subscriptionWithFeatures.current_period_end)}</strong>.
+                Renew now to maintain your benefits.
+              </p>
+              <div className="flex flex-wrap gap-2 pt-1">
+                <Button 
+                  size="sm" 
+                  className="bg-amber-600 hover:bg-amber-700 text-white"
+                  onClick={() => router.push(`/membership`)}
+                >
+                  Renew Now
+                </Button>
+              </div>
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {/* Grace Period Alert */}
+        {subscriptionWithFeatures && subscriptionData?.enhancement?.status === "grace_period" && (
+          <Alert className="border-red-200 bg-red-50 text-red-900">
+            <XCircle className="h-4 w-4 text-red-600" />
+            <AlertTitle className="font-semibold">Grace Period Active</AlertTitle>
+            <AlertDescription className="mt-2 space-y-3">
+              <p>
+                Your subscription has expired. You have until{" "}
+                <strong>
+                  {subscriptionData?.enhancement?.grace_period_expires_at 
+                    ? formatDate(subscriptionData.enhancement.grace_period_expires_at) 
+                    : "soon"}
+                </strong>{" "}
+                to renew and keep your benefits. After that, you&apos;ll be moved to the free tier.
+              </p>
+              <div className="flex flex-wrap gap-2 pt-1">
+                <Button 
+                  size="sm" 
+                  className="bg-red-600 hover:bg-red-700 text-white"
+                  onClick={() => router.push(`/membership`)}
+                >
+                  Renew Now to Keep Benefits
+                </Button>
+              </div>
+            </AlertDescription>
+          </Alert>
+        )}
+
         {/* Current Subscription */}
         {subscriptionWithFeatures ? (
           <Card>
@@ -185,51 +341,63 @@ export default function SubscriptionPage() {
                     {getStatusBadge(subscriptionWithFeatures.status)}
                   </CardTitle>
                   <CardDescription>
-                    {subscriptionWithFeatures.billing_interval === "monthly" ? "Monthly" : "Yearly"} billing
+                    {subscriptionWithFeatures.plan.price_monthly === 0 
+                      ? "Free forever" 
+                      : `${subscriptionWithFeatures.billing_interval === "monthly" ? "Monthly" : "Yearly"} billing`
+                    }
                   </CardDescription>
                 </div>
                 <div className="text-right">
                   <p className="text-2xl font-bold">
-                    {formatCurrency(
-                      subscriptionWithFeatures.billing_interval === "monthly"
-                        ? subscriptionWithFeatures.plan.price_monthly
-                        : subscriptionWithFeatures.plan.price_yearly,
-                      subscriptionWithFeatures.plan.currency
-                    )}
+                    {subscriptionWithFeatures.plan.price_monthly === 0 
+                      ? "Free"
+                      : formatCurrency(
+                          subscriptionWithFeatures.billing_interval === "monthly"
+                            ? subscriptionWithFeatures.plan.price_monthly
+                            : subscriptionWithFeatures.plan.price_yearly,
+                          subscriptionWithFeatures.plan.currency
+                        )
+                    }
                   </p>
-                  <p className="text-sm text-muted-foreground">
-                    per {subscriptionWithFeatures.billing_interval === "monthly" ? "month" : "year"}
-                  </p>
+                  {subscriptionWithFeatures.plan.price_monthly > 0 && (
+                    <p className="text-sm text-muted-foreground">
+                      per {subscriptionWithFeatures.billing_interval === "monthly" ? "month" : "year"}
+                    </p>
+                  )}
                 </div>
               </div>
             </CardHeader>
             <CardContent className="space-y-6">
-              {/* Billing Info */}
-              <div className="rounded-lg bg-muted/50 p-4">
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Current Period</p>
-                    <p className="font-medium">
-                      {formatDate(subscriptionWithFeatures.current_period_start)} -{" "}
-                      {formatDate(subscriptionWithFeatures.current_period_end)}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Next Billing Date</p>
-                    <p className="font-medium">
-                      {subscriptionWithFeatures.cancel_at_period_end
-                        ? "Subscription ends on " + formatDate(subscriptionWithFeatures.current_period_end)
-                        : formatDate(subscriptionWithFeatures.current_period_end)}
-                    </p>
+              {/* Billing Info - Only show for paid plans */}
+              {subscriptionWithFeatures.plan.price_monthly > 0 && subscriptionWithFeatures.current_period_end && (
+                <div className="rounded-lg bg-muted/50 p-4">
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Current Period</p>
+                      <p className="font-medium">
+                        {formatDate(subscriptionWithFeatures.current_period_start)} -{" "}
+                        {formatDate(subscriptionWithFeatures.current_period_end)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Next Billing Date</p>
+                      <p className="font-medium">
+                        {subscriptionWithFeatures.cancel_at_period_end
+                          ? "Subscription ends on " + formatDate(subscriptionWithFeatures.current_period_end)
+                          : formatDate(subscriptionWithFeatures.current_period_end)}
+                      </p>
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
 
               {/* Features */}
               <div>
                 <h4 className="font-medium mb-3">Included in your plan:</h4>
                 <ul className="grid gap-2 sm:grid-cols-2">
-                  {subscriptionWithFeatures.plan.features.map((feature, index) => (
+                  {subscriptionWithFeatures.plan.features
+                    .filter((f) => !isQuotaFeature(getLocalizedValue(f)))
+                    .map((feature, index) => (
                     <li key={index} className="flex items-center gap-2 text-sm">
                       <svg
                         className="h-4 w-4 text-green-500"
@@ -250,22 +418,26 @@ export default function SubscriptionPage() {
                 </ul>
               </div>
 
-              {/* Actions */}
+              {/* Actions - Different for free vs paid */}
               <div className="flex flex-wrap gap-3 border-t pt-4">
-                <Button variant="outline">Change Plan</Button>
-                <Button variant="outline">Update Payment Method</Button>
-                {subscriptionWithFeatures.cancel_at_period_end ? (
-                  <Button variant="outline" onClick={handleReactivate}>
-                    Reactivate Subscription
-                  </Button>
-                ) : (
-                  <Button
-                    variant="ghost"
-                    className="text-destructive hover:text-destructive"
-                    onClick={() => setShowCancelConfirm(true)}
-                  >
-                    Cancel Subscription
-                  </Button>
+                <Button variant="default" onClick={scrollToPlans}>Upgrade Plan</Button>
+                {subscriptionWithFeatures.plan.price_monthly > 0 && (
+                  <>
+                    <Button variant="outline">Update Payment Method</Button>
+                    {subscriptionWithFeatures.cancel_at_period_end ? (
+                      <Button variant="outline" onClick={handleReactivate}>
+                        Reactivate Subscription
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="ghost"
+                        className="text-destructive hover:text-destructive"
+                        onClick={() => setShowCancelConfirm(true)}
+                      >
+                        Cancel Subscription
+                      </Button>
+                    )}
+                  </>
                 )}
               </div>
 
@@ -302,7 +474,7 @@ export default function SubscriptionPage() {
               </div>
               <CardTitle>No Active Subscription</CardTitle>
               <CardDescription>
-                Upgrade to a paid plan to unlock premium features like blog posting, priority event
+                Choose a plan below to unlock features like blog posting, priority event
                 registration, and more.
               </CardDescription>
             </CardHeader>
@@ -310,9 +482,9 @@ export default function SubscriptionPage() {
         )}
 
         {/* Available Plans */}
-        <div>
+        <div id="available-plans">
           <h2 className="text-lg font-semibold mb-4">
-            {subscription ? "Other Plans" : "Available Plans"}
+            {subscription ? "Upgrade to a Premium Plan" : "Available Plans"}
           </h2>
           {loading ? (
             <div className="grid gap-4 md:grid-cols-3">
@@ -377,9 +549,17 @@ export default function SubscriptionPage() {
                       <Button
                         className="w-full"
                         variant={isCurrentPlan ? "secondary" : "default"}
-                        disabled={isCurrentPlan}
+                        disabled={isCurrentPlan || upgradingPlanId === plan.id}
+                        onClick={() => !isCurrentPlan && handleSelectPlan(plan.id, plan.price_monthly)}
                       >
-                        {isCurrentPlan ? "Current Plan" : "Select Plan"}
+                        {upgradingPlanId === plan.id 
+                          ? "Processing..." 
+                          : isCurrentPlan 
+                            ? "Current Plan" 
+                            : plan.price_monthly === 0 
+                              ? "Select Free Plan" 
+                              : "Select Plan"
+                        }
                       </Button>
                     </CardContent>
                   </Card>

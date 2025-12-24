@@ -209,15 +209,13 @@ export default function AdminDonationDetailPage() {
                   </div>
                 )}
 
-                {donation.county && (
-                  <div className="flex items-center gap-3">
-                    <MapPin className="h-4 w-4 text-muted-foreground" />
-                    <div>
-                      <p className="text-sm text-muted-foreground">County</p>
-                      <p className="font-medium">{donation.county.name}</p>
-                    </div>
+                <div className="flex items-center gap-3">
+                  <MapPin className="h-4 w-4 text-muted-foreground" />
+                  <div>
+                    <p className="text-sm text-muted-foreground">County</p>
+                    <p className="font-medium">{donation.county?.name || "—"}</p>
                   </div>
-                )}
+                </div>
               </div>
             </CardContent>
           </Card>
