@@ -2,12 +2,13 @@
 
 import { useSearchParams } from "next/navigation"
 import Link from "next/link"
+import { Suspense } from "react"
 import { XCircle, RefreshCw, HelpCircle } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 
-export default function EventCheckoutErrorPage() {
+function EventCheckoutErrorContent() {
   const searchParams = useSearchParams()
   const reference = searchParams.get("reference")
   const reason = searchParams.get("reason") || "payment_failed"
@@ -91,5 +92,13 @@ export default function EventCheckoutErrorPage() {
         </CardContent>
       </Card>
     </div>
+  )
+}
+
+export default function EventCheckoutErrorPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Loading...</div>}>
+      <EventCheckoutErrorContent />
+    </Suspense>
   )
 }

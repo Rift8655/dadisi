@@ -1,13 +1,13 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, Suspense } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
 
 /**
  * Legacy checkout page - redirects to /checkout/subscription
  * This page is kept for backwards compatibility with old links
  */
-export default function LegacyCheckoutPage() {
+function LegacyCheckoutContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
 
@@ -25,5 +25,13 @@ export default function LegacyCheckoutPage() {
     <div className="container mx-auto py-12 px-4 max-w-4xl text-center">
       <p className="text-muted-foreground">Redirecting to checkout...</p>
     </div>
+  )
+}
+
+export default function LegacyCheckoutPage() {
+  return (
+    <Suspense fallback={<div className="container mx-auto py-12 px-4 max-w-4xl text-center"><p className="text-muted-foreground">Loading...</p></div>}>
+      <LegacyCheckoutContent />
+    </Suspense>
   )
 }

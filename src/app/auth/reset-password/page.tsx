@@ -1,9 +1,9 @@
 "use client"
-import React, { useState, useEffect } from "react"
+import React, { useState, useEffect, Suspense } from "react"
 import { useResetPassword } from "@/hooks/useAuth"
 import { useSearchParams } from "next/navigation"
 
-export default function ResetPasswordPage() {
+function ResetPasswordForm() {
   const search = useSearchParams()
   const token = search?.get("token") || ""
   const [email, setEmail] = useState("")
@@ -70,5 +70,13 @@ export default function ResetPasswordPage() {
         <div className="mt-4 text-green-600">Password reset successful.</div>
       )}
     </div>
+  )
+}
+
+export default function ResetPasswordPage() {
+  return (
+    <Suspense fallback={<div className="max-w-md mx-auto p-6">Loading...</div>}>
+      <ResetPasswordForm />
+    </Suspense>
   )
 }

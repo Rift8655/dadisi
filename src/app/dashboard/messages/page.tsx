@@ -29,7 +29,6 @@ import {
   useSendMessageMutation,
   useStoreMessageKeysMutation,
 } from "@/hooks/useMessages"
-import { useRealtimeChat } from "@/hooks/useRealtimeChat"
 import { useAuth } from "@/store/auth"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -62,23 +61,6 @@ export default function MessagesPage() {
   useEffect(() => {
     setHasKeys(hasMessagingKeys())
   }, [])
-
-  // Real-time updates via WebSockets
-  useRealtimeChat({
-    onMessage: (payload) => {
-      // Show notification for new messages
-      if (payload.sender_id !== selectedPartner) {
-        Swal.fire({
-          toast: true,
-          position: "top-end",
-          icon: "info",
-          title: `New message from ${payload.sender_username}`,
-          showConfirmButton: false,
-          timer: 3000,
-        })
-      }
-    },
-  })
 
 
   // Fetch conversations

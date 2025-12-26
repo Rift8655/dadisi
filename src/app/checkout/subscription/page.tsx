@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, Suspense } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { useSearchParams, useRouter } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -29,7 +29,7 @@ interface PlanData {
   features: { id: number; name: string | { en?: string }; limit: number | null }[]
 }
 
-export default function SubscriptionCheckoutPage() {
+function SubscriptionCheckoutContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const user = useAuth((s) => s.user)
@@ -330,5 +330,13 @@ export default function SubscriptionCheckoutPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function SubscriptionCheckoutPage() {
+  return (
+    <Suspense fallback={<div className="container mx-auto py-12 px-4 max-w-4xl"><Skeleton className="h-8 w-48 mb-8" /><div className="grid md:grid-cols-2 gap-8"><Skeleton className="h-96" /><Skeleton className="h-64" /></div></div>}>
+      <SubscriptionCheckoutContent />
+    </Suspense>
   )
 }

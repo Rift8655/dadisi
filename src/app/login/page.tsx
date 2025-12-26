@@ -1,11 +1,11 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useAuth } from "@/store/auth"
 import { LoadingSpinner } from "@/components/loading-spinner"
 
-export default function LoginPage() {
+function LoginContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const setAuthDialogOpen = useAuth((s) => s.setAuthDialogOpen)
@@ -32,5 +32,13 @@ export default function LoginPage() {
     <div className="flex min-h-[50vh] items-center justify-center">
       <LoadingSpinner />
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="flex min-h-[50vh] items-center justify-center"><LoadingSpinner /></div>}>
+      <LoginContent />
+    </Suspense>
   )
 }

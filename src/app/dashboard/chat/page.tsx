@@ -34,7 +34,6 @@ import {
   useSendMessageMutation,
   useStoreMessageKeysMutation,
 } from "@/hooks/useMessages"
-import { useRealtimeChat } from "@/hooks/useRealtimeChat"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -81,22 +80,6 @@ export default function ChatPage() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [decryptedMessages])
-
-  // Real-time updates via WebSockets
-  useRealtimeChat({
-    onMessage: (payload) => {
-      if (payload.sender_id !== selectedPartner) {
-        Swal.fire({
-          toast: true,
-          position: "top-end",
-          icon: "info",
-          title: `New message from ${payload.sender_username}`,
-          showConfirmButton: false,
-          timer: 3000,
-        })
-      }
-    },
-  })
 
   // Fetch data
   const { data: conversations, isLoading: loadingConversations } = useConversations(hasKeys)

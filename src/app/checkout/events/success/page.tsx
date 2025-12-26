@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, Suspense } from "react"
 import { useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { CheckCircle, Ticket, Calendar, MapPin, QrCode, Loader2, Download } from "lucide-react"
@@ -20,7 +20,7 @@ interface TicketData {
   }
 }
 
-export default function EventCheckoutSuccessPage() {
+function EventCheckoutSuccessContent() {
   const searchParams = useSearchParams()
   const reference = searchParams.get("reference")
   
@@ -166,5 +166,13 @@ export default function EventCheckoutSuccessPage() {
         </CardContent>
       </Card>
     </div>
+  )
+}
+
+export default function EventCheckoutSuccessPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-background to-muted/20"><Loader2 className="h-12 w-12 animate-spin text-primary" /></div>}>
+      <EventCheckoutSuccessContent />
+    </Suspense>
   )
 }
