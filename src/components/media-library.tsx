@@ -18,7 +18,8 @@ interface MediaLibraryProps {
 export function MediaLibrary({ onSelect }: MediaLibraryProps) {
   const isLocal = process.env.NEXT_PUBLIC_BACKEND_APP_URL?.includes("localhost") || 
                   process.env.NEXT_PUBLIC_BACKEND_APP_URL?.includes("127.0.0.1")
-  const { data: media = [], isLoading } = useMedia()
+  const { data: mediaData, isLoading } = useMedia()
+  const media = mediaData?.data || []
   const uploadMut = useUploadMedia()
   const deleteMut = useDeleteMedia()
   
@@ -128,7 +129,7 @@ export function MediaLibrary({ onSelect }: MediaLibraryProps) {
           </div>
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-            {media.map((file) => (
+            {media.map((file: any) => (
               <Card key={file.id} className="overflow-hidden group relative">
                 <div className="aspect-square relative bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
                    {file.mime_type.startsWith("image/") ? (

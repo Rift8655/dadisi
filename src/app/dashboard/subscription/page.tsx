@@ -29,7 +29,7 @@ interface CurrentSubscription {
   id: number
   plan: Plan
   billing_interval: "monthly" | "yearly"
-  status: "active" | "cancelled" | "expired" | "past_due" | "payment_pending"
+  status: "active" | "cancelled" | "expired" | "past_due" | "payment_pending" | "pending"
   current_period_start: string
   current_period_end: string
   cancel_at_period_end: boolean
@@ -241,7 +241,7 @@ export default function SubscriptionPage() {
     <UserDashboardShell title="Subscription">
       <div className="space-y-6">
         {/* Pending Payment Alert */}
-        {subscriptionWithFeatures && (subscriptionWithFeatures.status === "payment_pending" || subscriptionWithFeatures.status === "pending") && (
+        {subscriptionWithFeatures && (["payment_pending", "pending"] as const).includes(subscriptionWithFeatures.status as "payment_pending" | "pending") && (
           <Alert className="border-blue-200 bg-blue-50 text-blue-900">
             <Clock className="h-4 w-4 text-blue-600" />
             <AlertTitle className="font-semibold">Payment Pending</AlertTitle>
@@ -311,8 +311,8 @@ export default function SubscriptionPage() {
               <p>
                 Your subscription has expired. You have until{" "}
                 <strong>
-                  {subscriptionData?.enhancement?.grace_period_expires_at 
-                    ? formatDate(subscriptionData.enhancement.grace_period_expires_at) 
+                  {subscriptionData?.enhancement?.grace_period_ends_at 
+                    ? formatDate(subscriptionData.enhancement.grace_period_ends_at) 
                     : "soon"}
                 </strong>{" "}
                 to renew and keep your benefits. After that, you&apos;ll be moved to the free tier.

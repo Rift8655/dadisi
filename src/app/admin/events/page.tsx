@@ -8,7 +8,6 @@ import {
   Star,
   ClipboardCheck,
   Search,
-  ChevronDown,
   Eye,
   Check,
   X,
@@ -21,6 +20,7 @@ import {
   Plus,
   Pencil,
   Send,
+  type LucideIcon,
 } from "lucide-react"
 import { AdminDashboardShell } from "@/components/admin-dashboard-shell"
 import { useAuth } from "@/store/auth"
@@ -75,7 +75,7 @@ function EventTypeBadge({ type }: { type: string | undefined }) {
 }
 
 // Stats card
-function StatCard({ title, value, icon: Icon, loading }: { title: string; value: number; icon: any; loading: boolean }) {
+function StatCard({ title, value, icon: Icon, loading }: { title: string; value: number; icon: LucideIcon; loading: boolean }) {
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -113,7 +113,7 @@ export default function AdminEventsPage() {
   const [selectedIds, setSelectedIds] = useState<number[]>([])
 
   // Data queries
-  const { data: eventsData, isLoading: eventsLoading, refetch } = useAdminEvents(filters)
+  const { data: eventsData, isLoading: eventsLoading } = useAdminEvents(filters)
   const { data: stats, isLoading: statsLoading } = useAdminEventStats()
   const mutations = useAdminEventMutations()
 
@@ -123,11 +123,11 @@ export default function AdminEventsPage() {
   }
 
   const handleStatusFilter = (value: string) => {
-    setFilters(prev => ({ ...prev, status: value as any, page: 1 }))
+    setFilters(prev => ({ ...prev, status: value as AdminEventFilters['status'], page: 1 }))
   }
 
   const handleTypeFilter = (value: string) => {
-    setFilters(prev => ({ ...prev, event_type: value as any, page: 1 }))
+    setFilters(prev => ({ ...prev, event_type: value as AdminEventFilters['event_type'], page: 1 }))
   }
 
   const handleRowsPerPage = (value: string) => {
@@ -416,7 +416,6 @@ export default function AdminEventsPage() {
                     </TableHead>
                     <SortableHeader label="Title" column="title" />
                     <TableHead>Type</TableHead>
-                    <TableHead>Organizer</TableHead>
                     <TableHead>Created By</TableHead>
                     <SortableHeader label="Status" column="status" />
                     <SortableHeader label="Date" column="starts_at" />
@@ -463,11 +462,8 @@ export default function AdminEventsPage() {
                         <TableCell>
                           <EventTypeBadge type={event.event_type} />
                         </TableCell>
-                        <TableCell className="text-sm">
-                          {(event as any).organizer?.username || (event as any).organizer?.email || "—"}
-                        </TableCell>
                         <TableCell className="text-sm text-muted-foreground">
-                          {(event as any).creator?.username || (event as any).creator?.email || "—"}
+                          {event.creator?.username || event.creator?.email || "—"}
                         </TableCell>
                         <TableCell>
                           <StatusBadge status={event.status} />
@@ -476,7 +472,7 @@ export default function AdminEventsPage() {
                           {event.starts_at ? formatDate(event.starts_at) : "—"}
                         </TableCell>
                         <TableCell className="text-sm">
-                          {(event as any).registrations_count ?? "—"}
+                          {event.registrations_count ?? "—"}
                           {event.capacity && ` / ${event.capacity}`}
                         </TableCell>
                         <TableCell className="text-right">

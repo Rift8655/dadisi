@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { useAuth } from "@/store/auth"
+import { useAuth, type AuthState } from "@/store/auth"
 
 // authApi import removed; using `useAuth.sendVerification` instead
 import { showError, showSuccess } from "@/lib/sweetalert"
@@ -12,9 +12,9 @@ interface VerifyEmailButtonProps {
 }
 
 export function VerifyEmailButton({ className }: VerifyEmailButtonProps) {
-  const user = useAuth((s) => s.user)
-  const sendingVerification = useAuth((s) => s.sendingVerification)
-  const sendVerification = useAuth((s) => s.sendVerification)
+  const user = useAuth((s: AuthState) => s.user)
+  const sendingVerification = useAuth((s: AuthState) => s.sendingVerification)
+  const sendVerification = useAuth((s: AuthState) => s.sendVerification)
 
   if (!user || user.email_verified_at) {
     return null

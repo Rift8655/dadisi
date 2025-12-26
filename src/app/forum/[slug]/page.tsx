@@ -14,7 +14,8 @@ import {
   User,
   MapPin,
 } from "lucide-react"
-import { type ForumThread, countiesApi } from "@/lib/api"
+import { type ForumThread } from "@/schemas/forum"
+import { countiesApi } from "@/lib/api"
 import { useAuth } from "@/store/auth"
 import {
   useForumCategory,

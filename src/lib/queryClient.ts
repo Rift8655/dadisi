@@ -100,3 +100,14 @@ export const GC_TIME = {
   /** Short cache for frequently changing data */
   SHORT: 5 * 60 * 1000, // 5 minutes
 } as const
+
+// ============================================================================
+// INVALIDATION HELPERS - Standardized query invalidation
+// ============================================================================
+
+/** Invalidate all plan-related queries */
+export function invalidatePlans() {
+  if (queryClient) {
+    queryClient.invalidateQueries({ queryKey: ["plans"] })
+  }
+}

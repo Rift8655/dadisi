@@ -27,7 +27,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Switch } from "@/components/ui/switch"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
-import { CreateEventSchema, CreateEventInput, TicketInput, SpeakerInput } from "@/schemas/event-form"
+import { CreateEventSchema, CreateEventInput, CreateEventFormValues, TicketInput, SpeakerInput } from "@/schemas/event-form"
 import { eventsApi, mediaApi } from "@/lib/api"
 import { eventsAdminApi } from "@/lib/api-admin"
 import { api } from "@/lib/api"
@@ -54,7 +54,7 @@ export function EventForm({ initialData, isEdit = false, isAdmin = false }: Even
     watch,
     reset,
     formState: { errors },
-  } = useForm<CreateEventInput>({
+  } = useForm<CreateEventFormValues>({
     resolver: zodResolver(CreateEventSchema),
     defaultValues: {
       title: initialData?.title || "",
@@ -235,7 +235,7 @@ export function EventForm({ initialData, isEdit = false, isAdmin = false }: Even
   }
 
   const mutation = useMutation({
-    mutationFn: async (data: CreateEventInput) => {
+    mutationFn: async (data: CreateEventFormValues) => {
       // Include image_path in the submission
       const submitData = { ...data, image_path: imagePath } as any
       if (isEdit && initialData?.id) {
@@ -252,7 +252,7 @@ export function EventForm({ initialData, isEdit = false, isAdmin = false }: Even
         return eventsApi.create(submitData)
       }
     },
-    onSuccess: (_: any, variables: CreateEventInput) => {
+    onSuccess: (_: any, variables: CreateEventFormValues) => {
       queryClient.invalidateQueries({ queryKey: ["events"] })
       queryClient.invalidateQueries({ queryKey: ["organizer-events"] })
       queryClient.invalidateQueries({ queryKey: ["admin-events"] })
@@ -300,7 +300,7 @@ export function EventForm({ initialData, isEdit = false, isAdmin = false }: Even
     console.log("[EventForm] Ticket sync effect:", { pricingType, basePrice, isEdit, ticketCount: getValues("tickets")?.length })
     
     // Only run auto-generation logic if it's a paid event with a price
-    if (pricingType === "paid" && basePrice > 0) {
+    if (pricingType === "paid" && basePrice && Number(basePrice) > 0) {
       const tickets = getValues("tickets") || []
       const generalAdmissionIndex = tickets.findIndex(t => t.name === "General Admission")
       const ticketQuantity = capacityValue ? Number(capacityValue) : UNLIMITED_QUANTITY
@@ -322,7 +322,7 @@ export function EventForm({ initialData, isEdit = false, isAdmin = false }: Even
         })
       } else if (generalAdmissionIndex !== -1) {
         // UPDATE: Sync existing General Admission ticket price and quantity
-        setValue(`tickets.${generalAdmissionIndex}.price`, basePrice)
+        setValue(`tickets.${generalAdmissionIndex}.price`, Number(basePrice))
         setValue(`tickets.${generalAdmissionIndex}.quantity`, ticketQuantity)
       }
       // Note: In edit mode with no General Admission ticket, user must manually manage tickets
@@ -357,7 +357,7 @@ export function EventForm({ initialData, isEdit = false, isAdmin = false }: Even
     }
   }
 
-  const onSubmit = (data: CreateEventInput) => {
+  const onSubmit = (data: CreateEventFormValues) => {
     mutation.mutate(data)
   }
 

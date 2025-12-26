@@ -151,7 +151,7 @@ export default function ForumCategoriesAdminPage() {
   }
 
   const DynamicIcon = ({ name, className }: { name: string, className?: string }) => {
-    // @ts-ignore
+    // @ts-expect-error dynamic lookup of lucide icon by name
     const IconComponent = LucideIcons[name.charAt(0).toUpperCase() + name.slice(1).replace(/-([a-z])/g, (g) => g[1].toUpperCase())] || LucideIcons.HelpCircle
     return <IconComponent className={className} />
   }

@@ -105,7 +105,7 @@ export interface Subscription {
   user_id: number
   plan_id: number
   plan: Plan
-  status: "active" | "canceled" | "expired" | "past_due" | "pending"
+  status: "active" | "canceled" | "cancelled" | "expired" | "past_due" | "pending" | "payment_pending"
   starts_at: string
   ends_at: string | null
   canceled_at: string | null
@@ -197,21 +197,6 @@ export interface PromoCode {
   is_active: boolean
 }
 
-export interface Payout {
-  id: number
-  event_id: number
-  organizer_id: number
-  total_revenue: number
-  commission_amount: number
-  net_payout: number
-  currency: string
-  status: "pending" | "processing" | "completed" | "failed"
-  hold_until: string
-  reference: string
-  admin_notes?: string
-  created_at: string
-}
-
 export interface Event {
   id: number
   title: string
@@ -226,15 +211,17 @@ export interface Event {
   waitlist_capacity: number | null
   county?: County
   image_url: string | null
+  image_path: string | null
   price: number
   currency: string
-  status: "draft" | "published" | "suspended"
+  status: "draft" | "published" | "suspended" | "pending_approval" | "rejected" | "cancelled"
+  event_type?: "organization" | "user"
   featured: boolean
   featured_until: string | null
   registration_deadline: string | null
   starts_at: string
   ends_at: string | null
-  organizer?: {
+  creator?: {
     id: number
     username: string
     email: string
@@ -242,6 +229,7 @@ export interface Event {
   tickets?: Ticket[]
   speakers?: Speaker[]
   tags?: EventTag[]
+  registrations_count?: number
   created_at: string
   updated_at: string
 }

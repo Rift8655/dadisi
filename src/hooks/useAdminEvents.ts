@@ -2,6 +2,9 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { eventsAdminApi, type AdminEventFilters, type AdminEventStats } from "@/lib/api-admin"
 import type { Event } from "@/types"
 
+// Re-export types for consumers
+export type { AdminEventFilters, AdminEventStats }
+
 // Query key factory for admin events
 export const adminEventKeys = {
   all: ["admin-events"] as const,

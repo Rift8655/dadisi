@@ -3,12 +3,13 @@ import { devtools, persist, createJSONStorage } from "zustand/middleware";
 import type { AuthUser, UiPermissions, AdminAccess } from "@/contracts/auth.contract";
 import { encryptToken, decryptToken, clearEncryptionCache } from "@/lib/crypto";
 
-interface AuthState {
+export interface AuthState {
   user: AuthUser | null;
   token: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   expiresAt: string | null;
+  sendingVerification: boolean;
   
   // UI Permissions & Admin Access (derived from user)
   uiPermissions: UiPermissions | null;
@@ -25,6 +26,7 @@ interface AuthState {
   setIsLoading: (loading: boolean) => void;
   logout: () => void;
   refreshSession: () => Promise<void>;
+  sendVerification: () => Promise<void>;
   
   // Helpers
   hasUIPermission: (permission: keyof UiPermissions) => boolean;
@@ -84,6 +86,7 @@ export const useAuth = create<AuthState>()(
         isAuthenticated: false,
         isLoading: false, // Don't persist loading state - always start as false
         expiresAt: null,
+        sendingVerification: false,
         uiPermissions: null,
         adminAccess: null,
         _hasHydrated: false,
@@ -141,6 +144,16 @@ export const useAuth = create<AuthState>()(
           } catch (e) {
             console.error("Silent refresh failed:", e);
             // If refresh fails with 401, the interceptor in api.ts will handle logout
+          }
+        },
+        
+        sendVerification: async () => {
+          set({ sendingVerification: true });
+          try {
+            const { authApi } = await import("@/lib/api");
+            await authApi.sendVerification();
+          } finally {
+            set({ sendingVerification: false });
           }
         },
 

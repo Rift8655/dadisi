@@ -397,7 +397,7 @@ export const plansApi = {
 // Subscriptions API
 export const subscriptionsApi = {
   create: (data: z.infer<typeof CreateSubscriptionSchema>) =>
-    api.post("/api/subscriptions", data),
+    api.post<{ data: { message?: string; next_url?: string } }>("/api/subscriptions", data),
 
   // Get current user's subscription
   current: () =>
@@ -694,6 +694,9 @@ export const donationsApi = {
         amount: number
         currency: string
         status: string
+        payment_method?: string
+        receipt_number?: string
+        receipt_url?: string
         campaign?: { id: number; title: string; slug: string }
         created_at: string
       }>
@@ -724,6 +727,26 @@ export const donationsApi = {
         created_at: string
       }
     }>(`/api/donations/ref/${reference}`)
+  },
+
+  get: async (id: number) => {
+    return api.get<{
+      success: boolean
+      data: {
+        id: number
+        reference: string
+        donor_name: string
+        donor_email: string
+        donor_phone?: string
+        amount: number
+        currency: string
+        status: string
+        notes?: string
+        county?: { id: number; name: string }
+        campaign?: { id: number; title: string; slug: string }
+        created_at: string
+      }
+    }>(`/api/donations/${id}`)
   },
 }
 

@@ -36,13 +36,15 @@ export const CreateEventSchema = z.object({
   county_id: z.coerce.number().optional(),
   
   // Capacity & Pricing
-  capacity: z.string().optional().transform((val) => {
+  capacity: z.union([z.string(), z.number()]).optional().transform((val) => {
+    if (typeof val === 'number') return val
     if (!val || val.trim() === '') return undefined
     const num = parseInt(val, 10)
     return isNaN(num) ? undefined : num
   }).pipe(z.number().min(1).optional()),
   waitlist_enabled: z.boolean().default(false),
-  waitlist_capacity: z.string().optional().transform((val) => {
+  waitlist_capacity: z.union([z.string(), z.number()]).optional().transform((val) => {
+    if (typeof val === 'number') return val
     if (!val || val.trim() === '') return undefined
     const num = parseInt(val, 10)
     return isNaN(num) ? undefined : num
@@ -117,5 +119,6 @@ export const CreateEventSchema = z.object({
 )
 
 export type CreateEventInput = z.infer<typeof CreateEventSchema>
+export type CreateEventFormValues = z.input<typeof CreateEventSchema>
 export type TicketInput = z.infer<typeof TicketInputSchema>
 export type SpeakerInput = z.infer<typeof SpeakerInputSchema>

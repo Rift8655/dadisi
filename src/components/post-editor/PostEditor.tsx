@@ -25,8 +25,8 @@ import { authorBlogApi, authorPostsApi } from "@/lib/api"
 const USE_DEV_EDITOR = process.env.NEXT_PUBLIC_USE_DEV_EDITOR === "true"
 
 // TinyMCE loaded dynamically to avoid SSR issues (only if not using dev editor)
-const TinyMCEEditor = dynamic(
-  () => import("@tinymce/tinymce-react").then((mod) => mod.Editor),
+const TinyMCEEditor = dynamic<any>(
+  () => import("@tinymce/tinymce-react").then((mod) => mod.Editor as any),
   { ssr: false, loading: () => <div className="h-96 animate-pulse bg-muted rounded" /> }
 )
 
@@ -458,9 +458,9 @@ export function PostEditor({ mode, postSlug, dashboardType, onSuccess }: PostEdi
               ) : (
                 <TinyMCEEditor
                   apiKey={process.env.NEXT_PUBLIC_TINYMCE_API_KEY || "no-api-key"}
-                  onInit={(evt, editor) => (editorRef.current = editor)}
+                  onInit={(evt: any, editor: any) => (editorRef.current = editor)}
                   value={formData.body}
-                  onEditorChange={(content) => setFormData({ ...formData, body: content })}
+                  onEditorChange={(content: string) => setFormData({ ...formData, body: content })}
                   init={{
                     height: 500,
                     menubar: true,

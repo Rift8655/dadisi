@@ -162,28 +162,6 @@ export default function PaymentGatewaySettingsPage() {
                     </p>
                   </div>
                 )}
-
-                {/* Escrow Settings */}
-                <div className="border-t pt-4 mt-4">
-                  <h4 className="font-medium text-sm mb-3">Escrow Settings</h4>
-                  <div className="space-y-2">
-                    <Label htmlFor="escrow_default_hold_days">Default Hold Period (Days)</Label>
-                    <Input
-                      id="escrow_default_hold_days"
-                      type="number"
-                      min="0"
-                      max="30"
-                      value={formSettings['escrow.default_hold_days'] || '3'}
-                      onChange={(e) => handleUpdateField('escrow.default_hold_days', e.target.value)}
-                      placeholder="3"
-                      className="w-32"
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Number of days funds are held in escrow before automatic payout to organizers. 
-                      Specific rules in EscrowConfiguration can override this default.
-                    </p>
-                  </div>
-                </div>
               </div>
 
               <div className="flex gap-4 pt-4">

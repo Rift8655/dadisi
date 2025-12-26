@@ -16,7 +16,8 @@ import {
   ChevronRight,
   Loader2,
 } from "lucide-react"
-import { forumApi, type ForumThread } from "@/lib/api"
+import { forumApi } from "@/lib/api"
+import { type ForumThread } from "@/schemas/forum"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
