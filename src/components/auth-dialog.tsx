@@ -1,18 +1,18 @@
 "use client"
 
 import { useEffect, useId, useRef, useState } from "react"
-import { useLogin, useSignup } from "@/hooks/useAuth"
+import { useAuth } from "@/store/auth"
+import { Shield } from "lucide-react"
 import { createPortal } from "react-dom"
 import { z } from "zod"
-import { Shield } from "lucide-react"
 
 import { authApi } from "@/lib/api"
 import { showError, showSuccess } from "@/lib/sweetalert"
+import { useLogin, useSignup } from "@/hooks/useAuth"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { GoogleIcon } from "@/components/icons"
-import { useAuth } from "@/store/auth"
 
 export type AuthDialogProps = {
   open: boolean
@@ -20,7 +20,11 @@ export type AuthDialogProps = {
   defaultTab?: "signin" | "register"
 }
 
-export function AuthDialog({ open, onOpenChange, defaultTab = "signin" }: AuthDialogProps) {
+export function AuthDialog({
+  open,
+  onOpenChange,
+  defaultTab = "signin",
+}: AuthDialogProps) {
   const [tab, setTab] = useState<"signin" | "register">(defaultTab)
 
   useEffect(() => {
@@ -34,13 +38,13 @@ export function AuthDialog({ open, onOpenChange, defaultTab = "signin" }: AuthDi
   const [validationErrors, setValidationErrors] = useState<
     Record<string, string>
   >({})
-  
+
   // 2FA State
   const [show2faDialog, setShow2faDialog] = useState(false)
   const [twoFactorEmail, setTwoFactorEmail] = useState("")
   const [twoFactorCode, setTwoFactorCode] = useState("")
   const [is2faLoading, setIs2faLoading] = useState(false)
-  
+
   const signinFormRef = useRef<HTMLFormElement>(null)
   const signupFormRef = useRef<HTMLFormElement>(null)
   const titleId = useId()
@@ -58,7 +62,10 @@ export function AuthDialog({ open, onOpenChange, defaultTab = "signin" }: AuthDi
       username: z
         .string()
         .min(2, "Username must be at least 2 characters")
-        .regex(/^[a-zA-Z0-9_]+$/, "Username can only contain letters, numbers and underscores"),
+        .regex(
+          /^[a-zA-Z0-9_]+$/,
+          "Username can only contain letters, numbers and underscores"
+        ),
       email: z.string().email("Invalid email address"),
       password: z.string().min(8, "Password must be at least 8 characters"),
       "reg-password-confirm": z
@@ -184,7 +191,7 @@ export function AuthDialog({ open, onOpenChange, defaultTab = "signin" }: AuthDi
 
     try {
       const res = await loginMut.mutateAsync({ email, password })
-      
+
       // Check if 2FA is required
       if (res.requires2fa) {
         setTwoFactorEmail(res.email || email)
@@ -229,7 +236,8 @@ export function AuthDialog({ open, onOpenChange, defaultTab = "signin" }: AuthDi
       })
 
       // Complete login with the returned user and token
-      const authUser = res.user as unknown as import("@/contracts/auth.contract").AuthUser
+      const authUser =
+        res.user as unknown as import("@/contracts/auth.contract").AuthUser
       setAuth(authUser, res.access_token)
 
       await showSuccess("Signed in", `Welcome back, ${authUser.username}!`)
@@ -270,7 +278,7 @@ export function AuthDialog({ open, onOpenChange, defaultTab = "signin" }: AuthDi
             <button
               onClick={close2faDialog}
               aria-label="Close dialog"
-              className="absolute right-3 top-3 rounded-md p-2 text-foreground/70 transition hover:bg-accent hover:text-accent-foreground"
+              className="absolute right-3 top-2 rounded-md p-2 text-foreground/70 transition hover:bg-accent hover:text-accent-foreground"
             >
               ✕
             </button>
@@ -280,10 +288,10 @@ export function AuthDialog({ open, onOpenChange, defaultTab = "signin" }: AuthDi
                   <Shield className="h-6 w-6 text-primary" />
                 </div>
               </div>
-              <h2 className="mb-2 text-xl font-semibold text-center">
+              <h2 className="mb-2 text-center text-xl font-semibold">
                 Two-Factor Authentication
               </h2>
-              <p className="mb-6 text-sm text-muted-foreground text-center">
+              <p className="mb-6 text-center text-sm text-muted-foreground">
                 Enter the 6-digit code from your authenticator app.
               </p>
               <form onSubmit={handle2FASubmit} className="space-y-4">
@@ -293,9 +301,11 @@ export function AuthDialog({ open, onOpenChange, defaultTab = "signin" }: AuthDi
                   pattern="[0-9]*"
                   maxLength={6}
                   value={twoFactorCode}
-                  onChange={(e) => setTwoFactorCode(e.target.value.replace(/\D/g, ""))}
+                  onChange={(e) =>
+                    setTwoFactorCode(e.target.value.replace(/\D/g, ""))
+                  }
                   placeholder="000000"
-                  className="text-center text-2xl tracking-widest font-mono"
+                  className="text-center font-mono text-2xl tracking-widest"
                   autoFocus
                   disabled={is2faLoading}
                 />
@@ -307,14 +317,17 @@ export function AuthDialog({ open, onOpenChange, defaultTab = "signin" }: AuthDi
                   {is2faLoading ? "Verifying..." : "Verify Code"}
                 </Button>
               </form>
-              <p className="mt-4 text-xs text-muted-foreground text-center">
+              <p className="mt-4 text-center text-xs text-muted-foreground">
                 Can&apos;t access your authenticator app?{" "}
                 <button
                   type="button"
                   className="text-primary hover:underline"
                   onClick={() => {
                     // TODO: Add recovery code flow
-                    showError("Recovery codes", "Please use one of your recovery codes.")
+                    showError(
+                      "Recovery codes",
+                      "Please use one of your recovery codes."
+                    )
                   }}
                 >
                   Use recovery code
@@ -344,7 +357,7 @@ export function AuthDialog({ open, onOpenChange, defaultTab = "signin" }: AuthDi
             <button
               onClick={closeVerificationDialog}
               aria-label="Close dialog"
-              className="absolute right-3 top-3 rounded-md p-2 text-foreground/70 transition hover:bg-accent hover:text-accent-foreground"
+              className="absolute right-3 top-2 rounded-md p-2 text-foreground/70 transition hover:bg-accent hover:text-accent-foreground"
             >
               ✕
             </button>
@@ -399,7 +412,7 @@ export function AuthDialog({ open, onOpenChange, defaultTab = "signin" }: AuthDi
           <button
             onClick={close}
             aria-label="Close dialog"
-            className="absolute right-3 top-3 rounded-md p-2 text-foreground/70 transition hover:bg-accent hover:text-accent-foreground"
+            className="absolute right-3 top-1 z-10 rounded-md p-2 text-foreground/70 transition hover:bg-accent hover:text-accent-foreground"
           >
             ✕
           </button>
@@ -489,12 +502,12 @@ export function AuthDialog({ open, onOpenChange, defaultTab = "signin" }: AuthDi
                     </p>
                   )}
                   <div className="flex justify-end">
-                    <a 
-                      href="/forgot-password" 
+                    <a
+                      href="/forgot-password"
                       onClick={(e) => {
-                         e.preventDefault();
-                         close();
-                         window.location.href = "/forgot-password";
+                        e.preventDefault()
+                        close()
+                        window.location.href = "/forgot-password"
                       }}
                       className="text-xs text-muted-foreground hover:underline"
                     >
