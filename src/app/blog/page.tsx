@@ -37,8 +37,8 @@ export default function BlogPage() {
   const { data, isLoading, isError } = usePosts(queryParams)
 
   const posts = data?.data ?? []
-  const totalPages = data?.last_page ?? 1
-  const totalItems = data?.total ?? 0
+  const totalPages = data?.pagination?.last_page ?? 1
+  const totalItems = data?.pagination?.total ?? 0
 
   // Grid classes based on view type
   const gridClasses = cn(

@@ -116,14 +116,22 @@ export const PublicTagsResponseSchema = z.object({
 export const PaginatedPostsResponseSchema = z.object({
   success: z.literal(true),
   data: z.array(PostSchema),
-  current_page: z.number(),
-  from: z.number().nullable(),
-  last_page: z.number(),
-  per_page: z.number(),
-  to: z.number().nullable(),
-  total: z.number(),
+  pagination: z.object({
+    total: z.number(),
+    per_page: z.number(),
+    current_page: z.number(),
+    last_page: z.number(),
+  }),
 })
 
 export type PublicCategory = z.infer<typeof PublicCategorySchema>
 export type PublicTag = z.infer<typeof PublicTagSchema>
 export type PaginatedPostsResponse = z.infer<typeof PaginatedPostsResponseSchema>
+
+// Helper function to extract pagination from response
+export function extractPaginationFromPosts(response: PaginatedPostsResponse) {
+  return {
+    ...response.pagination,
+    data: response.data,
+  }
+}

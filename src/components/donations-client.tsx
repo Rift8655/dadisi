@@ -1,18 +1,22 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { useCreateDonation } from "@/hooks/useDonations"
-import { useDonationStore } from "@/store/donations"
-import { useCountiesQuery } from "@/hooks/useMemberProfileQuery"
 import { useAuth } from "@/store/auth"
+import { useDonationStore } from "@/store/donations"
 import Swal from "sweetalert2"
-import { useEffect } from "react"
 
+import { useCreateDonation } from "@/hooks/useDonations"
 import { Button } from "@/components/ui/button"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 
 const DEFAULT_CONFIG = {
@@ -23,7 +27,11 @@ const DEFAULT_CONFIG = {
 export function DonationsClient({
   config = DEFAULT_CONFIG,
 }: {
-  config?: { presetAmounts: number[]; currency: string; thankYouMessage?: string }
+  config?: {
+    presetAmounts: number[]
+    currency: string
+    thankYouMessage?: string
+  }
 }) {
   const router = useRouter()
   const createMut = useCreateDonation()
@@ -34,23 +42,16 @@ export function DonationsClient({
   const [lastName, setLastName] = useState("")
   const [email, setEmail] = useState("")
   const [message, setMessage] = useState("")
-  const [countyId, setCountyId] = useState<string>("")
-
-  const { data: countiesData } = useCountiesQuery()
-  const counties = Array.isArray(countiesData) ? countiesData : []
   const { user, isAuthenticated } = useAuth()
 
   // Pre-fill form if user is authenticated
   useEffect(() => {
     if (isAuthenticated && user) {
       if (user.member_profile) {
-        setFirstName(prev => prev || user.member_profile?.first_name || "")
-        setLastName(prev => prev || user.member_profile?.last_name || "")
-        if ((user.member_profile as any).county_id) {
-          setCountyId(String((user.member_profile as any).county_id))
-        }
+        setFirstName((prev) => prev || user.member_profile?.first_name || "")
+        setLastName((prev) => prev || user.member_profile?.last_name || "")
       }
-      setEmail(prev => prev || user.email || "")
+      setEmail((prev) => prev || user.email || "")
     }
   }, [isAuthenticated, user])
 
@@ -68,20 +69,30 @@ export function DonationsClient({
         email,
         first_name: firstName,
         last_name: lastName,
-        county_id: countyId ? parseInt(countyId, 10) : undefined,
         message: message || undefined,
         is_anonymous: false,
       })
-      
+
       const data = (res as any).data ?? res // normalize response
       if (data.redirect_url) {
-        setLastDonation({ amount: amt, currency: config.currency, name: firstName })
+        setLastDonation({
+          amount: amt,
+          currency: config.currency,
+          name: firstName,
+        })
         window.location.href = data.redirect_url
       } else {
-        Swal.fire("Success", "Donation recorded (manual bank transfer)", "success")
+        Swal.fire(
+          "Success",
+          "Donation recorded (manual bank transfer)",
+          "success"
+        )
       }
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : String(err ?? "Failed to process donation")
+      const message =
+        err instanceof Error
+          ? err.message
+          : String(err ?? "Failed to process donation")
       Swal.fire("Error", message, "error")
     }
   }
@@ -112,10 +123,12 @@ export function DonationsClient({
             />
           </div>
         </div>
-        
+
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <Label htmlFor="fname" className="mb-1 block">First Name <span className="text-red-500">*</span></Label>
+            <Label htmlFor="fname" className="mb-1 block">
+              First Name <span className="text-red-500">*</span>
+            </Label>
             <Input
               id="fname"
               value={firstName}
@@ -124,7 +137,9 @@ export function DonationsClient({
             />
           </div>
           <div>
-            <Label htmlFor="lname" className="mb-1 block">Last Name <span className="text-red-500">*</span></Label>
+            <Label htmlFor="lname" className="mb-1 block">
+              Last Name <span className="text-red-500">*</span>
+            </Label>
             <Input
               id="lname"
               value={lastName}
@@ -135,7 +150,9 @@ export function DonationsClient({
         </div>
 
         <div>
-          <Label htmlFor="email" className="mb-1 block">Email <span className="text-red-500">*</span></Label>
+          <Label htmlFor="email" className="mb-1 block">
+            Email <span className="text-red-500">*</span>
+          </Label>
           <Input
             id="email"
             type="email"
@@ -155,28 +172,11 @@ export function DonationsClient({
             onChange={(e) => setMessage(e.target.value)}
           />
         </div>
-
-        <div className="space-y-1">
-          <Label htmlFor="county" className="mb-1 block">County (Optional, but recommended)</Label>
-          <Select value={countyId} onValueChange={setCountyId}>
-            <SelectTrigger id="county">
-              <SelectValue placeholder="Select your county" />
-            </SelectTrigger>
-            <SelectContent>
-              {counties.map((county: { id: number; name: string }) => (
-                <SelectItem key={county.id} value={String(county.id)}>
-                  {county.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <p className="text-[10px] text-muted-foreground italic">
-            Required for NGO annual reporting compliance.
-          </p>
-        </div>
         <Button
           onClick={handleDonate}
-          disabled={!(typeof amount === "number" && amount > 0) || createMut.isPending}
+          disabled={
+            !(typeof amount === "number" && amount > 0) || createMut.isPending
+          }
           className="w-full"
         >
           {createMut.isPending ? "Processing..." : "Donate Now"}

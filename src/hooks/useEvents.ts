@@ -42,8 +42,6 @@ export function useRsvp() {
       const id = "eventId" in data ? data.eventId : data.id
       queryClient.invalidateQueries({ queryKey: ["event", id] })
       queryClient.invalidateQueries({ queryKey: ["events"] })
-      queryClient.invalidateQueries({ queryKey: ["user-events"] })
-      queryClient.invalidateQueries({ queryKey: ["organizer-events"] })
     },
   })
 }

@@ -41,7 +41,18 @@ describe("usePosts hooks", () => {
   beforeEach(() => vi.clearAllMocks())
 
   it("calls postsApi.list and returns posts", async () => {
-    ;(postsApi.list as any).mockResolvedValue([ { id: 1, title: "T", slug: "t", excerpt: "e", content: "c", featured_image: null, author_id: 1, author: { id: 1, username: "u" }, is_published: true, published_at: new Date().toISOString(), created_at: new Date().toISOString(), updated_at: new Date().toISOString(), tags: [] } ])
+    ;(postsApi.list as any).mockResolvedValue({
+      success: true,
+      data: [
+        { id: 1, title: "T", slug: "t", excerpt: "e", content: "c", featured_image: null, author_id: 1, author: { id: 1, username: "u" }, is_published: true, published_at: new Date().toISOString(), created_at: new Date().toISOString(), updated_at: new Date().toISOString(), tags: [] }
+      ],
+      pagination: {
+        total: 1,
+        per_page: 20,
+        current_page: 1,
+        last_page: 1,
+      },
+    })
 
     render(
       <Wrapper>

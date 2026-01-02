@@ -1,20 +1,32 @@
 "use client"
 
-import { useState } from "react"
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { labSpacesAdminApi } from "@/lib/api-admin"
+import Link from "next/link"
 import { useAuth } from "@/store/auth"
-import { format } from "date-fns"
-import Swal from "sweetalert2"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import {
+  FlaskConical,
+  Leaf,
+  Loader2,
+  Pencil,
+  Plus,
+  Trash2,
+  Truck,
+  Users,
+} from "lucide-react"
 import { toast } from "sonner"
+import Swal from "sweetalert2"
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
+import type { LabSpace, LabSpaceType } from "@/types/lab"
+import { labSpacesAdminApi } from "@/lib/api-admin"
 import { Badge } from "@/components/ui/badge"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Switch } from "@/components/ui/switch"
+import { Button } from "@/components/ui/button"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
   Table,
@@ -24,35 +36,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import { AdminDashboardShell } from "@/components/admin-dashboard-shell"
 import { Unauthorized } from "@/components/unauthorized"
-import { 
-  Plus, 
-  Pencil, 
-  Trash2, 
-  FlaskConical, 
-  Monitor, 
-  Leaf, 
-  Truck,
-  Users,
-  Loader2,
-} from "lucide-react"
-import type { LabSpace, LabSpaceType } from "@/types/lab"
 
 const SPACE_TYPES = [
   { value: "wet_lab", label: "Wet Lab", icon: FlaskConical },
@@ -60,6 +45,25 @@ const SPACE_TYPES = [
   { value: "greenhouse", label: "Greenhouse", icon: Leaf },
   { value: "mobile_lab", label: "Mobile Lab", icon: Truck },
 ]
+
+const Monitor = (props: any) => (
+  <svg
+    {...props}
+    xmlns="http://www.w3.org/2000/svg"
+    width="24"
+    height="24"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <rect width="20" height="14" x="2" y="3" rx="2" />
+    <line x1="8" x2="16" y1="21" y2="21" />
+    <line x1="12" x2="12" y1="17" y2="21" />
+  </svg>
+)
 
 const getSpaceIcon = (type: LabSpaceType) => {
   const found = SPACE_TYPES.find((t) => t.value === type)
@@ -70,57 +74,17 @@ const getSpaceIcon = (type: LabSpaceType) => {
 export default function AdminLabSpacesPage() {
   const { user, isLoading: authLoading } = useAuth()
   const queryClient = useQueryClient()
-  
-  const [dialogOpen, setDialogOpen] = useState(false)
-  const [editingSpace, setEditingSpace] = useState<LabSpace | null>(null)
-  const [formData, setFormData] = useState<Partial<LabSpace>>({
-    name: "",
-    type: "wet_lab",
-    description: "",
-    capacity: 10,
-    hourly_rate: 0,
-    amenities: [],
-    safety_requirements: [],
-    is_active: true,
-  })
-  const [amenitiesText, setAmenitiesText] = useState("")
-  const [safetyText, setSafetyText] = useState("")
 
   // Fetch lab spaces
-  const { data: spacesData, isLoading, error } = useQuery({
+  const {
+    data: spacesData,
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: ["admin-lab-spaces"],
     queryFn: async () => {
       const res = await labSpacesAdminApi.list({ per_page: 50 })
       return res.data
-    },
-  })
-
-  // Create mutation
-  const createMutation = useMutation({
-    mutationFn: (data: Partial<LabSpace>) => labSpacesAdminApi.create(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["admin-lab-spaces"] })
-      queryClient.invalidateQueries({ queryKey: ["lab-spaces"] })
-      toast.success("Lab space created successfully!")
-      closeDialog()
-    },
-    onError: (error: any) => {
-      toast.error(error?.message || "Failed to create lab space")
-    },
-  })
-
-  // Update mutation
-  const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: number; data: Partial<LabSpace> }) =>
-      labSpacesAdminApi.update(id, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["admin-lab-spaces"] })
-      queryClient.invalidateQueries({ queryKey: ["lab-spaces"] })
-      toast.success("Lab space updated successfully!")
-      closeDialog()
-    },
-    onError: (error: any) => {
-      toast.error(error?.message || "Failed to update lab space")
     },
   })
 
@@ -138,57 +102,6 @@ export default function AdminLabSpacesPage() {
   })
 
   const spaces = spacesData || []
-
-  const openCreateDialog = () => {
-    setEditingSpace(null)
-    setFormData({
-      name: "",
-      type: "wet_lab",
-      description: "",
-      capacity: 10,
-      hourly_rate: 0,
-      amenities: [],
-      safety_requirements: [],
-      is_active: true,
-    })
-    setAmenitiesText("")
-    setSafetyText("")
-    setDialogOpen(true)
-  }
-
-  const openEditDialog = (space: LabSpace) => {
-    setEditingSpace(space)
-    setFormData({
-      name: space.name,
-      type: space.type,
-      description: space.description,
-      capacity: space.capacity,
-      hourly_rate: space.hourly_rate,
-      is_active: space.is_active,
-    })
-    setAmenitiesText(space.amenities.join("\n"))
-    setSafetyText(space.safety_requirements.join("\n"))
-    setDialogOpen(true)
-  }
-
-  const closeDialog = () => {
-    setDialogOpen(false)
-    setEditingSpace(null)
-  }
-
-  const handleSubmit = async () => {
-    const data = {
-      ...formData,
-      amenities: amenitiesText.split("\n").map((s) => s.trim()).filter(Boolean),
-      safety_requirements: safetyText.split("\n").map((s) => s.trim()).filter(Boolean),
-    }
-
-    if (editingSpace) {
-      await updateMutation.mutateAsync({ id: editingSpace.id, data })
-    } else {
-      await createMutation.mutateAsync(data)
-    }
-  }
 
   const handleDelete = async (space: LabSpace) => {
     const result = await Swal.fire({
@@ -238,9 +151,11 @@ export default function AdminLabSpacesPage() {
                   Manage laboratory spaces available for booking
                 </CardDescription>
               </div>
-              <Button onClick={openCreateDialog}>
-                <Plus className="mr-2 h-4 w-4" />
-                Add Lab Space
+              <Button asChild>
+                <Link href="/admin/lab-spaces/create">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add Lab Space
+                </Link>
               </Button>
             </div>
           </CardHeader>
@@ -256,11 +171,11 @@ export default function AdminLabSpacesPage() {
                 ))}
               </div>
             ) : error ? (
-              <div className="text-center py-8 text-muted-foreground">
+              <div className="py-8 text-center text-muted-foreground">
                 Failed to load lab spaces
               </div>
             ) : spaces.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
+              <div className="py-8 text-center text-muted-foreground">
                 No lab spaces yet. Click "Add Lab Space" to create one.
               </div>
             ) : (
@@ -271,7 +186,7 @@ export default function AdminLabSpacesPage() {
                       <TableHead>Name</TableHead>
                       <TableHead>Type</TableHead>
                       <TableHead>Capacity</TableHead>
-                      <TableHead>Hourly Rate</TableHead>
+                      <TableHead>Location</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
@@ -295,25 +210,28 @@ export default function AdminLabSpacesPage() {
                           </div>
                         </TableCell>
                         <TableCell>
-                          {space.hourly_rate > 0 ? (
-                            `KES ${space.hourly_rate}`
-                          ) : (
-                            <span className="text-green-600">Free</span>
-                          )}
+                          <div className="flex flex-col text-xs">
+                            <span className="font-medium">
+                              {space.location || "N/A"}
+                            </span>
+                            <span className="text-muted-foreground">
+                              {space.county}
+                            </span>
+                          </div>
                         </TableCell>
                         <TableCell>
-                          <Badge variant={space.is_active ? "default" : "secondary"}>
+                          <Badge
+                            variant={space.is_active ? "default" : "secondary"}
+                          >
                             {space.is_active ? "Active" : "Inactive"}
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-2">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => openEditDialog(space)}
-                            >
-                              <Pencil className="h-4 w-4" />
+                            <Button variant="ghost" size="icon" asChild>
+                              <Link href={`/admin/lab-spaces/${space.id}/edit`}>
+                                <Pencil className="h-4 w-4" />
+                              </Link>
                             </Button>
                             <Button
                               variant="ghost"
@@ -334,150 +252,6 @@ export default function AdminLabSpacesPage() {
           </CardContent>
         </Card>
       </div>
-
-      {/* Create/Edit Dialog */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>
-              {editingSpace ? "Edit Lab Space" : "Create Lab Space"}
-            </DialogTitle>
-            <DialogDescription>
-              {editingSpace
-                ? "Update the lab space details below."
-                : "Fill in the details to create a new lab space."}
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto">
-            {/* Name */}
-            <div className="space-y-2">
-              <Label htmlFor="name">Name *</Label>
-              <Input
-                id="name"
-                value={formData.name || ""}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="e.g., Main Chemistry Lab"
-              />
-            </div>
-
-            {/* Type */}
-            <div className="space-y-2">
-              <Label htmlFor="type">Type *</Label>
-              <Select
-                value={formData.type}
-                onValueChange={(v) => setFormData({ ...formData, type: v as LabSpaceType })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {SPACE_TYPES.map((type) => (
-                    <SelectItem key={type.value} value={type.value}>
-                      {type.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Description */}
-            <div className="space-y-2">
-              <Label htmlFor="description">Description</Label>
-              <Textarea
-                id="description"
-                value={formData.description || ""}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                placeholder="Describe the lab space..."
-                rows={3}
-              />
-            </div>
-
-            {/* Capacity & Rate */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="capacity">Capacity</Label>
-                <Input
-                  id="capacity"
-                  type="number"
-                  min={1}
-                  value={formData.capacity || 1}
-                  onChange={(e) =>
-                    setFormData({ ...formData, capacity: parseInt(e.target.value) || 1 })
-                  }
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="hourly_rate">Hourly Rate (KES)</Label>
-                <Input
-                  id="hourly_rate"
-                  type="number"
-                  min={0}
-                  value={formData.hourly_rate || 0}
-                  onChange={(e) =>
-                    setFormData({ ...formData, hourly_rate: parseInt(e.target.value) || 0 })
-                  }
-                />
-              </div>
-            </div>
-
-            {/* Amenities */}
-            <div className="space-y-2">
-              <Label htmlFor="amenities">Amenities (one per line)</Label>
-              <Textarea
-                id="amenities"
-                value={amenitiesText}
-                onChange={(e) => setAmenitiesText(e.target.value)}
-                placeholder="Fume hood&#10;Microscopes&#10;Chemical storage"
-                rows={3}
-              />
-            </div>
-
-            {/* Safety Requirements */}
-            <div className="space-y-2">
-              <Label htmlFor="safety">Safety Requirements (one per line)</Label>
-              <Textarea
-                id="safety"
-                value={safetyText}
-                onChange={(e) => setSafetyText(e.target.value)}
-                placeholder="Lab coat required&#10;Safety goggles&#10;Closed-toe shoes"
-                rows={3}
-              />
-            </div>
-
-            {/* Active Status */}
-            <div className="flex items-center justify-between">
-              <Label htmlFor="is_active">Active</Label>
-              <Switch
-                id="is_active"
-                checked={formData.is_active}
-                onCheckedChange={(checked) =>
-                  setFormData({ ...formData, is_active: checked })
-                }
-              />
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={closeDialog}>
-              Cancel
-            </Button>
-            <Button
-              onClick={handleSubmit}
-              disabled={
-                !formData.name ||
-                createMutation.isPending ||
-                updateMutation.isPending
-              }
-            >
-              {(createMutation.isPending || updateMutation.isPending) && (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              )}
-              {editingSpace ? "Update" : "Create"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </AdminDashboardShell>
   )
 }

@@ -254,7 +254,6 @@ export function EventForm({ initialData, isEdit = false, isAdmin = false }: Even
     },
     onSuccess: (_: any, variables: CreateEventFormValues) => {
       queryClient.invalidateQueries({ queryKey: ["events"] })
-      queryClient.invalidateQueries({ queryKey: ["organizer-events"] })
       queryClient.invalidateQueries({ queryKey: ["admin-events"] })
       Swal.fire({
         icon: "success",

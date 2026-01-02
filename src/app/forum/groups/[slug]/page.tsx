@@ -1,26 +1,29 @@
 "use client"
 
 import { use, useState } from "react"
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
+import { useAuth } from "@/store/auth"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { format } from "date-fns"
 import {
   ArrowLeft,
-  Users,
-  MessageSquare,
   Calendar,
-  UserPlus,
   LogOut,
-  Plus,
   MapPin,
+  MessageSquare,
+  Plus,
+  UserPlus,
+  Users,
 } from "lucide-react"
-import { groupsApi, forumApi, memberProfileApi } from "@/lib/api"
-import { ForumSidebar } from "@/components/forum/ForumSidebar"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
+import Swal from "sweetalert2"
+
+import { forumApi, groupsApi, memberProfileApi } from "@/lib/api"
+import { useForumCategories } from "@/hooks/useForum"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Skeleton } from "@/components/ui/skeleton"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   Dialog,
   DialogContent,
@@ -28,6 +31,8 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import {
   Select,
   SelectContent,
@@ -35,18 +40,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
+import { Skeleton } from "@/components/ui/skeleton"
 import { Textarea } from "@/components/ui/textarea"
-import { useAuth } from "@/store/auth"
-import { format } from "date-fns"
-import Swal from "sweetalert2"
+import { ForumSidebar } from "@/components/forum/ForumSidebar"
 
-interface CountyHubPageProps {
+interface GroupDetailPageProps {
   params: Promise<{ slug: string }>
 }
 
-export default function CountyHubPage({ params }: CountyHubPageProps) {
+export default function GroupDetailPage({ params }: GroupDetailPageProps) {
   const { slug } = use(params)
   const router = useRouter()
   const { isAuthenticated, user } = useAuth()
@@ -60,7 +62,11 @@ export default function CountyHubPage({ params }: CountyHubPageProps) {
   })
 
   // Fetch group details
-  const { data: groupData, isLoading, error } = useQuery({
+  const {
+    data: groupData,
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: ["group", slug],
     queryFn: () => groupsApi.show(slug),
   })
@@ -68,11 +74,7 @@ export default function CountyHubPage({ params }: CountyHubPageProps) {
   const group = groupData?.data
 
   // Fetch categories for thread creation
-  const { data: categoriesData } = useQuery({
-    queryKey: ["forum-categories"],
-    queryFn: () => forumApi.categories.list(),
-  })
-  const categories = categoriesData?.data ?? []
+  const { data: categories = [] } = useForumCategories()
 
   // Join mutation
   const joinMutation = useMutation({
@@ -159,11 +161,11 @@ export default function CountyHubPage({ params }: CountyHubPageProps) {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto py-8 px-4">
+      <div className="container mx-auto px-4 py-8">
         <div className="flex gap-8">
           <ForumSidebar className="hidden lg:block" />
           <main className="flex-1">
-            <Skeleton className="h-8 w-48 mb-4" />
+            <Skeleton className="mb-4 h-8 w-48" />
             <Skeleton className="h-64 rounded-xl" />
           </main>
         </div>
@@ -173,11 +175,13 @@ export default function CountyHubPage({ params }: CountyHubPageProps) {
 
   if (error || !group) {
     return (
-      <div className="container mx-auto py-8 px-4">
+      <div className="container mx-auto px-4 py-8">
         <div className="flex gap-8">
           <ForumSidebar className="hidden lg:block" />
-          <main className="flex-1 text-center py-12">
-            <p className="text-destructive">Group not found or error loading.</p>
+          <main className="flex-1 py-12 text-center">
+            <p className="text-destructive">
+              Group not found or error loading.
+            </p>
             <Button asChild className="mt-4">
               <Link href="/forum">Back to Forum</Link>
             </Button>
@@ -188,13 +192,13 @@ export default function CountyHubPage({ params }: CountyHubPageProps) {
   }
 
   return (
-    <div className="container mx-auto py-8 px-4">
+    <div className="container mx-auto px-4 py-8">
       <div className="flex gap-8">
         {/* Sidebar */}
         <ForumSidebar className="hidden lg:block" />
 
         {/* Main Content */}
-        <main className="flex-1 min-w-0 space-y-6">
+        <main className="min-w-0 flex-1 space-y-6">
           {/* Breadcrumb */}
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Link href="/forum" className="hover:text-foreground">
@@ -202,7 +206,7 @@ export default function CountyHubPage({ params }: CountyHubPageProps) {
             </Link>
             <span>/</span>
             <Link href="/forum/groups" className="hover:text-foreground">
-              County Hub
+              Group
             </Link>
             <span>/</span>
             <span className="text-foreground">{group.name}</span>
@@ -214,7 +218,7 @@ export default function CountyHubPage({ params }: CountyHubPageProps) {
               <div className="flex items-start justify-between">
                 <div>
                   <CardTitle className="text-2xl">{group.name}</CardTitle>
-                  <p className="text-muted-foreground mt-1">
+                  <p className="mt-1 text-muted-foreground">
                     {group.description}
                   </p>
                 </div>
@@ -223,20 +227,23 @@ export default function CountyHubPage({ params }: CountyHubPageProps) {
                     <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
                       <DialogTrigger asChild>
                         <Button variant="outline">
-                          <Plus className="h-4 w-4 mr-2" /> New Topic
+                          <Plus className="mr-2 h-4 w-4" /> New Topic
                         </Button>
                       </DialogTrigger>
                       <DialogContent className="sm:max-w-lg">
                         <DialogHeader>
                           <DialogTitle>Start a Local Discussion</DialogTitle>
                         </DialogHeader>
-                        <div className="space-y-4 mt-4">
+                        <div className="mt-4 space-y-4">
                           <div>
                             <Label htmlFor="category">Category</Label>
                             <Select
                               value={newThread.category_slug}
                               onValueChange={(val) =>
-                                setNewThread({ ...newThread, category_slug: val })
+                                setNewThread({
+                                  ...newThread,
+                                  category_slug: val,
+                                })
                               }
                             >
                               <SelectTrigger>
@@ -258,7 +265,10 @@ export default function CountyHubPage({ params }: CountyHubPageProps) {
                               id="title"
                               value={newThread.title}
                               onChange={(e) =>
-                                setNewThread({ ...newThread, title: e.target.value })
+                                setNewThread({
+                                  ...newThread,
+                                  title: e.target.value,
+                                })
                               }
                               placeholder="What's on your mind?"
                             />
@@ -271,11 +281,14 @@ export default function CountyHubPage({ params }: CountyHubPageProps) {
                               rows={5}
                               value={newThread.content}
                               onChange={(e) =>
-                                setNewThread({ ...newThread, content: e.target.value })
+                                setNewThread({
+                                  ...newThread,
+                                  content: e.target.value,
+                                })
                               }
                               placeholder="Write your message..."
                             />
-                            <p className="text-[10px] text-muted-foreground mt-1">
+                            <p className="mt-1 text-[10px] text-muted-foreground">
                               This topic will be automatically tagged with{" "}
                               <strong>{group.county?.name} County</strong>.
                             </p>
@@ -305,7 +318,7 @@ export default function CountyHubPage({ params }: CountyHubPageProps) {
                         onClick={() => leaveMutation.mutate()}
                         disabled={leaveMutation.isPending}
                       >
-                        <LogOut className="h-4 w-4 mr-2" />
+                        <LogOut className="mr-2 h-4 w-4" />
                         {leaveMutation.isPending ? "Leaving..." : "Leave Group"}
                       </Button>
                     ) : (
@@ -313,21 +326,21 @@ export default function CountyHubPage({ params }: CountyHubPageProps) {
                         onClick={() => joinMutation.mutate()}
                         disabled={joinMutation.isPending}
                       >
-                        <UserPlus className="h-4 w-4 mr-2" />
+                        <UserPlus className="mr-2 h-4 w-4" />
                         {joinMutation.isPending ? "Joining..." : "Join Group"}
                       </Button>
                     )}
                   </div>
                 )}
               </div>
-              <div className="flex gap-4 mt-4 text-sm text-muted-foreground">
+              <div className="mt-4 flex gap-4 text-sm text-muted-foreground">
                 <span className="flex items-center gap-1">
                   <Users className="h-4 w-4" />
                   {group.member_count} members
                 </span>
                 {group.county && (
                   <Badge variant="secondary">
-                    <MapPin className="h-3 w-3 mr-1" />
+                    <MapPin className="mr-1 h-3 w-3" />
                     {group.county.name} County
                   </Badge>
                 )}
@@ -340,7 +353,7 @@ export default function CountyHubPage({ params }: CountyHubPageProps) {
             {/* Members Grid */}
             <Card className="lg:col-span-1">
               <CardHeader className="pb-3">
-                <CardTitle className="text-base flex items-center gap-2">
+                <CardTitle className="flex items-center gap-2 text-base">
                   <Users className="h-4 w-4" />
                   Members ({group.member_count})
                 </CardTitle>
@@ -350,17 +363,23 @@ export default function CountyHubPage({ params }: CountyHubPageProps) {
                   {group.members?.slice(0, 10).map((member: any) => (
                     <div key={member.id} className="flex items-center gap-3">
                       <Avatar className="h-8 w-8">
-                        <AvatarImage src={member.profile_picture ?? "/images/default-avatar.png"} />
+                        <AvatarImage
+                          src={
+                            member.profile_picture ??
+                            "/images/default-avatar.png"
+                          }
+                        />
                         <AvatarFallback>
                           {member.username?.[0]?.toUpperCase() || "U"}
                         </AvatarFallback>
                       </Avatar>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium">
                           {member.username}
                         </p>
                         <p className="text-xs text-muted-foreground">
-                          Joined {format(new Date(member.joined_at), "MMM d, yyyy")}
+                          Joined{" "}
+                          {format(new Date(member.joined_at), "MMM d, yyyy")}
                         </p>
                       </div>
                     </div>
@@ -368,8 +387,8 @@ export default function CountyHubPage({ params }: CountyHubPageProps) {
                 </div>
                 {group.member_count > 10 && (
                   <Link
-                    href={`/forum/county/${slug}/members`}
-                    className="text-sm text-primary hover:underline mt-4 block"
+                    href={`/forum/groups/${slug}/members`}
+                    className="mt-4 block text-sm text-primary hover:underline"
                   >
                     View all members →
                   </Link>
@@ -380,7 +399,7 @@ export default function CountyHubPage({ params }: CountyHubPageProps) {
             {/* Recent Local Discussions */}
             <Card className="lg:col-span-2">
               <CardHeader className="pb-3 text-right">
-                <CardTitle className="text-base flex items-center gap-2 text-left">
+                <CardTitle className="flex items-center gap-2 text-left text-base">
                   <MessageSquare className="h-4 w-4" />
                   Recent Local Discussions
                 </CardTitle>
@@ -392,21 +411,21 @@ export default function CountyHubPage({ params }: CountyHubPageProps) {
                       <Link
                         key={thread.id}
                         href={`/forum/threads/${thread.slug}`}
-                        className="block p-3 rounded-lg hover:bg-muted transition-colors border border-transparent hover:border-muted-foreground/10"
+                        className="block rounded-lg border border-transparent p-3 transition-colors hover:border-muted-foreground/10 hover:bg-muted"
                       >
                         <div className="flex items-start justify-between">
-                          <div className="flex-1 min-w-0">
-                            <p className="font-medium text-sm truncate">
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-medium">
                               {thread.title}
                             </p>
-                            <p className="text-xs text-muted-foreground mt-1">
+                            <p className="mt-1 text-xs text-muted-foreground">
                               by {thread.user?.username} in{" "}
-                              <span className="text-primary font-medium">
+                              <span className="font-medium text-primary">
                                 {thread.category?.name}
                               </span>
                             </p>
                           </div>
-                          <div className="text-[10px] text-muted-foreground whitespace-nowrap ml-4">
+                          <div className="ml-4 whitespace-nowrap text-[10px] text-muted-foreground">
                             {format(new Date(thread.created_at), "MMM d")}
                           </div>
                         </div>
@@ -414,10 +433,10 @@ export default function CountyHubPage({ params }: CountyHubPageProps) {
                     ))}
                   </div>
                 ) : (
-                  <div className="text-center py-12 text-muted-foreground border-2 border-dashed rounded-lg">
-                    <MessageSquare className="h-10 w-10 mx-auto mb-3 opacity-20" />
+                  <div className="rounded-lg border-2 border-dashed py-12 text-center text-muted-foreground">
+                    <MessageSquare className="mx-auto mb-3 h-10 w-10 opacity-20" />
                     <p className="font-medium">No local discussions yet.</p>
-                    <p className="text-xs mt-1">
+                    <p className="mt-1 text-xs">
                       Start a topic tagged with {group.county?.name} to see it
                       here.
                     </p>

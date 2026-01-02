@@ -1,21 +1,22 @@
 "use client"
 
+import { useEffect, useState } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import {
-  FolderOpen,
-  Clock,
-  Tag,
-  Users,
-  Globe,
-  ScrollText,
   ChevronDown,
   ChevronRight,
+  Clock,
+  FolderOpen,
+  Globe,
   Loader2,
+  ScrollText,
+  Tag,
+  Users,
 } from "lucide-react"
-import { useGroups } from "@/hooks/useGroups"
+
 import { cn } from "@/lib/utils"
-import { useState, useEffect } from "react"
+import { useGroups } from "@/hooks/useGroups"
 import { Skeleton } from "@/components/ui/skeleton"
 
 interface ForumSidebarProps {
@@ -33,7 +34,9 @@ export function ForumSidebar({ className }: ForumSidebarProps) {
   }, [])
 
   // Fetch county groups using the hook
-  const { data: groupsData, isLoading: groupsLoading } = useGroups({ per_page: 10 })
+  const { data: groupsData, isLoading: groupsLoading } = useGroups({
+    per_page: 10,
+  })
   const groups = groupsData?.data ?? []
 
   // Navigation items
@@ -58,7 +61,7 @@ export function ForumSidebar({ className }: ForumSidebarProps) {
               className={cn(
                 "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
                 isActive
-                  ? "bg-primary/10 text-primary font-medium"
+                  ? "bg-primary/10 font-medium text-primary"
                   : "text-muted-foreground hover:bg-muted hover:text-foreground"
               )}
             >
@@ -72,15 +75,15 @@ export function ForumSidebar({ className }: ForumSidebarProps) {
       {/* Divider */}
       <div className="border-t" />
 
-      {/* County Hub Section */}
+      {/* Groups Section */}
       <div className="space-y-2">
         <button
           onClick={() => setCountyExpanded(!countyExpanded)}
-          className="flex w-full items-center justify-between px-3 py-2 text-sm font-medium text-foreground hover:bg-muted rounded-lg"
+          className="flex w-full items-center justify-between rounded-lg px-3 py-2 text-sm font-medium text-foreground hover:bg-muted"
         >
           <span className="flex items-center gap-2">
             <Globe className="h-4 w-4" />
-            COUNTY HUB
+            GROUPS
           </span>
           {countyExpanded ? (
             <ChevronDown className="h-4 w-4" />
@@ -99,30 +102,32 @@ export function ForumSidebar({ className }: ForumSidebarProps) {
                 <Skeleton className="h-7 w-full rounded-lg" />
               </>
             )}
-            
+
             {/* Groups list - only render when mounted and loaded to avoid hydration mismatch */}
-            {mounted && !groupsLoading && groups.slice(0, 5).map((group) => {
-              const href = `/forum/county/${group.slug}`
-              const isActive = pathname === href
-              return (
-                <Link
-                  key={group.id}
-                  href={href}
-                  className={cn(
-                    "flex items-center justify-between rounded-lg px-3 py-1.5 text-sm transition-colors",
-                    isActive
-                      ? "bg-primary/10 text-primary"
-                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                  )}
-                >
-                  <span>{group.county?.name || group.name}</span>
-                  <span className="text-xs text-muted-foreground">
-                    ({group.member_count})
-                  </span>
-                </Link>
-              )
-            })}
-            
+            {mounted &&
+              !groupsLoading &&
+              groups.slice(0, 5).map((group) => {
+                const href = `/forum/groups/${group.slug}`
+                const isActive = pathname === href
+                return (
+                  <Link
+                    key={group.id}
+                    href={href}
+                    className={cn(
+                      "flex items-center justify-between rounded-lg px-3 py-1.5 text-sm transition-colors",
+                      isActive
+                        ? "bg-primary/10 text-primary"
+                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                    )}
+                  >
+                    <span>{group.county?.name || group.name}</span>
+                    <span className="text-xs text-muted-foreground">
+                      ({group.thread_count ?? 0})
+                    </span>
+                  </Link>
+                )
+              })}
+
             {mounted && !groupsLoading && groups.length > 5 && (
               <Link
                 href="/forum/groups"
@@ -131,7 +136,7 @@ export function ForumSidebar({ className }: ForumSidebarProps) {
                 View All →
               </Link>
             )}
-            
+
             {mounted && !groupsLoading && groups.length === 0 && (
               <p className="px-3 py-1.5 text-xs text-muted-foreground">
                 No county groups yet

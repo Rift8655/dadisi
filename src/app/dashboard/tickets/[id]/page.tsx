@@ -19,6 +19,7 @@ import {
   ExternalLink
 } from "lucide-react"
 import { useState } from "react"
+import { QRCodeSVG } from "qrcode.react"
 
 import { DashboardShell } from "@/components/dashboard-shell"
 import { Button } from "@/components/ui/button"
@@ -247,12 +248,13 @@ export default function TicketDetailPage() {
               <CardContent className="text-center space-y-4">
                 {ticket.status === 'paid' ? (
                   <>
-                    {/* QR Code Placeholder - In production, use a QR code library */}
-                    <div className="aspect-square max-w-[200px] mx-auto bg-muted rounded-lg flex items-center justify-center border-2 border-dashed">
-                      <div className="text-center">
-                        <QrCode className="h-16 w-16 mx-auto text-muted-foreground mb-2" />
-                        <p className="text-xs text-muted-foreground">QR Code</p>
-                      </div>
+                    <div className="p-4 bg-white rounded-xl shadow-inner border-2 border-primary/10 inline-block mx-auto animate-in zoom-in-95 duration-500">
+                      <QRCodeSVG
+                        value={ticket.qr_code_token}
+                        size={180}
+                        level="H"
+                        includeMargin={false}
+                      />
                     </div>
 
                     <div className="space-y-2">

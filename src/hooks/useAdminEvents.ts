@@ -13,6 +13,8 @@ export const adminEventKeys = {
   details: () => [...adminEventKeys.all, "detail"] as const,
   detail: (id: number) => [...adminEventKeys.details(), id] as const,
   registrations: (id: number, params: any) => [...adminEventKeys.detail(id), "registrations", params] as const,
+  attendance: (id: number) => [...adminEventKeys.detail(id), "attendance"] as const,
+  attendanceStats: (id: number) => [...adminEventKeys.detail(id), "attendance-stats"] as const,
   stats: () => [...adminEventKeys.all, "stats"] as const,
 }
 
@@ -80,6 +82,32 @@ export function useAdminEventStats() {
   })
 }
 
+// Fetch admin event attendance list
+export function useAdminEventAttendance(id: number | null) {
+  return useQuery({
+    queryKey: id ? adminEventKeys.attendance(id) : ["admin-events", "attendance", 0],
+    queryFn: async () => {
+      if (!id) return []
+      return await eventsAdminApi.listAttendance(id)
+    },
+    enabled: !!id,
+    staleTime: 1000 * 30, // 30 seconds for attendance
+  })
+}
+
+// Fetch admin event attendance statistics
+export function useAdminEventAttendanceStats(id: number | null) {
+  return useQuery({
+    queryKey: id ? adminEventKeys.attendanceStats(id) : ["admin-events", "attendance-stats", 0],
+    queryFn: async () => {
+      if (!id) return null
+      return await eventsAdminApi.attendanceStats(id)
+    },
+    enabled: !!id,
+    staleTime: 1000 * 30,
+  })
+}
+
 // Cache invalidation helpers
 export function useInvalidateAdminEvents() {
   const queryClient = useQueryClient()
@@ -90,6 +118,10 @@ export function useInvalidateAdminEvents() {
     invalidateStats: () => queryClient.invalidateQueries({ queryKey: adminEventKeys.stats() }),
     invalidateDetail: (id: number) => queryClient.invalidateQueries({ queryKey: adminEventKeys.detail(id) }),
     invalidateRegistrations: (id: number) => queryClient.invalidateQueries({ queryKey: [...adminEventKeys.detail(id), "registrations"] }),
+    invalidateAttendance: (id: number) => {
+      queryClient.invalidateQueries({ queryKey: adminEventKeys.attendance(id) })
+      queryClient.invalidateQueries({ queryKey: adminEventKeys.attendanceStats(id) })
+    },
   }
 }
 
@@ -98,20 +130,7 @@ export function useAdminEventMutations() {
   const queryClient = useQueryClient()
   const invalidate = useInvalidateAdminEvents()
 
-  const approveMutation = useMutation({
-    mutationFn: (id: number) => eventsAdminApi.approve(id),
-    onSuccess: () => {
-      invalidate.invalidateAll()
-    },
-  })
 
-  const rejectMutation = useMutation({
-    mutationFn: ({ id, reason }: { id: number; reason?: string }) =>
-      eventsAdminApi.reject(id, { reason }),
-    onSuccess: () => {
-      invalidate.invalidateAll()
-    },
-  })
 
   const publishMutation = useMutation({
     mutationFn: (id: number) => eventsAdminApi.publish(id),
@@ -173,8 +192,7 @@ export function useAdminEventMutations() {
   })
 
   return {
-    approve: approveMutation,
-    reject: rejectMutation,
+
     publish: publishMutation,
     cancel: cancelMutation,
     suspend: suspendMutation,
@@ -183,5 +201,12 @@ export function useAdminEventMutations() {
     delete: deleteMutation,
     update: updateMutation,
     create: createMutation,
+    scan: useMutation({
+      mutationFn: ({ id, token }: { id: number; token: string }) =>
+        eventsAdminApi.scanAttendance(id, token),
+      onSuccess: (_, variables) => {
+        invalidate.invalidateAttendance(variables.id)
+      },
+    }),
   }
 }

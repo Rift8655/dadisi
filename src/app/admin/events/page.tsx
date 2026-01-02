@@ -48,9 +48,7 @@ import type { Event } from "@/types"
 function StatusBadge({ status }: { status: string }) {
   const variants: Record<string, { color: string; label: string }> = {
     draft: { color: "bg-gray-100 text-gray-700 border-gray-200", label: "Draft" },
-    pending_approval: { color: "bg-amber-100 text-amber-700 border-amber-200", label: "Pending" },
     published: { color: "bg-green-100 text-green-700 border-green-200", label: "Published" },
-    rejected: { color: "bg-red-100 text-red-700 border-red-200", label: "Rejected" },
     cancelled: { color: "bg-gray-100 text-gray-500 border-gray-200", label: "Cancelled" },
     suspended: { color: "bg-orange-100 text-orange-700 border-orange-200", label: "Suspended" },
   }
@@ -59,20 +57,7 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 // Event type badge
-function EventTypeBadge({ type }: { type: string | undefined }) {
-  if (type === "organization") {
-    return (
-      <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 gap-1">
-        <Building className="h-3 w-3" /> Dadisi
-      </Badge>
-    )
-  }
-  return (
-    <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200 gap-1">
-      <User className="h-3 w-3" /> User
-    </Badge>
-  )
-}
+
 
 // Stats card
 function StatCard({ title, value, icon: Icon, loading }: { title: string; value: number; icon: LucideIcon; loading: boolean }) {
@@ -101,7 +86,6 @@ export default function AdminEventsPage() {
   // Filters state
   const [filters, setFilters] = useState<AdminEventFilters>({
     status: "all",
-    event_type: "all",
     search: "",
     upcoming: false,
     sort_by: "starts_at",
@@ -126,9 +110,7 @@ export default function AdminEventsPage() {
     setFilters(prev => ({ ...prev, status: value as AdminEventFilters['status'], page: 1 }))
   }
 
-  const handleTypeFilter = (value: string) => {
-    setFilters(prev => ({ ...prev, event_type: value as AdminEventFilters['event_type'], page: 1 }))
-  }
+
 
   const handleRowsPerPage = (value: string) => {
     setFilters(prev => ({ ...prev, per_page: parseInt(value), page: 1 }))
@@ -175,33 +157,6 @@ export default function AdminEventsPage() {
   }
 
   // Action handlers (same as before)
-  const handleApprove = async (id: number) => {
-    try {
-      await mutations.approve.mutateAsync(id)
-      Swal.fire("Approved!", "Event has been approved and published.", "success")
-    } catch (e) {
-      Swal.fire("Error", "Failed to approve event.", "error")
-    }
-  }
-
-  const handleReject = async (id: number) => {
-    const result = await Swal.fire({
-      title: "Reject Event",
-      input: "textarea",
-      inputLabel: "Reason for rejection (optional)",
-      showCancelButton: true,
-      confirmButtonColor: "#EF4444",
-      confirmButtonText: "Reject",
-    })
-    if (result.isConfirmed) {
-      try {
-        await mutations.reject.mutateAsync({ id, reason: result.value })
-        Swal.fire("Rejected", "Event has been rejected.", "success")
-      } catch (e) {
-        Swal.fire("Error", "Failed to reject event.", "error")
-      }
-    }
-  }
 
   const handlePublish = async (id: number) => {
     try {
@@ -269,14 +224,6 @@ export default function AdminEventsPage() {
   }
 
   // Bulk actions
-  const handleBulkApprove = async () => {
-    if (selectedIds.length === 0) return
-    for (const id of selectedIds) {
-      await mutations.approve.mutateAsync(id)
-    }
-    setSelectedIds([])
-    Swal.fire("Success", `${selectedIds.length} events approved.`, "success")
-  }
 
   const handleBulkSuspend = async () => {
     if (selectedIds.length === 0) return
@@ -322,7 +269,7 @@ export default function AdminEventsPage() {
         {/* Stats Cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <StatCard title="Total Events" value={stats?.total || 0} icon={Calendar} loading={statsLoading} />
-          <StatCard title="Pending Review" value={stats?.pending_review || 0} icon={ClipboardCheck} loading={statsLoading} />
+          <StatCard title="Published" value={stats?.published || 0} icon={ClipboardCheck} loading={statsLoading} />
           <StatCard title="Upcoming" value={stats?.upcoming || 0} icon={Users} loading={statsLoading} />
           <StatCard title="Featured" value={stats?.featured || 0} icon={Star} loading={statsLoading} />
         </div>
@@ -357,25 +304,14 @@ export default function AdminEventsPage() {
                 <SelectContent>
                   <SelectItem value="all">All Status</SelectItem>
                   <SelectItem value="draft">Draft</SelectItem>
-                  <SelectItem value="pending_approval">Pending</SelectItem>
                   <SelectItem value="published">Published</SelectItem>
-                  <SelectItem value="rejected">Rejected</SelectItem>
                   <SelectItem value="cancelled">Cancelled</SelectItem>
                   <SelectItem value="suspended">Suspended</SelectItem>
                 </SelectContent>
               </Select>
 
               {/* Type filter */}
-              <Select value={filters.event_type || "all"} onValueChange={handleTypeFilter}>
-                <SelectTrigger className="w-[150px]">
-                  <SelectValue placeholder="Type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Types</SelectItem>
-                  <SelectItem value="organization">Dadisi Events</SelectItem>
-                  <SelectItem value="user">User Events</SelectItem>
-                </SelectContent>
-              </Select>
+
 
               {/* Rows per page */}
               <Select value={String(filters.per_page || 20)} onValueChange={handleRowsPerPage}>
@@ -394,9 +330,6 @@ export default function AdminEventsPage() {
             {selectedIds.length > 0 && (
               <div className="flex gap-2 mb-4 p-2 bg-muted rounded-md">
                 <span className="text-sm text-muted-foreground self-center">{selectedIds.length} selected</span>
-                <Button size="sm" variant="outline" onClick={handleBulkApprove}>
-                  <Check className="h-4 w-4 mr-1" /> Approve
-                </Button>
                 <Button size="sm" variant="outline" onClick={handleBulkSuspend}>
                   <Ban className="h-4 w-4 mr-1" /> Suspend
                 </Button>
@@ -415,7 +348,7 @@ export default function AdminEventsPage() {
                       />
                     </TableHead>
                     <SortableHeader label="Title" column="title" />
-                    <TableHead>Type</TableHead>
+    
                     <TableHead>Created By</TableHead>
                     <SortableHeader label="Status" column="status" />
                     <SortableHeader label="Date" column="starts_at" />
@@ -459,9 +392,7 @@ export default function AdminEventsPage() {
                             <Star className="h-3 w-3 text-yellow-500 inline ml-1" fill="currentColor" />
                           )}
                         </TableCell>
-                        <TableCell>
-                          <EventTypeBadge type={event.event_type} />
-                        </TableCell>
+
                         <TableCell className="text-sm text-muted-foreground">
                           {event.creator?.username || event.creator?.email || "—"}
                         </TableCell>
@@ -490,16 +421,6 @@ export default function AdminEventsPage() {
                                 <Pencil className="h-4 w-4 mr-2" /> Edit Event
                               </DropdownMenuItem>
                               <DropdownMenuSeparator />
-                              {event.status === "pending_approval" && (
-                                <>
-                                  <DropdownMenuItem onClick={() => handleApprove(event.id)}>
-                                    <Check className="h-4 w-4 mr-2" /> Approve
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => handleReject(event.id)}>
-                                    <X className="h-4 w-4 mr-2" /> Reject
-                                  </DropdownMenuItem>
-                                </>
-                              )}
                               {event.status === "draft" && (
                                 <DropdownMenuItem onClick={() => handlePublish(event.id)}>
                                   <Send className="h-4 w-4 mr-2" /> Publish

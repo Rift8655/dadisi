@@ -215,7 +215,7 @@ export interface Event {
   price: number
   currency: string
   status: "draft" | "published" | "suspended" | "pending_approval" | "rejected" | "cancelled"
-  event_type?: "organization" | "user"
+
   featured: boolean
   featured_until: string | null
   registration_deadline: string | null

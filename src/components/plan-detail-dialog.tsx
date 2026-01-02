@@ -2,6 +2,11 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import { useAuth } from "@/store/auth"
+import { Check } from "lucide-react"
+
+import { showWarning } from "@/lib/sweetalert"
+import { Button } from "@/components/ui/button"
 import {
   Dialog,
   DialogContent,
@@ -9,10 +14,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Button } from "@/components/ui/button"
-import { useAuth } from "@/store/auth"
-import { showWarning } from "@/lib/sweetalert"
-import { Check } from "lucide-react"
 
 interface PlanDetailDialogProps {
   open: boolean
@@ -34,21 +35,30 @@ interface PlanDetailDialogProps {
   }
 }
 
-export function PlanDetailDialog({ open, onOpenChange, plan }: PlanDetailDialogProps) {
-  const [billingInterval, setBillingInterval] = useState<"monthly" | "yearly">("monthly")
+export function PlanDetailDialog({
+  open,
+  onOpenChange,
+  plan,
+}: PlanDetailDialogProps) {
+  const [billingInterval, setBillingInterval] = useState<"monthly" | "yearly">(
+    "monthly"
+  )
+  const [enableAutoRenewal, setEnableAutoRenewal] = useState(true)
   const router = useRouter()
   const user = useAuth((s) => s.user)
 
   const monthlyPromoActive = plan.promotions.monthly?.active ?? false
   const yearlyPromoActive = plan.promotions.yearly?.active ?? false
 
-  const monthlyPrice = monthlyPromoActive && plan.pricing.monthly.discounted
-    ? plan.pricing.monthly.discounted
-    : plan.pricing.monthly.base
+  const monthlyPrice =
+    monthlyPromoActive && plan.pricing.monthly.discounted
+      ? plan.pricing.monthly.discounted
+      : plan.pricing.monthly.base
 
-  const yearlyPrice = yearlyPromoActive && plan.pricing.yearly.discounted
-    ? plan.pricing.yearly.discounted
-    : plan.pricing.yearly.base
+  const yearlyPrice =
+    yearlyPromoActive && plan.pricing.yearly.discounted
+      ? plan.pricing.yearly.discounted
+      : plan.pricing.yearly.base
 
   const isFree = monthlyPrice === 0
 
@@ -70,11 +80,17 @@ export function PlanDetailDialog({ open, onOpenChange, plan }: PlanDetailDialogP
 
     // Navigate to checkout page with plan and billing info
     onOpenChange(false)
-    router.push(`/checkout?plan_id=${plan.id}&billing_interval=${billingInterval}&currency=${plan.currency}`)
+    router.push(
+      `/checkout?plan_id=${plan.id}&billing_interval=${billingInterval}&currency=${plan.currency}&auto_renewal=${enableAutoRenewal}`
+    )
   }
 
-  const selectedPrice = billingInterval === "monthly" ? monthlyPrice : yearlyPrice
-  const selectedPromo = billingInterval === "monthly" ? plan.promotions.monthly : plan.promotions.yearly
+  const selectedPrice =
+    billingInterval === "monthly" ? monthlyPrice : yearlyPrice
+  const selectedPromo =
+    billingInterval === "monthly"
+      ? plan.promotions.monthly
+      : plan.promotions.yearly
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -82,11 +98,13 @@ export function PlanDetailDialog({ open, onOpenChange, plan }: PlanDetailDialogP
         <DialogHeader>
           <DialogTitle className="text-2xl">{plan.name}</DialogTitle>
           {plan.description && (
-            <DialogDescription className="text-base">{plan.description}</DialogDescription>
+            <DialogDescription className="text-base">
+              {plan.description}
+            </DialogDescription>
           )}
         </DialogHeader>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           {/* Features list - Left column */}
           <div className="space-y-3">
             <h4 className="font-medium">What's included:</h4>
@@ -95,12 +113,14 @@ export function PlanDetailDialog({ open, onOpenChange, plan }: PlanDetailDialogP
                 {plan.features.length > 0 ? (
                   plan.features.map((feature, idx) => (
                     <li key={idx} className="flex items-start gap-2 text-sm">
-                      <Check className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
+                      <Check className="mt-0.5 h-4 w-4 flex-shrink-0 text-green-500" />
                       <span>{feature}</span>
                     </li>
                   ))
                 ) : (
-                  <li className="text-muted-foreground text-sm">No features listed</li>
+                  <li className="text-sm text-muted-foreground">
+                    No features listed
+                  </li>
                 )}
               </ul>
             </div>
@@ -108,11 +128,13 @@ export function PlanDetailDialog({ open, onOpenChange, plan }: PlanDetailDialogP
 
           {/* Billing options and button - Right column */}
           {isFree ? (
-            <div className="flex flex-col items-center justify-center space-y-4 p-6 bg-green-50 dark:bg-green-950/20 rounded-lg border border-green-200 dark:border-green-800">
+            <div className="flex flex-col items-center justify-center space-y-4 rounded-lg border border-green-200 bg-green-50 p-6 dark:border-green-800 dark:bg-green-950/20">
               <div className="text-center">
-                <div className="text-3xl mb-2">🎉</div>
-                <h4 className="font-medium text-lg text-green-800 dark:text-green-200">Free Forever!</h4>
-                <p className="text-sm text-green-600 dark:text-green-400 mt-2">
+                <div className="mb-2 text-3xl">🎉</div>
+                <h4 className="text-lg font-medium text-green-800 dark:text-green-200">
+                  Free Forever!
+                </h4>
+                <p className="mt-2 text-sm text-green-600 dark:text-green-400">
                   No payment required. Start exploring biotech today.
                 </p>
               </div>
@@ -122,7 +144,9 @@ export function PlanDetailDialog({ open, onOpenChange, plan }: PlanDetailDialogP
               <h4 className="font-medium">Select billing cycle:</h4>
 
               <div className="space-y-3">
-                <label className={`flex items-center justify-between p-4 rounded-lg border cursor-pointer transition-colors ${billingInterval === "monthly" ? "border-primary bg-primary/5" : "border-border hover:border-primary/50"}`}>
+                <label
+                  className={`flex cursor-pointer items-center justify-between rounded-lg border p-4 transition-colors ${billingInterval === "monthly" ? "border-primary bg-primary/5" : "border-border hover:border-primary/50"}`}
+                >
                   <div className="flex items-center gap-3">
                     <input
                       type="radio"
@@ -134,11 +158,15 @@ export function PlanDetailDialog({ open, onOpenChange, plan }: PlanDetailDialogP
                     />
                     <div>
                       <div className="font-medium">Monthly</div>
-                      <div className="text-sm text-muted-foreground">Billed monthly</div>
+                      <div className="text-sm text-muted-foreground">
+                        Billed monthly
+                      </div>
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="font-bold">{formatPrice(monthlyPrice)}/mo</div>
+                    <div className="font-bold">
+                      {formatPrice(monthlyPrice)}/mo
+                    </div>
                     {monthlyPromoActive && plan.promotions.monthly && (
                       <div className="text-xs text-green-600">
                         {plan.promotions.monthly.discount_percent}% off
@@ -147,7 +175,9 @@ export function PlanDetailDialog({ open, onOpenChange, plan }: PlanDetailDialogP
                   </div>
                 </label>
 
-                <label className={`flex items-center justify-between p-4 rounded-lg border cursor-pointer transition-colors ${billingInterval === "yearly" ? "border-primary bg-primary/5" : "border-border hover:border-primary/50"}`}>
+                <label
+                  className={`flex cursor-pointer items-center justify-between rounded-lg border p-4 transition-colors ${billingInterval === "yearly" ? "border-primary bg-primary/5" : "border-border hover:border-primary/50"}`}
+                >
                   <div className="flex items-center gap-3">
                     <input
                       type="radio"
@@ -159,11 +189,15 @@ export function PlanDetailDialog({ open, onOpenChange, plan }: PlanDetailDialogP
                     />
                     <div>
                       <div className="font-medium">Yearly</div>
-                      <div className="text-sm text-muted-foreground">Billed annually</div>
+                      <div className="text-sm text-muted-foreground">
+                        Billed annually
+                      </div>
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="font-bold">{formatPrice(yearlyPrice)}/yr</div>
+                    <div className="font-bold">
+                      {formatPrice(yearlyPrice)}/yr
+                    </div>
                     {yearlyPromoActive && plan.promotions.yearly && (
                       <div className="text-xs text-green-600">
                         {plan.promotions.yearly.discount_percent}% off
@@ -171,6 +205,32 @@ export function PlanDetailDialog({ open, onOpenChange, plan }: PlanDetailDialogP
                     )}
                   </div>
                 </label>
+              </div>
+
+              {/* Auto-Renewal Option */}
+              <div className="mt-4 space-y-2 rounded-lg border border-muted-foreground/10 bg-muted/50 p-3">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="auto-renewal"
+                    checked={enableAutoRenewal}
+                    onChange={(e) => setEnableAutoRenewal(e.target.checked)}
+                    className="h-4 w-4 cursor-pointer rounded border-gray-300 text-primary focus:ring-primary"
+                  />
+                  <label
+                    htmlFor="auto-renewal"
+                    className="cursor-pointer text-sm font-medium"
+                  >
+                    Enable auto-renewal
+                  </label>
+                </div>
+                {enableAutoRenewal && (
+                  <p className="text-[11px] leading-tight text-blue-600 dark:text-blue-400">
+                    ℹ️ <strong>Card Only:</strong> Auto-renewal requires Visa or
+                    MasterCard. Mobile money (M-Pesa) will require manual
+                    renewal.
+                  </p>
+                )}
               </div>
 
               {/* Subscribe button */}

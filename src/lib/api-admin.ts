@@ -507,9 +507,7 @@ export const labMaintenanceAdminApi = {
 // Admin Events API
 export interface AdminEventFilters {
   status?: 'all' | 'draft' | 'pending_approval' | 'published' | 'rejected' | 'cancelled' | 'suspended'
-  event_type?: 'all' | 'organization' | 'user'
   featured?: boolean
-  organizer_id?: number
   search?: string
   upcoming?: boolean
   sort_by?: 'title' | 'starts_at' | 'status' | 'created_at'
@@ -524,8 +522,6 @@ export interface AdminEventStats {
   published: number
   upcoming: number
   featured: number
-  organization_events: number
-  user_events: number
 }
 
 export const eventsAdminApi = {
@@ -541,11 +537,7 @@ export const eventsAdminApi = {
   update: (id: number, data: Record<string, unknown>) =>
     api.put<any>(`/api/admin/events/${id}`, data),
 
-  approve: (id: number) =>
-    api.post<{ message: string }>(`/api/admin/events/${id}/approve`),
 
-  reject: (id: number, data?: { reason?: string }) =>
-    api.post<{ message: string }>(`/api/admin/events/${id}/reject`, data || {}),
 
   publish: (id: number) =>
     api.post<{ message: string }>(`/api/admin/events/${id}/publish`),
@@ -570,25 +562,18 @@ export const eventsAdminApi = {
 
   registrations: (id: number, params?: { status?: string; waitlist?: boolean; page?: number; per_page?: number }) =>
     api.get<any>(`/api/admin/events/${id}/registrations`, { params: params as Record<string, string | number | boolean> }),
+
+  listAttendance: (id: number) =>
+    api.get<any>(`/api/admin/events/${id}/attendance`),
+
+  attendanceStats: (id: number) =>
+    api.get<any>(`/api/admin/events/${id}/attendance/stats`),
+
+  scanAttendance: (id: number, token: string) =>
+    api.post<any>(`/api/admin/events/${id}/attendance/scan`, { token }),
 }
 
-// Finance Payouts API
-export const payoutsAdminApi = {
-  list: (params?: { status?: string; page?: number; per_page?: number }) =>
-    api.get<any>("/api/admin/payouts", { params }),
 
-  get: (id: number) =>
-    api.get<any>(`/api/admin/payouts/${id}`),
-
-  approve: (id: number) =>
-    api.post<any>(`/api/admin/payouts/${id}/approve`),
-
-  complete: (id: number, data?: { reference?: string }) =>
-    api.post<any>(`/api/admin/payouts/${id}/complete`, data),
-
-  reject: (id: number, reason: string) =>
-    api.post<any>(`/api/admin/payouts/${id}/reject`, { reason }),
-}
 
 // Forum Stats
 export const forumAdminApi = {
@@ -666,6 +651,5 @@ export const adminApi = {
   eventCategories: eventCategoriesAdminApi,
   groups: groupsApi,
   forum: forumAdminApi,
-  payouts: payoutsAdminApi,
 }
 

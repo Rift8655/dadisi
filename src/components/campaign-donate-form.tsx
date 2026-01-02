@@ -1,15 +1,19 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { campaignsApi } from "@/lib/api"
+import type {
+  CampaignDonationInput,
+  DonationCampaign,
+} from "@/schemas/campaign"
 import { useAuth } from "@/store/auth"
+import { Loader2 } from "lucide-react"
+import Swal from "sweetalert2"
+
+import { campaignsApi } from "@/lib/api"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Loader2 } from "lucide-react"
-import { useCountiesQuery } from "@/hooks/useMemberProfileQuery"
 import {
   Select,
   SelectContent,
@@ -17,8 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import type { DonationCampaign, CampaignDonationInput } from "@/schemas/campaign"
-import Swal from "sweetalert2"
+import { Textarea } from "@/components/ui/textarea"
 
 interface CampaignDonateFormProps {
   campaign: DonationCampaign
@@ -27,35 +30,30 @@ interface CampaignDonateFormProps {
 
 const PRESET_AMOUNTS = [500, 1000, 2500, 5000, 10000]
 
-export function CampaignDonateForm({ campaign, onSuccess }: CampaignDonateFormProps) {
+export function CampaignDonateForm({
+  campaign,
+  onSuccess,
+}: CampaignDonateFormProps) {
   const router = useRouter()
   const { user, isAuthenticated } = useAuth()
   const [loading, setLoading] = useState(false)
-  
+
   const [amount, setAmount] = useState<number | "">(PRESET_AMOUNTS[1])
   const [firstName, setFirstName] = useState("")
   const [lastName, setLastName] = useState("")
   const [email, setEmail] = useState("")
   const [phone, setPhone] = useState("")
-  const [countyId, setCountyId] = useState<string>("")
   const [message, setMessage] = useState("")
-
-  const { data: countiesData } = useCountiesQuery()
-  const counties = Array.isArray(countiesData) ? countiesData : []
 
   // Pre-fill form if user is authenticated
   useEffect(() => {
     if (isAuthenticated && user) {
       if (user.member_profile) {
-        setFirstName(prev => prev || user.member_profile?.first_name || "")
-        setLastName(prev => prev || user.member_profile?.last_name || "")
-        setPhone(prev => prev || user.member_profile?.phone_number || "")
-        // If we can get county_id from profile (though contract is sparse)
-        if ((user.member_profile as any).county_id) {
-          setCountyId(String((user.member_profile as any).county_id))
-        }
+        setFirstName((prev) => prev || user.member_profile?.first_name || "")
+        setLastName((prev) => prev || user.member_profile?.last_name || "")
+        setPhone((prev) => prev || user.member_profile?.phone_number || "")
       }
-      setEmail(prev => prev || user.email || "")
+      setEmail((prev) => prev || user.email || "")
     }
   }, [isAuthenticated, user])
 
@@ -94,7 +92,6 @@ export function CampaignDonateForm({ campaign, onSuccess }: CampaignDonateFormPr
         last_name: lastName,
         email,
         phone_number: phone || undefined,
-        county_id: countyId ? parseInt(countyId, 10) : undefined,
         message: message || undefined,
       }
 
@@ -148,7 +145,9 @@ export function CampaignDonateForm({ campaign, onSuccess }: CampaignDonateFormPr
           type="number"
           placeholder="Custom amount"
           value={amount}
-          onChange={(e) => setAmount(e.target.value ? Number(e.target.value) : "")}
+          onChange={(e) =>
+            setAmount(e.target.value ? Number(e.target.value) : "")
+          }
           min={minDonation}
           className="mt-2"
         />
@@ -204,22 +203,6 @@ export function CampaignDonateForm({ campaign, onSuccess }: CampaignDonateFormPr
       </div>
 
       <div className="space-y-1">
-        <Label htmlFor="county">County (Optional)</Label>
-        <Select value={countyId} onValueChange={setCountyId}>
-          <SelectTrigger id="county">
-            <SelectValue placeholder="Select your county" />
-          </SelectTrigger>
-          <SelectContent>
-            {counties.map((county: { id: number; name: string }) => (
-              <SelectItem key={county.id} value={String(county.id)}>
-                {county.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      <div className="space-y-1">
         <Label htmlFor="message">Message (Optional)</Label>
         <Textarea
           id="message"
@@ -242,8 +225,9 @@ export function CampaignDonateForm({ campaign, onSuccess }: CampaignDonateFormPr
         )}
       </Button>
 
-      <p className="text-xs text-center text-muted-foreground">
-        Payments are securely processed. Your donation supports {campaign.title}.
+      <p className="text-center text-xs text-muted-foreground">
+        Payments are securely processed. Your donation supports {campaign.title}
+        .
       </p>
     </form>
   )

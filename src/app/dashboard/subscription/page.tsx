@@ -33,6 +33,8 @@ interface CurrentSubscription {
   current_period_start: string
   current_period_end: string
   cancel_at_period_end: boolean
+  pesapal_recurring_enabled?: boolean
+  payment_method?: string
 }
 
 export default function SubscriptionPage() {
@@ -98,6 +100,8 @@ export default function SubscriptionPage() {
         current_period_start: subscriptionData.subscription.starts_at,
         current_period_end: subscriptionData.subscription.ends_at,
         cancel_at_period_end: !!subscriptionData.subscription.cancels_at,
+        pesapal_recurring_enabled: !!subscriptionData.enhancement?.pesapal_recurring_enabled,
+        payment_method: subscriptionData.enhancement?.payment_method,
       }
     : null
 
@@ -338,7 +342,6 @@ export default function SubscriptionPage() {
                 <div>
                   <CardTitle className="flex items-center gap-2">
                     {getLocalizedValue(subscriptionWithFeatures.plan.name)} Plan
-                    {getStatusBadge(subscriptionWithFeatures.status)}
                   </CardTitle>
                   <CardDescription>
                     {subscriptionWithFeatures.plan.price_monthly === 0 
@@ -346,6 +349,14 @@ export default function SubscriptionPage() {
                       : `${subscriptionWithFeatures.billing_interval === "monthly" ? "Monthly" : "Yearly"} billing`
                     }
                   </CardDescription>
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {getStatusBadge(subscriptionWithFeatures.status)}
+                    {subscriptionWithFeatures.pesapal_recurring_enabled ? (
+                      <Badge className="bg-green-500/10 text-green-600">Auto-Renewal Active (Card)</Badge>
+                    ) : subscriptionWithFeatures.payment_method === 'MPESA' ? (
+                      <Badge className="bg-amber-500/10 text-amber-600">Manual Renewal (M-Pesa)</Badge>
+                    ) : null}
+                  </div>
                 </div>
                 <div className="text-right">
                   <p className="text-2xl font-bold">
@@ -388,6 +399,28 @@ export default function SubscriptionPage() {
                       </p>
                     </div>
                   </div>
+                </div>
+              )}
+
+              {/* Recurring Payment Info Helper */}
+              {subscriptionWithFeatures.plan.price_monthly > 0 && (
+                <div className="text-sm text-muted-foreground">
+                  {subscriptionWithFeatures.pesapal_recurring_enabled ? (
+                    <p>
+                      ℹ️ Your subscription will be automatically renewed using your card handled by Pesapal. 
+                      You can manage your recurring payments at <a href="https://www.pesapal.com" target="_blank" rel="noreferrer" className="underline">Pesapal.com</a>.
+                    </p>
+                  ) : subscriptionWithFeatures.payment_method === 'MPESA' ? (
+                    <p>
+                      ℹ️ M-Pesa payments do not support auto-renewal. You will receive a reminder email 
+                      before your subscription expires to renew manually.
+                    </p>
+                  ) : (
+                    <p>
+                      ℹ️ Enable auto-renewal during your next payment to avoid service interruptions. 
+                      Note: Auto-renewal is only supported for card payments (Visa/MasterCard).
+                    </p>
+                  )}
                 </div>
               )}
 

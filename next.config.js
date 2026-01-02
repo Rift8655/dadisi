@@ -115,8 +115,7 @@ module.exports = withSentryConfig(module.exports, {
   // This can increase your server load as well as your hosting bill.
   // Note: Check that the configured route will not match with your Next.js middleware, otherwise reporting of client-
   // side errors will fail.
-  // Disabled: tunnel route returning 404. Sentry will send directly to ingest endpoint.
-  // tunnelRoute: "/monitoring",
+  tunnelRoute: "/monitoring",
 
   webpack: {
     // Enables automatic instrumentation of Vercel Cron Monitors. (Does not yet work with App Router route handlers.)
@@ -128,7 +127,7 @@ module.exports = withSentryConfig(module.exports, {
     // Tree-shaking options for reducing bundle size
     treeshake: {
       // Automatically tree-shake Sentry logger statements to reduce bundle size
-      removeDebugLogging: false,
+      removeDebugLogging: true,
     },
   },
 });

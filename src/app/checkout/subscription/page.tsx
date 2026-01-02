@@ -141,6 +141,7 @@ function SubscriptionCheckoutContent() {
       }>("/api/subscriptions/initiate-payment", {
         plan_id: plan.id,
         billing_period: billingInterval === "monthly" ? "month" : "year",
+        enable_auto_renewal: searchParams.get("auto_renewal") === "true",
       })
 
       if (response.data?.redirect_url) {

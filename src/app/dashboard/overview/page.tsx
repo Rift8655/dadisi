@@ -98,8 +98,8 @@ export default function OverviewPage() {
   const { data: postsData, isLoading: postsLoading } = useQuery({
     queryKey: ["dashboard-posts"],
     queryFn: async () => {
-      const data = await postsApi.list({ page: 1 })
-      const posts = Array.isArray(data) ? data : []
+      const response = await postsApi.list({ page: 1 })
+      const posts = response.data || []
       return posts.slice(0, 3).map((p: any) => ({
         id: p.id,
         title: p.title,

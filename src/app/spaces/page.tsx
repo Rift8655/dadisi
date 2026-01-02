@@ -1,15 +1,37 @@
 "use client"
 
 import { useState } from "react"
-import Link from "next/link"
 import Image from "next/image"
-import { useLabSpaces, useLabQuota, LAB_SPACE_TYPES } from "@/hooks/useLabBookings"
+import Link from "next/link"
 import { useAuth } from "@/store/auth"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
+import {
+  AlertCircle,
+  CheckCircle2,
+  FlaskConical,
+  Leaf,
+  MapPin,
+  Monitor,
+  Search,
+  Truck,
+  Users,
+} from "lucide-react"
+
+import type { LabSpace, LabSpaceType } from "@/types/lab"
+import {
+  LAB_SPACE_TYPES,
+  useLabQuota,
+  useLabSpaces,
+} from "@/hooks/useLabBookings"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { Skeleton } from "@/components/ui/skeleton"
 import {
   Select,
   SelectContent,
@@ -17,18 +39,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { 
-  FlaskConical, 
-  Monitor, 
-  Leaf, 
-  Truck,
-  Users,
-  Search,
-  Clock,
-  AlertCircle,
-  CheckCircle2,
-} from "lucide-react"
-import type { LabSpace, LabSpaceType } from "@/types/lab"
+import { Skeleton } from "@/components/ui/skeleton"
 
 const SPACE_ICONS: Record<LabSpaceType, React.ReactNode> = {
   wet_lab: <FlaskConical className="h-6 w-6" />,
@@ -50,7 +61,11 @@ export default function LabSpacesPage() {
   const { isAuthenticated } = useAuth()
 
   // Fetch lab spaces
-  const { data: spaces, isLoading, error } = useLabSpaces({
+  const {
+    data: spaces,
+    isLoading,
+    error,
+  } = useLabSpaces({
     type: typeFilter !== "all" ? typeFilter : undefined,
     search: search || undefined,
   })
@@ -61,21 +76,22 @@ export default function LabSpacesPage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/30">
       {/* Hero Section */}
-      <section className="relative py-20 overflow-hidden">
+      <section className="relative overflow-hidden py-20">
         <div className="absolute inset-0 bg-gradient-to-r from-primary/10 to-primary/5" />
-        <div className="container mx-auto px-4 relative">
-          <div className="max-w-3xl mx-auto text-center">
-            <h1 className="text-4xl md:text-5xl font-bold mb-4 bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+        <div className="container relative mx-auto px-4">
+          <div className="mx-auto max-w-3xl text-center">
+            <h1 className="mb-4 bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-4xl font-bold text-transparent md:text-5xl">
               Lab Spaces
             </h1>
-            <p className="text-lg text-muted-foreground mb-8">
-              Book state-of-the-art laboratory spaces for your research, experiments, 
-              and innovation projects. From wet labs to mobile units, we have the facilities you need.
+            <p className="mb-8 text-lg text-muted-foreground">
+              Book state-of-the-art laboratory spaces for your research,
+              experiments, and innovation projects. From wet labs to mobile
+              units, we have the facilities you need.
             </p>
 
             {/* Quota Status (if authenticated) */}
             {isAuthenticated && quota && (
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-card border shadow-sm">
+              <div className="inline-flex items-center gap-2 rounded-full border bg-card px-4 py-2 shadow-sm">
                 {quota.has_access ? (
                   <>
                     <CheckCircle2 className="h-4 w-4 text-green-500" />
@@ -83,7 +99,10 @@ export default function LabSpacesPage() {
                       {quota.unlimited ? (
                         <>Unlimited Lab Access</>
                       ) : (
-                        <>{quota.remaining}h remaining of {quota.limit}h this month</>
+                        <>
+                          {quota.remaining}h remaining of {quota.limit}h this
+                          month
+                        </>
                       )}
                     </span>
                   </>
@@ -102,14 +121,14 @@ export default function LabSpacesPage() {
       </section>
 
       {/* Filters Section */}
-      <section className="container mx-auto px-4 -mt-8 mb-8">
-        <div className="max-w-4xl mx-auto">
+      <section className="container mx-auto -mt-8 mb-8 px-4">
+        <div className="mx-auto max-w-4xl">
           <Card className="shadow-lg">
             <CardContent className="p-4">
-              <div className="flex flex-col sm:flex-row gap-4">
+              <div className="flex flex-col gap-4 sm:flex-row">
                 {/* Search */}
                 <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                   <Input
                     placeholder="Search lab spaces..."
                     value={search}
@@ -140,7 +159,7 @@ export default function LabSpacesPage() {
 
       {/* Lab Spaces Grid */}
       <section className="container mx-auto px-4 pb-20">
-        <div className="max-w-6xl mx-auto">
+        <div className="mx-auto max-w-6xl">
           {isLoading ? (
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-2">
               {[...Array(4)].map((_, i) => (
@@ -158,8 +177,10 @@ export default function LabSpacesPage() {
             </div>
           ) : error ? (
             <Card className="p-8 text-center">
-              <AlertCircle className="h-12 w-12 mx-auto text-destructive mb-4" />
-              <h3 className="text-lg font-medium mb-2">Failed to load lab spaces</h3>
+              <AlertCircle className="mx-auto mb-4 h-12 w-12 text-destructive" />
+              <h3 className="mb-2 text-lg font-medium">
+                Failed to load lab spaces
+              </h3>
               <p className="text-muted-foreground">Please try again later.</p>
             </Card>
           ) : spaces && spaces.length > 0 ? (
@@ -170,10 +191,12 @@ export default function LabSpacesPage() {
             </div>
           ) : (
             <Card className="p-8 text-center">
-              <FlaskConical className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-              <h3 className="text-lg font-medium mb-2">No lab spaces found</h3>
+              <FlaskConical className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
+              <h3 className="mb-2 text-lg font-medium">No lab spaces found</h3>
               <p className="text-muted-foreground">
-                {search ? "Try a different search term." : "Check back later for available spaces."}
+                {search
+                  ? "Try a different search term."
+                  : "Check back later for available spaces."}
               </p>
             </Card>
           )}
@@ -185,13 +208,16 @@ export default function LabSpacesPage() {
 
 // Lab Space Card Component
 function LabSpaceCard({ space }: { space: LabSpace }) {
-  const isLocal = process.env.NEXT_PUBLIC_BACKEND_APP_URL?.includes("localhost") || 
-                  process.env.NEXT_PUBLIC_BACKEND_APP_URL?.includes("127.0.0.1")
+  const isLocal =
+    process.env.NEXT_PUBLIC_BACKEND_APP_URL?.includes("localhost") ||
+    process.env.NEXT_PUBLIC_BACKEND_APP_URL?.includes("127.0.0.1")
   const icon = SPACE_ICONS[space.type]
   const gradient = SPACE_COLORS[space.type]
+  // Defensively normalize amenities to handle undefined/null values from API
+  const amenities = Array.isArray(space.amenities) ? space.amenities : []
 
   return (
-    <Card className="overflow-hidden group hover:shadow-xl transition-all duration-300 border-2 hover:border-primary/20">
+    <Card className="group overflow-hidden border-2 transition-all duration-300 hover:border-primary/20 hover:shadow-xl">
       {/* Header with gradient */}
       <div className={`relative h-32 bg-gradient-to-r ${gradient}`}>
         {space.image_url ? (
@@ -204,13 +230,13 @@ function LabSpaceCard({ space }: { space: LabSpace }) {
           />
         ) : null}
         <div className="absolute inset-0 flex items-center justify-center">
-          <div className="p-4 rounded-full bg-white/20 backdrop-blur-sm">
+          <div className="rounded-full bg-white/20 p-4 backdrop-blur-sm">
             {icon}
           </div>
         </div>
-        <Badge 
-          variant="secondary" 
-          className="absolute top-4 right-4 bg-white/90 text-foreground"
+        <Badge
+          variant="secondary"
+          className="absolute right-4 top-4 bg-white/90 text-foreground"
         >
           {space.type_name}
         </Badge>
@@ -219,7 +245,7 @@ function LabSpaceCard({ space }: { space: LabSpace }) {
       <CardHeader>
         <CardTitle className="flex items-center justify-between">
           <span>{space.name}</span>
-          <div className="flex items-center gap-1 text-sm text-muted-foreground font-normal">
+          <div className="flex items-center gap-1 text-sm font-normal text-muted-foreground">
             <Users className="h-4 w-4" />
             <span>{space.capacity}</span>
           </div>
@@ -231,37 +257,31 @@ function LabSpaceCard({ space }: { space: LabSpace }) {
 
       <CardContent className="space-y-4">
         {/* Amenities preview */}
-        {space.amenities.length > 0 && (
+        {amenities.length > 0 && (
           <div className="flex flex-wrap gap-1">
-            {space.amenities.slice(0, 4).map((amenity, i) => (
+            {amenities.slice(0, 4).map((amenity, i) => (
               <Badge key={i} variant="outline" className="text-xs">
                 {amenity}
               </Badge>
             ))}
-            {space.amenities.length > 4 && (
+            {amenities.length > 4 && (
               <Badge variant="outline" className="text-xs">
-                +{space.amenities.length - 4} more
+                +{amenities.length - 4} more
               </Badge>
             )}
           </div>
         )}
 
-        {/* Price and CTA */}
+        {/* Location and CTA */}
         <div className="flex items-center justify-between pt-2">
-          <div className="flex items-center gap-1 text-sm">
-            <Clock className="h-4 w-4 text-muted-foreground" />
-            <span className="text-muted-foreground">
-              {space.hourly_rate > 0 ? (
-                `KES ${space.hourly_rate}/hr`
-              ) : (
-                <span className="text-green-600 font-medium">Free with subscription</span>
-              )}
+          <div className="flex items-center gap-1 text-sm text-muted-foreground">
+            <MapPin className="h-4 w-4" />
+            <span className="line-clamp-1">
+              {space.location || space.county || "Location TBD"}
             </span>
           </div>
           <Button asChild>
-            <Link href={`/spaces/${space.slug}`}>
-              View & Book
-            </Link>
+            <Link href={`/spaces/${space.slug}`}>View & Book</Link>
           </Button>
         </div>
       </CardContent>

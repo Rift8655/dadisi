@@ -1,15 +1,16 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { forumApi } from "@/lib/api"
 import {
-  ForumCategorySchema,
   ForumCategoriesSchema,
+  ForumCategorySchema,
+  ForumPostsSchema,
   ForumThreadSchema,
   ForumThreadsSchema,
-  ForumPostsSchema,
   type ForumCategory,
-  type ForumThread,
   type ForumPost,
+  type ForumThread,
 } from "@/schemas/forum"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+
+import { forumApi } from "@/lib/api"
 
 // Caching Strategy:
 // - Categories: Tier 2 (Stable Metadata) - 1 hour staleTime
@@ -35,7 +36,10 @@ export function useForumCategories() {
       // Validate with Zod
       const validated = ForumCategoriesSchema.safeParse(response.data)
       if (!validated.success) {
-        console.error("Forum categories validation failed:", validated.error.format())
+        console.error(
+          "Forum categories validation failed:",
+          validated.error.format()
+        )
         return response.data as unknown as ForumCategory[]
       }
       return validated.data
@@ -73,8 +77,9 @@ export function useForumThread(slug: string) {
     queryKey: ["forum-thread", slug],
     queryFn: async () => {
       const response = await forumApi.threads.get(slug)
-      // Backend returns { thread: ..., posts: ... } not { data: ... }
-      const threadData = response.thread
+      // Backend returns { success, data: { thread, posts } } - handle both formats
+      const threadData =
+        (response as any).data?.thread || (response as any).thread
       if (!threadData) {
         throw new Error("Thread not found")
       }
@@ -82,7 +87,10 @@ export function useForumThread(slug: string) {
       if (!validated.success) {
         // Log issues but don't fail - just use raw data
         if (process.env.NODE_ENV === "development") {
-          console.warn("Forum thread schema mismatch (using raw data):", validated.error.issues)
+          console.warn(
+            "Forum thread schema mismatch (using raw data):",
+            validated.error.issues
+          )
         }
         return threadData as ForumThread
       }
@@ -109,7 +117,9 @@ export function useCreateThread() {
     }) => forumApi.threads.create(categorySlug, data),
     onSuccess: (_, variables) => {
       // Invalidate category to refresh thread list
-      queryClient.invalidateQueries({ queryKey: ["forum-category", variables.categorySlug] })
+      queryClient.invalidateQueries({
+        queryKey: ["forum-category", variables.categorySlug],
+      })
       queryClient.invalidateQueries({ queryKey: ["forum-categories"] })
     },
   })
@@ -122,10 +132,17 @@ export function useUpdateThread() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: ({ slug, data }: { slug: string; data: { title?: string; content?: string } }) =>
-      forumApi.threads.update(slug, data),
+    mutationFn: ({
+      slug,
+      data,
+    }: {
+      slug: string
+      data: { title?: string; content?: string }
+    }) => forumApi.threads.update(slug, data),
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["forum-thread", variables.slug] })
+      queryClient.invalidateQueries({
+        queryKey: ["forum-thread", variables.slug],
+      })
     },
   })
 }
@@ -204,12 +221,33 @@ export function useForumPosts(threadSlug: string, params?: { page?: number }) {
     queryKey: ["forum-posts", threadSlug, params],
     queryFn: async () => {
       const response = await forumApi.posts.list(threadSlug, params)
-      const validated = ForumPostsSchema.safeParse(response.data)
+      // Backend returns paginated data, so we need to extract the posts array
+      const postsArray = (response as any)?.data?.data || response.data || []
+      const validated = ForumPostsSchema.safeParse(postsArray)
       if (!validated.success) {
-        console.error("Forum posts validation failed:", validated.error.format())
-        return { data: response.data as ForumPost[], meta: response.meta }
+        console.error(
+          "Forum posts validation failed:",
+          validated.error.format()
+        )
+        return {
+          data: postsArray as ForumPost[],
+          meta: {
+            total: (response as any)?.data?.total,
+            per_page: (response as any)?.data?.per_page,
+            current_page: (response as any)?.data?.current_page,
+            last_page: (response as any)?.data?.last_page,
+          },
+        }
       }
-      return { data: validated.data, meta: response.meta }
+      return {
+        data: validated.data,
+        meta: {
+          total: (response as any)?.data?.total,
+          per_page: (response as any)?.data?.per_page,
+          current_page: (response as any)?.data?.current_page,
+          last_page: (response as any)?.data?.last_page,
+        },
+      }
     },
     enabled: !!threadSlug,
     staleTime: FIVE_MINUTES,
@@ -231,8 +269,12 @@ export function useCreatePost() {
       data: { content: string; parent_id?: number }
     }) => forumApi.posts.create(threadSlug, data),
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["forum-posts", variables.threadSlug] })
-      queryClient.invalidateQueries({ queryKey: ["forum-thread", variables.threadSlug] })
+      queryClient.invalidateQueries({
+        queryKey: ["forum-posts", variables.threadSlug],
+      })
+      queryClient.invalidateQueries({
+        queryKey: ["forum-thread", variables.threadSlug],
+      })
     },
   })
 }

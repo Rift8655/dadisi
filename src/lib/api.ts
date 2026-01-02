@@ -1,52 +1,63 @@
-import { z } from "zod"
 import {
   LoginResponseSchema,
+  ResetPasswordSchema,
+  SendResetEmailSchema,
   SignupResponseSchema,
   UserSchema,
-  SendResetEmailSchema,
-  ResetPasswordSchema,
 } from "@/schemas/auth"
+// Donation Campaigns API (public)
 import {
-  MemberProfileResponseSchema,
+  CampaignListResponseSchema,
+  CampaignResponseSchema,
+  type CampaignDonationInput,
+} from "@/schemas/campaign"
+// donation.ts exists, I should probably check it but "common" was used.
+import {
   CountiesResponseSchema,
-  MemberProfileSchema,
-} from "@/schemas/common" // Using common for now as confirmed in analysis, or switch to memberProfile.ts if preferred. Let's use specific files where possible.
-// Wait, I saw memberProfile.ts has MemberProfileSchema too. Use that.
-import {
-  MemberProfileSchema as MemberProfileSchemaFull,
-  CountiesArraySchema,
-} from "@/schemas/memberProfile"
-import {
-  PostsArraySchema,
-  PostSchema,
-  PaginatedPostsResponseSchema,
-  PublicCategoriesResponseSchema,
-  PublicTagsResponseSchema,
-} from "@/schemas/post"
-import {
-  EventsListSchema,
-  EventSchema,
-} from "@/schemas/event"
-import {
-  PlansArraySchema,
-  PlanSchema,
-  AdminPlanFormSchema,
-  CreateSubscriptionSchema
-} from "@/schemas/plan"
-import {
   DonationSchema,
-} from "@/schemas/common" // donation.ts exists, I should probably check it but "common" was used.
-import {
   MediaListSchema,
   MediaSchema,
+  MemberProfileResponseSchema,
+  MemberProfileSchema,
 } from "@/schemas/common"
+import { EventSchema, EventsListSchema } from "@/schemas/event"
 import {
-  ForumThread,
   ForumCategory,
   ForumPost,
   ForumTag,
+  ForumThread,
   Group,
 } from "@/schemas/forum"
+import { LabSpaceListResponseSchema, LabSpaceSchema } from "@/schemas/lab"
+// Using common for now as confirmed in analysis, or switch to memberProfile.ts if preferred. Let's use specific files where possible.
+// Wait, I saw memberProfile.ts has MemberProfileSchema too. Use that.
+import {
+  CountiesArraySchema,
+  MemberProfileSchema as MemberProfileSchemaFull,
+} from "@/schemas/memberProfile"
+import {
+  AdminPlanFormSchema,
+  CreateSubscriptionSchema,
+  PlansArraySchema,
+  PlanSchema,
+} from "@/schemas/plan"
+import {
+  PaginatedPostsResponseSchema,
+  PostsArraySchema,
+  PostSchema,
+  PublicCategoriesResponseSchema,
+  PublicTagsResponseSchema,
+} from "@/schemas/post"
+import { z } from "zod"
+
+// Lab Spaces API (public browsing)
+import type {
+  CreateLabBookingRequest,
+  LabAvailabilityResponse,
+  LabBooking,
+  LabQuotaStatus,
+  LabSpace,
+} from "@/types/lab"
 
 // Re-imports for specific types if needed, but Zod inference is better.
 
@@ -88,12 +99,12 @@ async function apiRequest<T = unknown>(
   // Set default headers
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
-    "Accept": "application/json",
+    Accept: "application/json",
   }
 
   // Handle multipart/form-data: remove Content-Type to let browser set boundary
   if (requestOptions.body instanceof FormData) {
-    delete headers["Content-Type"];
+    delete headers["Content-Type"]
   }
 
   // Add authorization header if available
@@ -101,13 +112,13 @@ async function apiRequest<T = unknown>(
     if (typeof window !== "undefined") {
       const authModule = await import("@/store/auth")
       const authStore = authModule.useAuth
-      
+
       // If store hasn't hydrated yet, wait for it (max 2 seconds)
       if (!authStore.getState()._hasHydrated) {
-        let attempts = 0;
+        let attempts = 0
         while (!authStore.getState()._hasHydrated && attempts < 40) {
-          await new Promise(resolve => setTimeout(resolve, 50));
-          attempts++;
+          await new Promise((resolve) => setTimeout(resolve, 50))
+          attempts++
         }
       }
 
@@ -154,7 +165,8 @@ async function apiRequest<T = unknown>(
 
   if (!response.ok) {
     let errorMessage =
-      (data as any)?.message || `HTTP ${response.status}: ${response.statusText}`
+      (data as any)?.message ||
+      `HTTP ${response.status}: ${response.statusText}`
 
     if (response.status === 401) {
       errorMessage = "Your session has expired. Please log in again."
@@ -164,9 +176,11 @@ async function apiRequest<T = unknown>(
           .then((mod) => mod.useAuth.getState().logout())
           .then(() => {
             // Only redirect if not already on auth pages
-            if (!window.location.pathname.startsWith('/auth')) {
-              const returnUrl = encodeURIComponent(window.location.pathname + window.location.search);
-              window.location.href = `/auth/login?expired=true&redirect=${returnUrl}`;
+            if (!window.location.pathname.startsWith("/auth")) {
+              const returnUrl = encodeURIComponent(
+                window.location.pathname + window.location.search
+              )
+              window.location.href = `/login?expired=true&redirect=${returnUrl}`
             }
           })
           .catch((err) => console.error("Failed to auto-logout:", err))
@@ -210,7 +224,11 @@ export const api = {
   get: <T = unknown>(endpoint: string, options?: ApiRequestOptions) =>
     apiRequest<T>(endpoint, { ...options, method: "GET" }),
 
-  post: <T = unknown>(endpoint: string, body?: unknown, options?: ApiRequestOptions) =>
+  post: <T = unknown>(
+    endpoint: string,
+    body?: unknown,
+    options?: ApiRequestOptions
+  ) =>
     apiRequest<T>(endpoint, {
       ...options,
       method: "POST",
@@ -220,7 +238,11 @@ export const api = {
           : JSON.stringify(body))) as BodyInit,
     }),
 
-  put: <T = unknown>(endpoint: string, body?: unknown, options?: ApiRequestOptions) =>
+  put: <T = unknown>(
+    endpoint: string,
+    body?: unknown,
+    options?: ApiRequestOptions
+  ) =>
     apiRequest<T>(endpoint, {
       ...options,
       method: "PUT",
@@ -230,7 +252,11 @@ export const api = {
           : JSON.stringify(body))) as BodyInit,
     }),
 
-  patch: <T = unknown>(endpoint: string, body?: unknown, options?: ApiRequestOptions) =>
+  patch: <T = unknown>(
+    endpoint: string,
+    body?: unknown,
+    options?: ApiRequestOptions
+  ) =>
     apiRequest<T>(endpoint, {
       ...options,
       method: "PATCH",
@@ -249,47 +275,56 @@ export const api = {
 // Auth API
 export const authApi = {
   signup: (data: unknown) =>
-    apiRequestWithSchema(
-      "/api/auth/signup",
-      SignupResponseSchema,
-      { method: "POST", body: JSON.stringify(data) }
-    ),
-  
-  login: (data: unknown) =>
-    apiRequestWithSchema(
-      "/api/auth/login",
-      LoginResponseSchema,
-      { method: "POST", body: JSON.stringify(data) }
-    ),
-    
-  getUser: () => 
-    apiRequestWithSchema("/api/auth/user", UserSchema),
+    apiRequestWithSchema("/api/auth/signup", SignupResponseSchema, {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
 
-  getMe: () => 
-    apiRequestWithSchema("/api/auth/me", UserSchema),
+  login: (data: unknown) =>
+    apiRequestWithSchema("/api/auth/login", LoginResponseSchema, {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+  getUser: () => apiRequestWithSchema("/api/auth/user", UserSchema),
+
+  getMe: () => apiRequestWithSchema("/api/auth/me", UserSchema),
 
   logout: () => api.post("/api/auth/logout"),
-    
+
   sendVerification: () => api.post("/api/auth/send-verification"),
-  
-  changePassword: (data: unknown) => api.post("/api/auth/password/change", data),
-  
+
+  changePassword: (data: unknown) =>
+    api.post("/api/auth/password/change", data),
+
   sendResetEmail: (data: { email: string }) =>
     apiRequestWithSchema("/api/auth/password/email", SendResetEmailSchema, {
-       method: "POST", body: JSON.stringify(data) 
+      method: "POST",
+      body: JSON.stringify(data),
     }),
-    
-  resetPassword: (data: { email: string; password: string; password_confirmation: string; token: string }) =>
+
+  resetPassword: (data: {
+    email: string
+    password: string
+    password_confirmation: string
+    token: string
+  }) =>
     apiRequestWithSchema("/api/auth/password/reset", ResetPasswordSchema, {
-       method: "POST", body: JSON.stringify(data)
+      method: "POST",
+      body: JSON.stringify(data),
     }),
-    
+
   verifyEmail: (data: { code: string }) =>
-    api.post<{ message: string; token: string; user: unknown }>("/api/auth/verify-email", data),
+    api.post<{ message: string; token: string; user: unknown }>(
+      "/api/auth/verify-email",
+      data
+    ),
 
   // Token refresh for silent token rotation
   refresh: () =>
-    api.post<{ user: unknown; access_token: string; expires_at: string }>("/api/auth/refresh"),
+    api.post<{ user: unknown; access_token: string; expires_at: string }>(
+      "/api/auth/refresh"
+    ),
 
   // ========================================
   // Two-Factor Authentication (TOTP)
@@ -297,11 +332,16 @@ export const authApi = {
   twoFactor: {
     // Enable TOTP - returns secret and QR code URL
     enable: () =>
-      api.post<{ secret: string; qr_code_url: string }>("/api/auth/2fa/totp/enable"),
+      api.post<{ secret: string; qr_code_url: string }>(
+        "/api/auth/2fa/totp/enable"
+      ),
 
     // Verify TOTP code and fully enable 2FA
     verify: (code: string) =>
-      api.post<{ message: string; recovery_codes: string[] }>("/api/auth/2fa/totp/verify", { code }),
+      api.post<{ message: string; recovery_codes: string[] }>(
+        "/api/auth/2fa/totp/verify",
+        { code }
+      ),
 
     // Disable TOTP (requires password)
     disable: (password: string) =>
@@ -309,15 +349,24 @@ export const authApi = {
 
     // Validate TOTP code at login (no auth required)
     validateCode: (data: { email: string; code: string }) =>
-      api.post<{ user: unknown; access_token: string }>("/api/auth/2fa/totp/validate", data),
+      api.post<{ user: unknown; access_token: string }>(
+        "/api/auth/2fa/totp/validate",
+        data
+      ),
 
     // Get recovery codes (requires password)
     recoveryCodes: (password: string) =>
-      api.post<{ recovery_codes: string[] }>("/api/auth/2fa/totp/recovery-codes", { password }),
+      api.post<{ recovery_codes: string[] }>(
+        "/api/auth/2fa/totp/recovery-codes",
+        { password }
+      ),
 
     // Regenerate recovery codes (requires password)
     regenerateRecoveryCodes: (password: string) =>
-      api.post<{ recovery_codes: string[] }>("/api/auth/2fa/totp/regenerate-recovery-codes", { password }),
+      api.post<{ recovery_codes: string[] }>(
+        "/api/auth/2fa/totp/regenerate-recovery-codes",
+        { password }
+      ),
   },
 
   // ========================================
@@ -333,20 +382,28 @@ export const authApi = {
         pubKeyCredParams: Array<{ type: string; alg: number }>
         timeout: number
         attestation: string
-        authenticatorSelection: { residentKey: string; userVerification: string }
+        authenticatorSelection: {
+          residentKey: string
+          userVerification: string
+        }
       }>("/api/auth/passkeys/register/options"),
 
     // Register a new passkey
     register: (data: { name: string; credential: unknown }) =>
-      api.post<{ message: string; passkey: { id: number; name: string; created_at: string } }>(
-        "/api/auth/passkeys/register",
-        data
-      ),
+      api.post<{
+        message: string
+        passkey: { id: number; name: string; created_at: string }
+      }>("/api/auth/passkeys/register", data),
 
     // List user's passkeys
     list: () =>
       api.get<{
-        passkeys: Array<{ id: number; name: string; created_at: string; last_used_at: string | null }>
+        passkeys: Array<{
+          id: number
+          name: string
+          created_at: string
+          last_used_at: string | null
+        }>
       }>("/api/auth/passkeys"),
 
     // Delete a passkey
@@ -364,7 +421,10 @@ export const authApi = {
 
     // Authenticate with passkey (login)
     authenticate: (data: { id: string; response: unknown }) =>
-      api.post<{ user: unknown; access_token: string }>("/api/auth/passkeys/authenticate", data),
+      api.post<{ user: unknown; access_token: string }>(
+        "/api/auth/passkeys/authenticate",
+        data
+      ),
   },
 }
 
@@ -397,7 +457,10 @@ export const plansApi = {
 // Subscriptions API
 export const subscriptionsApi = {
   create: (data: z.infer<typeof CreateSubscriptionSchema>) =>
-    api.post<{ data: { message?: string; next_url?: string } }>("/api/subscriptions", data),
+    api.post<{ data: { message?: string; next_url?: string } }>(
+      "/api/subscriptions",
+      data
+    ),
 
   // Get current user's subscription
   current: () =>
@@ -421,6 +484,8 @@ export const subscriptionsApi = {
         enhancement: {
           status: string
           grace_period_ends_at?: string | null
+          pesapal_recurring_enabled?: boolean
+          payment_method?: string
         } | null
       }
     }>("/api/subscriptions/current"),
@@ -439,11 +504,16 @@ export const subscriptionsApi = {
 
   // Cancel subscription
   cancel: (reason?: string) =>
-    api.post<{ success: boolean; message: string }>("/api/subscriptions/cancel", { reason }),
+    api.post<{ success: boolean; message: string }>(
+      "/api/subscriptions/cancel",
+      { reason }
+    ),
 
   // Get renewal preferences
   getRenewalPreferences: () =>
-    api.get<{ success: boolean; data: any }>("/api/subscriptions/renewal-preferences"),
+    api.get<{ success: boolean; data: any }>(
+      "/api/subscriptions/renewal-preferences"
+    ),
 
   // Update renewal preferences
   updateRenewalPreferences: (data: {
@@ -453,10 +523,17 @@ export const subscriptionsApi = {
     preferred_payment_method?: string
     auto_switch_to_free_on_expiry?: boolean
   }) =>
-    api.put<{ success: boolean; message: string; data: any }>("/api/subscriptions/renewal-preferences", data),
+    api.put<{ success: boolean; message: string; data: any }>(
+      "/api/subscriptions/renewal-preferences",
+      data
+    ),
 
   // Initiate payment for subscription
-  initiatePayment: (data: { plan_id: number; billing_period?: "month" | "year"; phone?: string }) =>
+  initiatePayment: (data: {
+    plan_id: number
+    billing_period?: "month" | "year"
+    phone?: string
+  }) =>
     api.post<{
       success: boolean
       data: {
@@ -468,7 +545,9 @@ export const subscriptionsApi = {
 
   // Cancel a pending subscription payment
   cancelPayment: () =>
-    api.post<{ success: boolean; message: string }>("/api/subscriptions/cancel-payment"),
+    api.post<{ success: boolean; message: string }>(
+      "/api/subscriptions/cancel-payment"
+    ),
 }
 
 // Counties API (public read access)
@@ -477,7 +556,8 @@ export const countiesApi = {
     const res = await apiRequestWithSchema("/api/counties", CountiesWrapper)
     return res.data
   },
-  get: (id: number) => api.get<{ data: { id: number; name: string } }>(`/api/counties/${id}`),
+  get: (id: number) =>
+    api.get<{ data: { id: number; name: string } }>(`/api/counties/${id}`),
 }
 
 // Member Profile API
@@ -488,7 +568,10 @@ const CountiesWrapper = z.object({ data: CountiesArraySchema })
 
 export const memberProfileApi = {
   getMe: async () => {
-    const res = await apiRequestWithSchema("/api/member-profiles/me", MemberProfileWrapper)
+    const res = await apiRequestWithSchema(
+      "/api/member-profiles/me",
+      MemberProfileWrapper
+    )
     return res.data
   },
 
@@ -498,13 +581,16 @@ export const memberProfileApi = {
     return res.data
   },
 
-  update: async (id: number, data: Partial<z.infer<typeof MemberProfileSchemaFull>>) => {
-     const res = await apiRequestWithSchema(
-       `/api/member-profiles/${id}`, 
-       MemberProfileWrapper, 
-       { method: "PUT", body: JSON.stringify(data) }
-     )
-     return res.data
+  update: async (
+    id: number,
+    data: Partial<z.infer<typeof MemberProfileSchemaFull>>
+  ) => {
+    const res = await apiRequestWithSchema(
+      `/api/member-profiles/${id}`,
+      MemberProfileWrapper,
+      { method: "PUT", body: JSON.stringify(data) }
+    )
+    return res.data
   },
 
   uploadProfilePicture: (data: FormData) =>
@@ -531,24 +617,37 @@ export interface PostsListParams {
 
 export const postsApi = {
   list: async (params?: PostsListParams) => {
-    const res = await apiRequestWithSchema("/api/blog/posts", PaginatedPostsResponseSchema, { 
-      params: params as Record<string, string | number | boolean> 
-    })
+    const res = await apiRequestWithSchema(
+      "/api/blog/posts",
+      PaginatedPostsResponseSchema,
+      {
+        params: params as Record<string, string | number | boolean>,
+      }
+    )
     return res
   },
 
   getBySlug: async (slug: string) => {
-    const res = await apiRequestWithSchema(`/api/blog/posts/${slug}`, z.object({ success: z.literal(true), data: PostSchema }))
+    const res = await apiRequestWithSchema(
+      `/api/blog/posts/${slug}`,
+      z.object({ success: z.literal(true), data: PostSchema })
+    )
     return res.data
   },
 
   getCategories: async () => {
-    const res = await apiRequestWithSchema("/api/blog/categories", PublicCategoriesResponseSchema)
+    const res = await apiRequestWithSchema(
+      "/api/blog/categories",
+      PublicCategoriesResponseSchema
+    )
     return res.data
   },
 
   getTags: async () => {
-    const res = await apiRequestWithSchema("/api/blog/tags", PublicTagsResponseSchema)
+    const res = await apiRequestWithSchema(
+      "/api/blog/tags",
+      PublicTagsResponseSchema
+    )
     return res.data
   },
 }
@@ -556,7 +655,9 @@ export const postsApi = {
 // Events API
 export const eventsApi = {
   list: async (params?: any) => {
-    const res = await apiRequestWithSchema("/api/events", EventsListSchema, { params })
+    const res = await apiRequestWithSchema("/api/events", EventsListSchema, {
+      params,
+    })
     return res
   },
 
@@ -567,22 +668,31 @@ export const eventsApi = {
 
   // Get event categories
   getCategories: async () => {
-    const res = await api.get<{ data: Array<{ id: number; name: string; slug: string }> }>("/api/event-categories")
+    const res = await api.get<{
+      data: Array<{ id: number; name: string; slug: string }>
+    }>("/api/event-categories")
     return res.data || []
   },
 
   // Get event tags
   getTags: async () => {
-    const res = await api.get<{ data: Array<{ id: number; name: string; slug: string }> }>("/api/event-tags")
+    const res = await api.get<{
+      data: Array<{ id: number; name: string; slug: string }>
+    }>("/api/event-tags")
     return res.data || []
   },
 
   // Validate promo code
-  validatePromo: async (eventId: number, data: { code: string; ticket_id: number }) => {
-    return api.post<{ valid: boolean; discount_percent?: number; discount_amount?: number; message?: string }>(
-      `/api/events/${eventId}/validate-promo`,
-      data
-    )
+  validatePromo: async (
+    eventId: number,
+    data: { code: string; ticket_id: number }
+  ) => {
+    return api.post<{
+      valid: boolean
+      discount_percent?: number
+      discount_amount?: number
+      message?: string
+    }>(`/api/events/${eventId}/validate-promo`, data)
   },
 
   // Get organizer's own events
@@ -609,53 +719,64 @@ export const eventsApi = {
   },
 
   // Register for event
-  register: (eventId: number, data: { ticket_id: number; additional_data?: any }) =>
-    api.post<any>(`/api/events/${eventId}/register`, data),
+  register: (
+    eventId: number,
+    data: { ticket_id: number; additional_data?: any }
+  ) => api.post<any>(`/api/events/${eventId}/register`, data),
 
   rsvp: (id: number, data: unknown) => api.post(`/api/events/${id}/rsvp`, data),
 
-  getAttendanceStats: (eventId: number) => 
+  getAttendanceStats: (eventId: number) =>
     api.get<any>(`/api/events/${eventId}/attendance-stats`),
 
   // Scan RSVP registration (free events)
-  scanTicket: (eventId: number, token: string) => 
+  scanTicket: (eventId: number, token: string) =>
     api.post<any>(`/api/events/${eventId}/scan`, { token }),
 
   // Scan paid ticket order (paid events)
   scanPaidTicket: (eventId: number, qrToken: string) =>
-    api.post<{ success: boolean; message: string; order?: any }>(`/api/events/${eventId}/scan-ticket`, { qr_token: qrToken }),
+    api.post<{ success: boolean; message: string; order?: any }>(
+      `/api/events/${eventId}/scan-ticket`,
+      { qr_token: qrToken }
+    ),
 }
 
 // Registrations API (User's RSVPs)
 export const registrationsApi = {
   // Get current user's registrations
-  my: () => api.get<{
-    data: Array<{
-      id: number
-      status: "confirmed" | "pending" | "waitlisted" | "cancelled" | "attended"
-      confirmation_code: string
-      qr_code_token?: string
-      event: {
+  my: () =>
+    api.get<{
+      data: Array<{
         id: number
-        title: string
-        description?: string
-        starts_at: string
-        ends_at?: string
-        venue?: string
-        is_online: boolean
-      }
-      ticket: {
-        id: number
-        name: string
-        price: number
-        currency: string
-      }
-      created_at: string
-    }>
-  }>("/api/registrations/my"),
+        status:
+          | "confirmed"
+          | "pending"
+          | "waitlisted"
+          | "cancelled"
+          | "attended"
+        confirmation_code: string
+        qr_code_token?: string
+        event: {
+          id: number
+          title: string
+          description?: string
+          starts_at: string
+          ends_at?: string
+          venue?: string
+          is_online: boolean
+        }
+        ticket: {
+          id: number
+          name: string
+          price: number
+          currency: string
+        }
+        created_at: string
+      }>
+    }>("/api/registrations/my"),
 
   // Cancel a registration
-  cancel: (registrationId: number) => 
+  cancel: (registrationId: number) =>
     api.delete<{ message: string }>(`/api/registrations/${registrationId}`),
 }
 
@@ -753,14 +874,19 @@ export const donationsApi = {
 // Media API
 export const mediaApi = {
   list: async (params?: { page?: number; type?: string }) => {
-    const res = await apiRequestWithSchema("/api/media", MediaListSchema, { params })
+    const res = await apiRequestWithSchema("/api/media", MediaListSchema, {
+      params,
+    })
     return res.data
   },
-  
+
   upload: (data: FormData) => api.post("/api/media", data),
 
   get: async (id: number) => {
-    const res = await apiRequestWithSchema(`/api/media/${id}`, z.object({ data: MediaSchema }))
+    const res = await apiRequestWithSchema(
+      `/api/media/${id}`,
+      z.object({ data: MediaSchema })
+    )
     return res.data
   },
 
@@ -771,43 +897,33 @@ export const mediaApi = {
 export const authorPostsApi = {
   list: (params?: { page?: number; status?: string; search?: string }) =>
     api.get<unknown>("/api/user/blog/posts", { params }),
-  
-  getCreateMetadata: () =>
-    api.get<unknown>("/api/user/blog/posts/create"),
-  
+
+  getCreateMetadata: () => api.get<unknown>("/api/user/blog/posts/create"),
+
   get: async (slug: string) => {
     const res = await api.get<any>(`/api/user/blog/posts/${slug}`)
     return res.data
   },
-  
+
   getEditMetadata: (slug: string) =>
     api.get<unknown>(`/api/user/blog/posts/${slug}/edit`),
-  
-  create: (data: unknown) =>
-    api.post<unknown>("/api/user/blog/posts", data),
-  
+
+  create: (data: unknown) => api.post<unknown>("/api/user/blog/posts", data),
+
   update: (slug: string, data: unknown) =>
     api.put<unknown>(`/api/user/blog/posts/${slug}`, data),
-  
-  delete: (slug: string) =>
-    api.delete<unknown>(`/api/user/blog/posts/${slug}`),
-  
+
+  delete: (slug: string) => api.delete<unknown>(`/api/user/blog/posts/${slug}`),
+
   restore: (slug: string) =>
     api.post<unknown>(`/api/user/blog/posts/${slug}/restore`),
-  
+
   publish: (slug: string) =>
     api.post<unknown>(`/api/user/blog/posts/${slug}/publish`),
-  
+
   unpublish: (slug: string) =>
     api.post<unknown>(`/api/user/blog/posts/${slug}/unpublish`),
 }
-
-// Donation Campaigns API (public)
-import {
-  CampaignListResponseSchema,
-  CampaignResponseSchema,
-  type CampaignDonationInput,
-} from "@/schemas/campaign"
 
 export const campaignsApi = {
   list: async (params?: { page?: number; county_id?: number }) => {
@@ -885,44 +1001,64 @@ export interface Conversation {
 
 export const messageApi = {
   conversations: () => api.get<Conversation[]>("/api/messages/conversations"),
-  
-  getConversation: (partnerId: number) => 
-    api.get<{ data: PrivateMessage[] }>(`/api/messages/conversation/${partnerId}`),
-  
+
+  getConversation: (partnerId: number) =>
+    api.get<{ data: PrivateMessage[] }>(
+      `/api/messages/conversation/${partnerId}`
+    ),
+
   send: (data: {
     recipient_id: number
     r2_object_key: string
     encrypted_key_package: string
     nonce: string
   }) => api.post("/api/messages/send", data),
-  
+
   getVaultUrl: (messageId: string) =>
-    api.get<{ download_url: string; encrypted_key_package: string; nonce: string }>(
-      `/api/messages/${messageId}/vault`
+    api.get<{
+      download_url: string
+      encrypted_key_package: string
+      nonce: string
+    }>(`/api/messages/${messageId}/vault`),
+
+  getUploadUrl: () =>
+    api.get<{ upload_url: string; object_key: string }>(
+      "/api/messages/upload-url"
     ),
-    
-  getUploadUrl: () => 
-    api.get<{ upload_url: string; object_key: string }>("/api/messages/upload-url"),
-    
+
   keys: {
-    get: (userId: number) => 
+    get: (userId: number) =>
       api.get<{ public_key: string }>(`/api/messages/keys/${userId}`),
-    store: (publicKeyJwk: string) => 
+    store: (publicKeyJwk: string) =>
       api.post("/api/messages/keys", { public_key: publicKeyJwk }),
   },
 }
 
 // Forum API
 
-
 export const forumApi = {
   // Categories
   categories: {
     list: () => api.get<{ data: ForumCategory[] }>("/api/forum/categories"),
-    get: (slug: string) => api.get<{ data: ForumCategory }>(`/api/forum/categories/${slug}`),
-    create: (data: { name: string; description: string; color?: string; icon?: string; order?: number }) =>
-      api.post<{ data: ForumCategory }>("/api/forum/categories", data),
-    update: (slug: string, data: { name?: string; description?: string; color?: string; icon?: string; order?: number }) =>
+    get: (slug: string) =>
+      api.get<{ data: ForumCategory }>(`/api/forum/categories/${slug}`),
+    create: (data: {
+      name: string
+      description: string
+      color?: string
+      icon?: string
+      order?: number
+    }) => api.post<{ data: ForumCategory }>("/api/forum/categories", data),
+    update: (
+      slug: string,
+      data: {
+        name?: string
+        description?: string
+        color?: string
+        icon?: string
+        order?: number
+      }
+    ) =>
       api.put<{ data: ForumCategory }>(`/api/forum/categories/${slug}`, data),
     delete: (slug: string) => api.delete(`/api/forum/categories/${slug}`),
   },
@@ -931,13 +1067,31 @@ export const forumApi = {
   threads: {
     // List threads within a specific category
     list: (categorySlug: string, params?: { page?: number }) =>
-      api.get<{ data: ForumThread[]; meta?: any }>(`/api/forum/categories/${categorySlug}/threads`, { params }),
+      api.get<{ data: ForumThread[]; meta?: any }>(
+        `/api/forum/categories/${categorySlug}/threads`,
+        { params }
+      ),
     // List ALL threads across all categories (for Recent page)
     listAll: (params?: { page?: number; per_page?: number }) =>
-      api.get<{ data: ForumThread[]; meta?: any; links?: any; current_page?: number; last_page?: number }>("/api/forum/threads", { params }),
-    get: (slug: string) => api.get<{ thread: ForumThread; posts: any }>(`/api/forum/threads/${slug}`),
-    create: (categorySlug: string, data: { title: string; content: string; county_id?: number }) =>
-      api.post<{ data: ForumThread }>(`/api/forum/categories/${categorySlug}/threads`, data),
+      api.get<{
+        data: ForumThread[]
+        meta?: any
+        links?: any
+        current_page?: number
+        last_page?: number
+      }>("/api/forum/threads", { params }),
+    get: (slug: string) =>
+      api.get<{ thread: ForumThread; posts: any }>(
+        `/api/forum/threads/${slug}`
+      ),
+    create: (
+      categorySlug: string,
+      data: { title: string; content: string; county_id?: number }
+    ) =>
+      api.post<{ data: ForumThread }>(
+        `/api/forum/categories/${categorySlug}/threads`,
+        data
+      ),
     update: (slug: string, data: { title?: string; content?: string }) =>
       api.put<{ data: ForumThread }>(`/api/forum/threads/${slug}`, data),
     delete: (slug: string) => api.delete(`/api/forum/threads/${slug}`),
@@ -949,10 +1103,26 @@ export const forumApi = {
 
   // Posts (replies)
   posts: {
+    // Returns paginated posts (backend returns LengthAwarePaginator)
     list: (threadSlug: string, params?: { page?: number }) =>
-      api.get<{ data: ForumPost[]; meta?: any }>(`/api/forum/threads/${threadSlug}/posts`, { params }),
-    create: (threadSlug: string, data: { content: string; parent_id?: number }) =>
-      api.post<{ data: ForumPost }>(`/api/forum/threads/${threadSlug}/posts`, data),
+      api.get<{
+        success: boolean
+        data: {
+          data: ForumPost[]
+          total: number
+          per_page: number
+          current_page: number
+          last_page: number
+        }
+      }>(`/api/forum/threads/${threadSlug}/posts`, { params }),
+    create: (
+      threadSlug: string,
+      data: { content: string; parent_id?: number }
+    ) =>
+      api.post<{ data: ForumPost }>(
+        `/api/forum/threads/${threadSlug}/posts`,
+        data
+      ),
     update: (id: number, data: { content: string }) =>
       api.put<{ data: ForumPost }>(`/api/forum/posts/${id}`, data),
     delete: (id: number) => api.delete(`/api/forum/posts/${id}`),
@@ -963,18 +1133,35 @@ export const forumApi = {
     list: (params?: { search?: string; sort?: string }) =>
       api.get<{ data: ForumTag[] }>("/api/forum/tags", { params }),
     get: (slug: string, params?: { page?: number; per_page?: number }) =>
-      api.get<{ tag: ForumTag; threads: { data: ForumThread[]; current_page: number; last_page: number } }>(`/api/forum/tags/${slug}`, { params }),
+      api.get<{
+        tag: ForumTag
+        threads: {
+          data: ForumThread[]
+          current_page: number
+          last_page: number
+        }
+      }>(`/api/forum/tags/${slug}`, { params }),
     create: (data: { name: string; color: string; description?: string }) =>
       api.post<{ data: ForumTag }>("/api/forum/tags", data),
-    update: (id: number, data: { name?: string; color?: string; description?: string }) =>
-      api.put<{ data: ForumTag }>(`/api/forum/tags/${id}`, data),
+    update: (
+      id: number,
+      data: { name?: string; color?: string; description?: string }
+    ) => api.put<{ data: ForumTag }>(`/api/forum/tags/${id}`, data),
     delete: (id: number) => api.delete(`/api/forum/tags/${id}`),
   },
 
   // Users (member directory)
   users: {
-    list: (params?: { search?: string; sort?: string; page?: number; per_page?: number }) =>
-      api.get<{ data: ForumUser[]; current_page: number; last_page: number }>("/api/forum/users", { params }),
+    list: (params?: {
+      search?: string
+      sort?: string
+      page?: number
+      per_page?: number
+    }) =>
+      api.get<{ data: ForumUser[]; current_page: number; last_page: number }>(
+        "/api/forum/users",
+        { params }
+      ),
   },
 }
 
@@ -1028,44 +1215,55 @@ export const publicProfileApi = {
 
   // Update own privacy settings
   updatePrivacySettings: (data: Partial<PrivacySettings>) =>
-    api.put<{ data: PrivacySettings; message: string }>("/api/profile/privacy-settings", data),
+    api.put<{ data: PrivacySettings; message: string }>(
+      "/api/profile/privacy-settings",
+      data
+    ),
 
   // Preview own public profile
-  preview: () =>
-    api.get<{ data: PublicProfile }>("/api/profile/preview"),
+  preview: () => api.get<{ data: PublicProfile }>("/api/profile/preview"),
 }
 
-
 export const groupsApi = {
-  list: (params?: { county_id?: number; search?: string; per_page?: number }) =>
-    api.get<{ data: Group[]; meta?: { total: number } }>("/api/groups", { params }),
-  
+  list: (params?: {
+    county_id?: number
+    search?: string
+    per_page?: number
+    page?: number
+    sort?: string
+    order?: string
+  }) =>
+    api.get<{ data: Group[]; meta?: { total: number } }>("/api/groups", {
+      params,
+    }),
+
   show: (slug: string) =>
-    api.get<{ data: Group & { members: any[]; recent_discussions: any[] } }>(`/api/groups/${slug}`),
-  
+    api.get<{ data: Group & { members: any[]; recent_discussions: any[] } }>(
+      `/api/groups/${slug}`
+    ),
+
   members: (slug: string, params?: { per_page?: number }) =>
-    api.get<{ data: any[]; meta?: any }>(`/api/groups/${slug}/members`, { params }),
-  
+    api.get<{ data: any[]; meta?: any }>(`/api/groups/${slug}/members`, {
+      params,
+    }),
+
   join: (slug: string) =>
     api.post<{ message: string }>(`/api/groups/${slug}/join`),
-  
+
   leave: (slug: string) =>
     api.post<{ message: string }>(`/api/groups/${slug}/leave`),
 }
 
-// Lab Spaces API (public browsing)
-import type {
-  LabSpace,
-  LabBooking,
-  LabQuotaStatus,
-  LabAvailabilityResponse,
-  CreateLabBookingRequest,
-} from "@/types/lab"
-
 export const labSpacesApi = {
   // List all active lab spaces
-  list: (params?: { type?: string; search?: string }) =>
-    api.get<{ success: boolean; data: LabSpace[] }>("/api/spaces", { params }),
+  list: async (params?: { type?: string; search?: string }) => {
+    const res = await apiRequestWithSchema(
+      "/api/spaces",
+      LabSpaceListResponseSchema,
+      { params }
+    )
+    return res
+  },
 
   // Get lab space details by slug
   get: (slug: string) =>
@@ -1073,7 +1271,10 @@ export const labSpacesApi = {
 
   // Get availability calendar for a lab space
   availability: (slug: string, params?: { start?: string; end?: string }) =>
-    api.get<{ success: boolean; data: LabAvailabilityResponse }>(`/api/spaces/${slug}/availability`, { params }),
+    api.get<{ success: boolean; data: LabAvailabilityResponse }>(
+      `/api/spaces/${slug}/availability`,
+      { params }
+    ),
 }
 
 // Lab Bookings API (authenticated)
@@ -1084,7 +1285,9 @@ export const labBookingsApi = {
 
   // List user's bookings
   list: (params?: { status?: string; upcoming?: boolean }) =>
-    api.get<{ success: boolean; data: LabBooking[] }>("/api/bookings", { params }),
+    api.get<{ success: boolean; data: LabBooking[] }>("/api/bookings", {
+      params,
+    }),
 
   // Get booking details
   get: (id: number) =>
@@ -1092,11 +1295,16 @@ export const labBookingsApi = {
 
   // Create a new booking
   create: (data: CreateLabBookingRequest) =>
-    api.post<{ success: boolean; message: string; data: LabBooking }>("/api/bookings", data),
+    api.post<{ success: boolean; message: string; data: LabBooking }>(
+      "/api/bookings",
+      data
+    ),
 
   // Cancel a booking
   cancel: (id: number) =>
-    api.delete<{ success: boolean; message: string; data: LabBooking }>(`/api/bookings/${id}`),
+    api.delete<{ success: boolean; message: string; data: LabBooking }>(
+      `/api/bookings/${id}`
+    ),
 }
 
 // Event Ticket Orders API
@@ -1131,7 +1339,7 @@ export interface TicketOrder {
   subscriber_discount: number
   total_amount: number
   currency: string
-  status: 'pending' | 'paid' | 'cancelled' | 'refunded'
+  status: "pending" | "paid" | "cancelled" | "refunded"
   purchased_at: string | null
   checked_in_at: string | null
   event: {
@@ -1147,19 +1355,36 @@ export interface TicketOrder {
 export const eventOrdersApi = {
   // Purchase tickets for an event (supports guest checkout)
   purchase: (eventId: number, data: PurchaseTicketRequest) =>
-    api.post<{ success: boolean; message: string; data: TicketOrderResponse }>(`/api/events/${eventId}/purchase`, data),
+    api.post<{ success: boolean; message: string; data: TicketOrderResponse }>(
+      `/api/events/${eventId}/purchase`,
+      data
+    ),
 
   // Check payment status by order reference
   checkStatus: (reference: string) =>
-    api.get<{ success: boolean; data: { status: string; paid: boolean; qr_code_token?: string; event: { id: number; title: string; starts_at: string } } }>(`/api/event-orders/status/${reference}`),
+    api.get<{
+      success: boolean
+      data: {
+        status: string
+        paid: boolean
+        qr_code_token?: string
+        event: { id: number; title: string; starts_at: string }
+      }
+    }>(`/api/event-orders/status/${reference}`),
 
   // Get user's purchased tickets
   myTickets: (params?: { status?: string }) =>
-    api.get<{ success: boolean; data: TicketOrder[]; meta: { current_page: number; last_page: number; total: number } }>("/api/my-tickets", { params }),
+    api.get<{
+      success: boolean
+      data: TicketOrder[]
+      meta: { current_page: number; last_page: number; total: number }
+    }>("/api/my-tickets", { params }),
 
   // Get ticket order details
   get: (orderId: number) =>
-    api.get<{ success: boolean; data: TicketOrder }>(`/api/event-orders/${orderId}`),
+    api.get<{ success: boolean; data: TicketOrder }>(
+      `/api/event-orders/${orderId}`
+    ),
 }
 
 // ============= Notifications API =============
@@ -1191,30 +1416,45 @@ export interface NotificationsResponse {
 
 export const notificationsApi = {
   // Get all notifications (paginated)
-  list: (params?: { unread_only?: boolean; per_page?: number; page?: number }) =>
-    api.get<NotificationsResponse>("/api/notifications", { params }),
+  list: (params?: {
+    unread_only?: boolean
+    per_page?: number
+    page?: number
+  }) => api.get<NotificationsResponse>("/api/notifications", { params }),
 
   // Get unread notification count
   unreadCount: () =>
-    api.get<{ success: boolean; data: { unread_count: number } }>("/api/notifications/unread-count"),
+    api.get<{ success: boolean; data: { unread_count: number } }>(
+      "/api/notifications/unread-count"
+    ),
 
   // Mark a notification as read
   markAsRead: (id: string) =>
-    api.post<{ success: boolean; message: string }>(`/api/notifications/${id}/read`),
+    api.post<{ success: boolean; message: string }>(
+      `/api/notifications/${id}/read`
+    ),
 
   // Mark all notifications as read
   markAllAsRead: () =>
-    api.post<{ success: boolean; message: string; data: { marked_count: number } }>("/api/notifications/mark-all-read"),
+    api.post<{
+      success: boolean
+      message: string
+      data: { marked_count: number }
+    }>("/api/notifications/mark-all-read"),
 
   // Delete a notification
   delete: (id: string) =>
-    api.delete<{ success: boolean; message: string }>(`/api/notifications/${id}`),
+    api.delete<{ success: boolean; message: string }>(
+      `/api/notifications/${id}`
+    ),
 
   // Clear all notifications
   clearAll: () =>
-    api.post<{ success: boolean; message: string; data: { deleted_count: number } }>("/api/notifications/clear-all"),
+    api.post<{
+      success: boolean
+      message: string
+      data: { deleted_count: number }
+    }>("/api/notifications/clear-all"),
 }
 
 export default api
-
-

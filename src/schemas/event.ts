@@ -93,20 +93,7 @@ export const RegistrationSchema = z.object({
   ticket: TicketSchema.optional(),
 })
 
-export const PayoutSchema = z.object({
-  id: z.number(),
-  event_id: z.number(),
-  organizer_id: z.number(),
-  total_revenue: z.number(),
-  commission_amount: z.number(),
-  net_payout: z.number(),
-  currency: z.string(),
-  status: z.enum(["pending", "processing", "completed", "failed"]),
-  hold_until: z.string(),
-  reference: z.string(),
-  admin_notes: z.string().optional(),
-  created_at: z.string(),
-})
+
 
 export const PromoCodeSchema = z.object({
   id: z.number(),

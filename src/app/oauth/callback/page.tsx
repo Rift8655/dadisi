@@ -71,9 +71,11 @@ export default function OAuthCallbackPage() {
         if (accessToken && userJson) {
           try {
             const user = JSON.parse(userJson)
-            await setToken(accessToken)
+            // Use setAuth to set both user and token, marking the session as authenticated
+            await useAuth.getState().setAuth(user, accessToken)
 
-            await showSuccess("Signed in", `Welcome back, ${user.name}!`)
+            const displayName = user.username || "User"
+            await showSuccess("Signed in", `Welcome back, ${displayName}!`)
 
             router.push("/dashboard")
           } catch (error) {

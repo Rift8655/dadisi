@@ -13,7 +13,7 @@ import {
   X,
   Ban,
   Trash2,
-  Building,
+
   User,
   Mail,
   Clock,
@@ -43,14 +43,13 @@ import {
 } from "@/components/ui/dialog"
 import Swal from "sweetalert2"
 import { formatDate } from "@/lib/utils"
+import { AttendanceTab } from "@/components/admin/AttendanceTab"
 
 // Status badge component
 function StatusBadge({ status }: { status: string }) {
   const variants: Record<string, { color: string; label: string }> = {
     draft: { color: "bg-gray-100 text-gray-700 border-gray-200", label: "Draft" },
-    pending_approval: { color: "bg-amber-100 text-amber-700 border-amber-200", label: "Pending Approval" },
     published: { color: "bg-green-100 text-green-700 border-green-200", label: "Published" },
-    rejected: { color: "bg-red-100 text-red-700 border-red-200", label: "Rejected" },
     cancelled: { color: "bg-gray-100 text-gray-500 border-gray-200", label: "Cancelled" },
     suspended: { color: "bg-orange-100 text-orange-700 border-orange-200", label: "Suspended" },
   }
@@ -160,34 +159,8 @@ export default function AdminEventDetailPage() {
   
   const { data: event, isLoading } = useAdminEvent(eventId)
   const mutations = useAdminEventMutations()
-  
-  // Rejection dialog state
-  const [rejectDialogOpen, setRejectDialogOpen] = useState(false)
-  const [rejectReason, setRejectReason] = useState("")
 
   // Action handlers
-  const handleApprove = async () => {
-    if (!eventId) return
-    try {
-      await mutations.approve.mutateAsync(eventId)
-      Swal.fire("Approved!", "Event has been approved and published.", "success")
-    } catch (e) {
-      Swal.fire("Error", "Failed to approve event.", "error")
-    }
-  }
-
-  const handleReject = async () => {
-    if (!eventId) return
-    try {
-      await mutations.reject.mutateAsync({ id: eventId, reason: rejectReason })
-      setRejectDialogOpen(false)
-      setRejectReason("")
-      Swal.fire("Rejected", "Event has been rejected.", "success")
-    } catch (e) {
-      Swal.fire("Error", "Failed to reject event.", "error")
-    }
-  }
-
   const handlePublish = async () => {
     if (!eventId) return
     try {
@@ -332,7 +305,6 @@ export default function AdminEventDetailPage() {
     )
   }
 
-  const organizer = (event as any).organizer
   const creator = (event as any).creator
   const registrationsCount = (event as any).registrations_count ?? 0
 
@@ -347,10 +319,16 @@ export default function AdminEventDetailPage() {
         <Tabs defaultValue="overview" className="space-y-6">
           <TabsList className="grid grid-cols-4 w-full max-w-2xl">
             <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="attendance" className="gap-2">
+               Attendance
+            </TabsTrigger>
             <TabsTrigger value="registrations">Registrations ({registrationsCount})</TabsTrigger>
             <TabsTrigger value="waitlist">Waitlist</TabsTrigger>
-            <TabsTrigger value="payouts">Payouts</TabsTrigger>
           </TabsList>
+
+          <TabsContent value="attendance">
+            {eventId && <AttendanceTab eventId={eventId} />}
+          </TabsContent>
 
           <TabsContent value="overview">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -368,15 +346,6 @@ export default function AdminEventDetailPage() {
                         </CardTitle>
                         <CardDescription className="flex items-center gap-2 mt-2">
                           <StatusBadge status={event.status} />
-                          {(event as any).event_type === "organization" ? (
-                            <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 gap-1">
-                              <Building className="h-3 w-3" /> Dadisi Event
-                            </Badge>
-                          ) : (
-                            <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200 gap-1">
-                              <User className="h-3 w-3" /> User Event
-                            </Badge>
-                          )}
                         </CardDescription>
                       </div>
                     </div>
@@ -512,16 +481,6 @@ export default function AdminEventDetailPage() {
                     <Button variant="outline" className="w-full" onClick={() => router.push(`/admin/events/${eventId}/edit`)}>
                       <Pencil className="h-4 w-4 mr-2" /> Edit Event
                     </Button>
-                    {event.status === "pending_approval" && (
-                      <>
-                        <Button className="w-full" onClick={handleApprove}>
-                          <Check className="h-4 w-4 mr-2" /> Approve & Publish
-                        </Button>
-                        <Button variant="outline" className="w-full" onClick={() => setRejectDialogOpen(true)}>
-                          <X className="h-4 w-4 mr-2" /> Reject
-                        </Button>
-                      </>
-                    )}
                     {event.status === "draft" && (
                       <Button className="w-full" onClick={handlePublish}>
                         Publish
@@ -559,23 +518,7 @@ export default function AdminEventDetailPage() {
                     <CardTitle className="text-lg">People</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    {/* Organizer */}
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground mb-1">Organizer (Public)</p>
-                      <div className="flex items-center gap-2">
-                        <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center">
-                          <Building className="h-4 w-4 text-muted-foreground" />
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium">
-                            {organizer?.username || organizer?.email || "Dadisi Community Labs"}
-                          </p>
-                          {organizer?.email && (
-                            <p className="text-xs text-muted-foreground">{organizer.email}</p>
-                          )}
-                        </div>
-                      </div>
-                    </div>
+
 
                     {/* Creator */}
                     <div>
@@ -624,60 +567,9 @@ export default function AdminEventDetailPage() {
             </Card>
           </TabsContent>
 
-          <TabsContent value="payouts">
-            <Card>
-              <CardHeader>
-                <CardTitle>Payouts</CardTitle>
-                <CardDescription>Financial settlements for this event.</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {(event as any).payouts && (event as any).payouts.length > 0 ? (
-                  <div className="space-y-4">
-                     {/* Payout summary or list */}
-                     <p className="text-sm">Manage payouts in the Finance section.</p>
-                     <Button variant="outline" onClick={() => router.push('/admin/payouts')}>
-                        Go to Payouts Manager
-                     </Button>
-                  </div>
-                ) : (
-                  <div className="text-center py-8 text-muted-foreground border rounded-md border-dashed">
-                    No payouts records yet.
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
+
         </Tabs>
       </div>
-
-      {/* Reject Dialog */}
-      <Dialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Reject Event</DialogTitle>
-            <DialogDescription>
-              Provide a reason for rejecting this event. This will be shared with the organizer.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-2">
-            <Label htmlFor="rejectReason">Reason (optional)</Label>
-            <Textarea
-              id="rejectReason"
-              placeholder="Enter rejection reason..."
-              value={rejectReason}
-              onChange={(e) => setRejectReason(e.target.value)}
-            />
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setRejectDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button variant="destructive" onClick={handleReject}>
-              Reject Event
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </AdminDashboardShell>
   )
 }
