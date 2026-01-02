@@ -1262,7 +1262,7 @@ export const labSpacesApi = {
       LabSpaceListResponseSchema,
       { params }
     )
-    return res
+    return res as { success: boolean; data: LabSpace[] }
   },
 
   // Get lab space details by slug

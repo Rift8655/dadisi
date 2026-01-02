@@ -39,13 +39,7 @@ import {
 import { AdminDashboardShell } from "@/components/admin-dashboard-shell"
 import { Unauthorized } from "@/components/unauthorized"
 
-const SPACE_TYPES = [
-  { value: "wet_lab", label: "Wet Lab", icon: FlaskConical },
-  { value: "dry_lab", label: "Dry Lab", icon: Monitor },
-  { value: "greenhouse", label: "Greenhouse", icon: Leaf },
-  { value: "mobile_lab", label: "Mobile Lab", icon: Truck },
-]
-
+// Define Monitor icon component
 const Monitor = (props: any) => (
   <svg
     {...props}
@@ -64,6 +58,13 @@ const Monitor = (props: any) => (
     <line x1="12" x2="12" y1="17" y2="21" />
   </svg>
 )
+
+const SPACE_TYPES = [
+  { value: "wet_lab", label: "Wet Lab", icon: FlaskConical },
+  { value: "dry_lab", label: "Dry Lab", icon: Monitor },
+  { value: "greenhouse", label: "Greenhouse", icon: Leaf },
+  { value: "mobile_lab", label: "Mobile Lab", icon: Truck },
+]
 
 const getSpaceIcon = (type: LabSpaceType) => {
   const found = SPACE_TYPES.find((t) => t.value === type)

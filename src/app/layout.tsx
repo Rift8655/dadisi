@@ -2,14 +2,14 @@ import "@/styles/globals.css"
 
 import type { Metadata, Viewport } from "next"
 import { Inter } from "next/font/google"
+import { SessionRefresher } from "@/providers/session-refresher"
 
 import { siteConfig } from "@/config/site"
 import { cn } from "@/lib/utils"
 import { Footer } from "@/components/footer"
 import { Navbar } from "@/components/navbar"
-import { ThemeProvider } from "@/components/theme-provider"
 import { QueryProvider } from "@/components/QueryProvider"
-import { SessionRefresher } from "@/providers/session-refresher"
+import { ThemeProvider } from "@/components/theme-provider"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -56,7 +56,7 @@ export const metadata: Metadata = {
     creator: "@_rdev7",
   },
   icons: {
-    icon: "https://cdn.builder.io/api/v1/image/assets%2F8caa41cbd5bc4e10ad738e7eb66402fc%2F23b33b0948e24c00a9df68acee6d9a77?format=webp&width=128",
+    icon: "/favicon.ico",
   },
 }
 

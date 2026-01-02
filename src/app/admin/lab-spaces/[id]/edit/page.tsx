@@ -59,7 +59,6 @@ export default function EditLabSpacePage({
     county: "",
     amenities: [],
     safety_requirements: [],
-    is_active: true,
   })
   const [amenitiesText, setAmenitiesText] = useState("")
   const [safetyText, setSafetyText] = useState("")
