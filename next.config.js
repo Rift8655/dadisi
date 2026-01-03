@@ -33,6 +33,11 @@ const nextConfig = {
         hostname: 'cdn.builder.io',
         pathname: '/**',
       },
+      {
+        protocol: 'https',
+        hostname: 'api.dadisilab.com',
+        pathname: '/**',
+      }
     ],
   },
   async headers() {
