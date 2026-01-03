@@ -48,6 +48,7 @@ import {
   PublicCategoriesResponseSchema,
   PublicTagsResponseSchema,
 } from "@/schemas/post"
+import * as Sentry from "@sentry/nextjs"
 import { z } from "zod"
 
 // Lab Spaces API (public browsing)
@@ -214,6 +215,20 @@ export async function apiRequestWithSchema<T>(
   const result = schema.safeParse(res)
   if (!result.success) {
     console.error(`[API Schema Error] ${endpoint}:`, result.error.errors)
+
+    // Explicitly report to Sentry with extra context
+    Sentry.captureException(result.error, {
+      extra: {
+        endpoint,
+        data: res,
+        errors: result.error.errors,
+      },
+      tags: {
+        api_error_type: "schema_validation",
+        endpoint,
+      },
+    })
+
     throw new Error(`Schema validation failed: ${result.error.message}`)
   }
   return result.data
