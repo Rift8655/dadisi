@@ -57,7 +57,10 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: "/favicon.ico",
+    shortcut: "/favicon.png",
+    apple: "/logo.png",
   },
+  manifest: "/manifest.json",
 }
 
 export const viewport: Viewport = {

@@ -5,10 +5,11 @@ import Image from "next/image"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { useAuth } from "@/store/auth"
-import { useLogout } from "@/hooks/useAuth"
 import { LayoutDashboard, LogOut, Menu, Shield, User } from "lucide-react"
 
 import { cn } from "@/lib/utils"
+import { useLogout } from "@/hooks/useAuth"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -17,7 +18,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import AuthDialog from "@/components/auth-dialog"
 import { ModeToggle } from "@/components/mode-toggle"
 import { NotificationDropdown } from "@/components/notification-dropdown"
@@ -40,13 +40,13 @@ export function Navbar() {
   // member was used for isStaff check (deleted)
   // storeMember used for isStaff check (deleted)
   // So likely safe to remove deeply.
-  
+
   const { mutate: logout } = useLogout()
-  
+
   const user = useAuth((state) => state.user)
   const authDialogState = useAuth((state) => state.authDialogState)
   const setAuthDialogOpen = useAuth((state) => state.setAuthDialogOpen)
-  
+
   const [menuOpen, setMenuOpen] = useState(false)
 
   const handleLogout = async () => {
@@ -61,9 +61,9 @@ export function Navbar() {
   return (
     <header className="sticky top-0 z-40 w-full border-b bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-14 items-center justify-between gap-2">
-        <AuthDialog 
-          open={authDialogState.open} 
-          onOpenChange={(open) => setAuthDialogOpen(open)} 
+        <AuthDialog
+          open={authDialogState.open}
+          onOpenChange={(open) => setAuthDialogOpen(open)}
           defaultTab={authDialogState.tab}
         />
         <Link
@@ -72,20 +72,45 @@ export function Navbar() {
           aria-label="Dadisi home"
         >
           <span className="sr-only">Dadisi</span>
+          {/* Mobile View - Light Mode */}
           <Image
-            src="https://cdn.builder.io/api/v1/image/assets%2F18afee9d3b294226ab5e0dde6ffaa839%2Ff43e3876c5154de6b73c20c6853ecf82?format=webp&width=240"
-            alt="Dadisi icon"
-            width={28}
-            height={28}
-            className="block sm:hidden"
+            src="/images/brand/logo-mobile-light.png"
+            alt="Dadisi"
+            width={32}
+            height={32}
+            className="block h-8 w-auto dark:hidden sm:hidden"
+            unoptimized
             priority
           />
+          {/* Mobile View - Dark Mode */}
           <Image
-            src="https://cdn.builder.io/api/v1/image/assets%2F18afee9d3b294226ab5e0dde6ffaa839%2Fced30502f028407e94a768a4a8d27ddb?format=webp&width=400"
+            src="/images/brand/logo-mobile-dark.png"
+            alt="Dadisi"
+            width={32}
+            height={32}
+            className="hidden h-8 w-auto dark:block sm:dark:hidden"
+            unoptimized
+            priority
+          />
+
+          {/* Desktop View - Light Mode */}
+          <Image
+            src="/images/brand/logo-desktop-light.png"
             alt="Dadisi"
             width={140}
             height={32}
-            className="hidden sm:block"
+            className="hidden h-8 w-auto dark:hidden sm:block"
+            unoptimized
+            priority
+          />
+          {/* Desktop View - Dark Mode */}
+          <Image
+            src="/images/brand/logo-desktop-dark.png"
+            alt="Dadisi"
+            width={140}
+            height={32}
+            className="hidden h-8 w-auto dark:sm:block"
+            unoptimized
             priority
           />
         </Link>
@@ -110,8 +135,12 @@ export function Navbar() {
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" className="gap-2">
                   <Avatar className="h-6 w-6">
-                    <AvatarImage src={user.profile_picture_url || "/images/default-avatar.png"} />
-                    <AvatarFallback className="bg-primary/10 text-primary text-xs">
+                    <AvatarImage
+                      src={
+                        user.profile_picture_url || "/images/default-avatar.png"
+                      }
+                    />
+                    <AvatarFallback className="bg-primary/10 text-xs text-primary">
                       {user.username?.slice(0, 2).toUpperCase() || "U"}
                     </AvatarFallback>
                   </Avatar>
@@ -152,7 +181,10 @@ export function Navbar() {
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
-            <Button variant="outline" onClick={() => setAuthDialogOpen(true, "signin")}>
+            <Button
+              variant="outline"
+              onClick={() => setAuthDialogOpen(true, "signin")}
+            >
               Sign in
             </Button>
           )}

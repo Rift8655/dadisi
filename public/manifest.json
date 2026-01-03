@@ -1,0 +1,26 @@
+{
+  "name": "Dadisi Community Labs",
+  "short_name": "Dadisi",
+  "description": "A non-profit community science lab in Kenya — removing barriers to STEM and providing inclusive research and learning spaces.",
+  "id": "/",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#2EC6FE",
+  "theme_color": "#8936FF",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "/favicon.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/favicon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
