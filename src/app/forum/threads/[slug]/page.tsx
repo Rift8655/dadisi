@@ -1,44 +1,34 @@
 "use client"
 
-import { use, useState, useEffect } from "react"
+import { use, useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
+import { useAuth } from "@/store/auth"
 import { format } from "date-fns"
 import {
   ArrowLeft,
-  Pin,
-  Lock,
-  Unlock,
   Edit,
-  Trash2,
-  Send,
-  User,
+  Lock,
   MoreVertical,
-  MapPin,
+  Pin,
+  Send,
+  Trash2,
+  Unlock,
+  User,
+  Users,
 } from "lucide-react"
-import { useAuth } from "@/store/auth"
+import Swal from "sweetalert2"
+
 import {
-  useForumThread,
-  useForumPosts,
   useCreatePost,
-  useUpdatePost,
   useDeletePost,
-  usePinThread,
-  useUnpinThread,
+  useForumPosts,
+  useForumThread,
   useLockThread,
+  usePinThread,
   useUnlockThread,
+  useUnpinThread,
+  useUpdatePost,
 } from "@/hooks/useForum"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Skeleton } from "@/components/ui/skeleton"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Textarea } from "@/components/ui/textarea"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -49,8 +39,19 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { Skeleton } from "@/components/ui/skeleton"
+import { Textarea } from "@/components/ui/textarea"
 import { ForumSidebar } from "@/components/forum/ForumSidebar"
-import Swal from "sweetalert2"
 
 interface ThreadPageProps {
   params: Promise<{ slug: string }>
@@ -71,7 +72,11 @@ export default function ThreadPage({ params }: ThreadPageProps) {
     setMounted(true)
   }, [])
 
-  const { data: thread, isLoading: threadLoading, error: threadError } = useForumThread(slug)
+  const {
+    data: thread,
+    isLoading: threadLoading,
+    error: threadError,
+  } = useForumThread(slug)
   const { data: postsData, isLoading: postsLoading } = useForumPosts(slug)
 
   const createPostMutation = useCreatePost()
@@ -123,12 +128,12 @@ export default function ThreadPage({ params }: ThreadPageProps) {
 
   if (threadLoading) {
     return (
-      <div className="container mx-auto py-8 px-4">
+      <div className="container mx-auto px-4 py-8">
         <div className="flex gap-8">
           <ForumSidebar className="hidden lg:block" />
-          <div className="flex-1 min-w-0 max-w-4xl">
-            <Skeleton className="h-8 w-48 mb-4" />
-            <Skeleton className="h-32 rounded-lg mb-4" />
+          <div className="min-w-0 max-w-4xl flex-1">
+            <Skeleton className="mb-4 h-8 w-48" />
+            <Skeleton className="mb-4 h-32 rounded-lg" />
             <div className="space-y-3">
               {[...Array(3)].map((_, i) => (
                 <Skeleton key={i} className="h-24 rounded-lg" />
@@ -142,14 +147,20 @@ export default function ThreadPage({ params }: ThreadPageProps) {
 
   if (threadError || !thread) {
     return (
-      <div className="container mx-auto py-8 px-4">
+      <div className="container mx-auto px-4 py-8">
         <div className="flex gap-8">
           <ForumSidebar className="hidden lg:block" />
-          <div className="flex-1 min-w-0">
-            <Button variant="ghost" onClick={() => router.back()} className="mb-4">
-              <ArrowLeft className="h-4 w-4 mr-2" /> Back
+          <div className="min-w-0 flex-1">
+            <Button
+              variant="ghost"
+              onClick={() => router.back()}
+              className="mb-4"
+            >
+              <ArrowLeft className="mr-2 h-4 w-4" /> Back
             </Button>
-            <p className="text-destructive">Thread not found or failed to load.</p>
+            <p className="text-destructive">
+              Thread not found or failed to load.
+            </p>
           </div>
         </div>
       </div>
@@ -157,13 +168,13 @@ export default function ThreadPage({ params }: ThreadPageProps) {
   }
 
   return (
-    <div className="container mx-auto py-8 px-4">
+    <div className="container mx-auto px-4 py-8">
       <div className="flex gap-8">
         {/* Sidebar */}
         <ForumSidebar className="hidden lg:block" />
 
         {/* Main Content */}
-        <main className="flex-1 min-w-0 max-w-4xl">
+        <main className="min-w-0 max-w-4xl flex-1">
           {/* Back button */}
           <Button
             variant="ghost"
@@ -171,7 +182,8 @@ export default function ThreadPage({ params }: ThreadPageProps) {
             onClick={() => router.push(`/forum/${thread.category?.slug || ""}`)}
             className="mb-4"
           >
-            <ArrowLeft className="h-4 w-4 mr-2" /> Back to {thread.category?.name || "Forum"}
+            <ArrowLeft className="mr-2 h-4 w-4" /> Back to{" "}
+            {thread.category?.name || "Forum"}
           </Button>
 
           {/* Thread Header */}
@@ -179,27 +191,37 @@ export default function ThreadPage({ params }: ThreadPageProps) {
             <CardHeader>
               <div className="flex items-start justify-between">
                 <div className="flex-1">
-                  <div className="flex items-center gap-2 flex-wrap mb-2">
+                  <div className="mb-2 flex flex-wrap items-center gap-2">
                     {thread.is_pinned && (
                       <Badge variant="warning">
-                        <Pin className="h-3 w-3 mr-1" /> Pinned
+                        <Pin className="mr-1 h-3 w-3" /> Pinned
                       </Badge>
                     )}
                     {thread.is_locked && (
                       <Badge variant="secondary">
-                        <Lock className="h-3 w-3 mr-1" /> Locked
+                        <Lock className="mr-1 h-3 w-3" /> Locked
                       </Badge>
                     )}
                     {thread.county && (
-                      <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20">
-                        <MapPin className="h-3 w-3 mr-1" /> {thread.county.name}
+                      <Badge
+                        variant="outline"
+                        className="border-primary/20 bg-primary/5 text-primary"
+                      >
+                        <Users className="mr-1 h-3 w-3" /> {thread.county.name}
                       </Badge>
                     )}
                   </div>
-                  <CardTitle className="text-xl md:text-2xl">{thread.title}</CardTitle>
-                  <div className="flex items-center gap-2 mt-2 text-sm text-muted-foreground">
+                  <CardTitle className="text-xl md:text-2xl">
+                    {thread.title}
+                  </CardTitle>
+                  <div className="mt-2 flex items-center gap-2 text-sm text-muted-foreground">
                     <Avatar className="h-6 w-6">
-                      <AvatarImage src={thread.user?.profile_picture_path || "/images/default-avatar.png"} />
+                      <AvatarImage
+                        src={
+                          thread.user?.profile_picture_path ||
+                          "/images/default-avatar.png"
+                        }
+                      />
                       <AvatarFallback>
                         <User className="h-3 w-3" />
                       </AvatarFallback>
@@ -231,7 +253,7 @@ export default function ThreadPage({ params }: ThreadPageProps) {
                             : pinMutation.mutate(slug)
                         }
                       >
-                        <Pin className="h-4 w-4 mr-2" />
+                        <Pin className="mr-2 h-4 w-4" />
                         {thread.is_pinned ? "Unpin" : "Pin"} Thread
                       </DropdownMenuItem>
                       <DropdownMenuItem
@@ -243,11 +265,11 @@ export default function ThreadPage({ params }: ThreadPageProps) {
                       >
                         {thread.is_locked ? (
                           <>
-                            <Unlock className="h-4 w-4 mr-2" /> Unlock Thread
+                            <Unlock className="mr-2 h-4 w-4" /> Unlock Thread
                           </>
                         ) : (
                           <>
-                            <Lock className="h-4 w-4 mr-2" /> Lock Thread
+                            <Lock className="mr-2 h-4 w-4" /> Lock Thread
                           </>
                         )}
                       </DropdownMenuItem>
@@ -260,119 +282,137 @@ export default function ThreadPage({ params }: ThreadPageProps) {
 
           {/* Posts */}
           <div className="space-y-4">
-            {postsLoading ? (
-              [...Array(3)].map((_, i) => (
-                <Skeleton key={i} className="h-32 rounded-lg" />
-              ))
-            ) : (
-              postsData?.data?.map((post: any, index: number) => {
-                const isAuthor = user?.id === post.user_id
-                const isEditing = editingPostId === post.id
+            {postsLoading
+              ? [...Array(3)].map((_, i) => (
+                  <Skeleton key={i} className="h-32 rounded-lg" />
+                ))
+              : postsData?.data?.map((post: any, index: number) => {
+                  const isAuthor = user?.id === post.user_id
+                  const isEditing = editingPostId === post.id
 
-                return (
-                  <Card key={post.id} id={`post-${post.id}`}>
-                    <CardContent className="pt-4">
-                      <div className="flex items-start gap-4">
-                        <Avatar className="h-10 w-10">
-                          <AvatarImage src={post.user?.profile_picture_path || "/images/default-avatar.png"} />
-                          <AvatarFallback>
-                            <User className="h-5 w-5" />
-                          </AvatarFallback>
-                        </Avatar>
+                  return (
+                    <Card key={post.id} id={`post-${post.id}`}>
+                      <CardContent className="pt-4">
+                        <div className="flex items-start gap-4">
+                          <Avatar className="h-10 w-10">
+                            <AvatarImage
+                              src={
+                                post.user?.profile_picture_path ||
+                                "/images/default-avatar.png"
+                              }
+                            />
+                            <AvatarFallback>
+                              <User className="h-5 w-5" />
+                            </AvatarFallback>
+                          </Avatar>
 
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              <span className="font-medium">
-                                {post.user?.username || "Unknown"}
-                              </span>
-                              {index === 0 && (
-                                <Badge variant="default" className="text-[10px] h-4 px-1.5">
-                                  OP
-                                </Badge>
-                              )}
-                              {post.is_edited && (
-                                <span className="text-xs text-muted-foreground">(edited)</span>
-                              )}
-                            </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium">
+                                  {post.user?.username || "Unknown"}
+                                </span>
+                                {index === 0 && (
+                                  <Badge
+                                    variant="default"
+                                    className="h-4 px-1.5 text-[10px]"
+                                  >
+                                    OP
+                                  </Badge>
+                                )}
+                                {post.is_edited && (
+                                  <span className="text-xs text-muted-foreground">
+                                    (edited)
+                                  </span>
+                                )}
+                              </div>
 
-                            <div className="flex items-center gap-2">
-                              <span className="text-xs text-muted-foreground whitespace-nowrap">
-                                {post.created_at
-                                  ? format(new Date(post.created_at), "MMM d, HH:mm")
-                                  : ""}
-                              </span>
+                              <div className="flex items-center gap-2">
+                                <span className="whitespace-nowrap text-xs text-muted-foreground">
+                                  {post.created_at
+                                    ? format(
+                                        new Date(post.created_at),
+                                        "MMM d, HH:mm"
+                                      )
+                                    : ""}
+                                </span>
 
-                              {(isAuthor || canModerate) && (
-                                <DropdownMenu>
-                                  <DropdownMenuTrigger asChild>
-                                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                                      <MoreVertical className="h-4 w-4" />
-                                    </Button>
-                                  </DropdownMenuTrigger>
-                                  <DropdownMenuContent align="end">
-                                    <DropdownMenuItem
-                                      onClick={() => {
-                                        setEditingPostId(post.id)
-                                        setEditContent(post.content)
-                                      }}
-                                    >
-                                      <Edit className="h-4 w-4 mr-2" /> Edit
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem
-                                      className="text-destructive"
-                                      onClick={() => setDeletePostId(post.id)}
-                                    >
-                                      <Trash2 className="h-4 w-4 mr-2" /> Delete
-                                    </DropdownMenuItem>
-                                  </DropdownMenuContent>
-                                </DropdownMenu>
-                              )}
-                            </div>
-                          </div>
-
-                          {isEditing ? (
-                            <div className="mt-2 text-right">
-                              <Textarea
-                                value={editContent}
-                                onChange={(e) => setEditContent(e.target.value)}
-                                rows={4}
-                                className="mb-2"
-                              />
-                              <div className="flex gap-2 justify-end">
-                                <Button
-                                  size="sm"
-                                  onClick={() => handleUpdatePost(post.id)}
-                                  disabled={updatePostMutation.isPending}
-                                >
-                                  Save Change
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  onClick={() => {
-                                    setEditingPostId(null)
-                                    setEditContent("")
-                                  }}
-                                >
-                                  Cancel
-                                </Button>
+                                {(isAuthor || canModerate) && (
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-8 w-8"
+                                      >
+                                        <MoreVertical className="h-4 w-4" />
+                                      </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                      <DropdownMenuItem
+                                        onClick={() => {
+                                          setEditingPostId(post.id)
+                                          setEditContent(post.content)
+                                        }}
+                                      >
+                                        <Edit className="mr-2 h-4 w-4" /> Edit
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem
+                                        className="text-destructive"
+                                        onClick={() => setDeletePostId(post.id)}
+                                      >
+                                        <Trash2 className="mr-2 h-4 w-4" />{" "}
+                                        Delete
+                                      </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
+                                )}
                               </div>
                             </div>
-                          ) : (
-                            <div className="mt-2 prose prose-sm dark:prose-invert max-w-none">
-                              <p className="whitespace-pre-wrap leading-relaxed">
-                                {post.content}
-                              </p>
-                            </div>
-                          )}
+
+                            {isEditing ? (
+                              <div className="mt-2 text-right">
+                                <Textarea
+                                  value={editContent}
+                                  onChange={(e) =>
+                                    setEditContent(e.target.value)
+                                  }
+                                  rows={4}
+                                  className="mb-2"
+                                />
+                                <div className="flex justify-end gap-2">
+                                  <Button
+                                    size="sm"
+                                    onClick={() => handleUpdatePost(post.id)}
+                                    disabled={updatePostMutation.isPending}
+                                  >
+                                    Save Change
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => {
+                                      setEditingPostId(null)
+                                      setEditContent("")
+                                    }}
+                                  >
+                                    Cancel
+                                  </Button>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="prose prose-sm dark:prose-invert mt-2 max-w-none">
+                                <p className="whitespace-pre-wrap leading-relaxed">
+                                  {post.content}
+                                </p>
+                              </div>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                )
-              })
-            )}
+                      </CardContent>
+                    </Card>
+                  )
+                })}
           </div>
 
           {/* Reply Box */}
@@ -381,7 +421,12 @@ export default function ThreadPage({ params }: ThreadPageProps) {
               <CardContent className="pt-4">
                 <div className="flex items-start gap-4">
                   <Avatar className="h-10 w-10">
-                    <AvatarImage src={user?.profile_picture_url || "/images/default-avatar.png"} />
+                    <AvatarImage
+                      src={
+                        user?.profile_picture_url ||
+                        "/images/default-avatar.png"
+                      }
+                    />
                     <AvatarFallback>
                       <User className="h-5 w-5" />
                     </AvatarFallback>
@@ -398,11 +443,15 @@ export default function ThreadPage({ params }: ThreadPageProps) {
                     <div className="flex justify-end">
                       <Button
                         onClick={handleReply}
-                        disabled={createPostMutation.isPending || !replyContent.trim()}
+                        disabled={
+                          createPostMutation.isPending || !replyContent.trim()
+                        }
                         className="bg-primary hover:bg-primary/90"
                       >
-                        <Send className="h-4 w-4 mr-2" />
-                        {createPostMutation.isPending ? "Posting..." : "Post Reply"}
+                        <Send className="mr-2 h-4 w-4" />
+                        {createPostMutation.isPending
+                          ? "Posting..."
+                          : "Post Reply"}
                       </Button>
                     </div>
                   </div>
@@ -412,17 +461,19 @@ export default function ThreadPage({ params }: ThreadPageProps) {
           )}
 
           {!isAuthenticated && !thread.is_locked && (
-            <div className="mt-6 text-center p-6 border-2 border-dashed rounded-lg bg-muted/30">
-              <p className="text-muted-foreground mb-4">Please log in to join the conversation.</p>
+            <div className="mt-6 rounded-lg border-2 border-dashed bg-muted/30 p-6 text-center">
+              <p className="mb-4 text-muted-foreground">
+                Please log in to join the conversation.
+              </p>
               <Button onClick={() => router.push("/login")}>Log In</Button>
             </div>
           )}
 
           {thread.is_locked && (
-            <Card className="mt-6 bg-muted/50 border-dashed">
+            <Card className="mt-6 border-dashed bg-muted/50">
               <CardContent className="py-8 text-center">
-                <Lock className="h-8 w-8 mx-auto mb-3 text-muted-foreground/50" />
-                <p className="text-muted-foreground font-medium">
+                <Lock className="mx-auto mb-3 h-8 w-8 text-muted-foreground/50" />
+                <p className="font-medium text-muted-foreground">
                   This thread is locked. No new replies can be added.
                 </p>
               </CardContent>
@@ -430,12 +481,16 @@ export default function ThreadPage({ params }: ThreadPageProps) {
           )}
 
           {/* Delete Confirmation */}
-          <AlertDialog open={!!deletePostId} onOpenChange={() => setDeletePostId(null)}>
+          <AlertDialog
+            open={!!deletePostId}
+            onOpenChange={() => setDeletePostId(null)}
+          >
             <AlertDialogContent>
               <AlertDialogHeader>
                 <AlertDialogTitle>Delete Post</AlertDialogTitle>
                 <AlertDialogDescription>
-                  Are you sure you want to delete this post? This action cannot be undone.
+                  Are you sure you want to delete this post? This action cannot
+                  be undone.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>

@@ -8,7 +8,6 @@ import {
   ChevronRight,
   Clock,
   FolderOpen,
-  Globe,
   Loader2,
   ScrollText,
   Tag,
@@ -82,7 +81,7 @@ export function ForumSidebar({ className }: ForumSidebarProps) {
           className="flex w-full items-center justify-between rounded-lg px-3 py-2 text-sm font-medium text-foreground hover:bg-muted"
         >
           <span className="flex items-center gap-2">
-            <Globe className="h-4 w-4" />
+            <Users className="h-4 w-4" />
             GROUPS
           </span>
           {countyExpanded ? (

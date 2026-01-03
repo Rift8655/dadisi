@@ -35,12 +35,16 @@ export interface Post {
   content?: string
   featured_image?: string | null
   status?: "draft" | "published" | "archived"
+  is_featured?: boolean
   views_count?: number
   comments_count?: number
+  meta_title?: string | null
+  meta_description?: string | null
   author?: {
     id: number
     username: string
     email?: string
+    profile_picture_url?: string | null
   } | null
   is_published?: boolean
   published_at?: string | null
@@ -52,36 +56,45 @@ export interface Post {
   related_posts?: Post[]
 }
 
-export const PostSchema: z.ZodType<Post> = z.lazy(() => z.object({
-  id: z.number(),
-  user_id: z.number().optional(),
-  county_id: z.number().nullable().optional(),
-  title: z.string(),
-  slug: z.string(),
-  excerpt: z.string().nullable().optional(),
-  body: z.string().optional(),
-  content: z.string().optional(),
-  featured_image: z.string().nullable().optional(),
-  status: z.enum(["draft", "published", "archived"]).optional(),
-  views_count: z.number().optional().default(0),
-  comments_count: z.number().optional().default(0),
-  author: z
-    .object({
-      id: z.number(),
-      username: z.string(),
-      email: z.string().optional(),
-    })
-    .optional()
-    .nullable(),
-  is_published: z.boolean().optional(),
-  published_at: z.string().nullable().optional(),
-  created_at: z.string(),
-  updated_at: z.string().optional(),
-  categories: z.array(CategorySchema).optional(),
-  tags: z.array(TagSchema).optional(),
-  county: z.object({ id: z.number(), name: z.string() }).optional().nullable(),
-  related_posts: z.array(z.lazy(() => PostSchema)).optional(),
-}))
+export const PostSchema: z.ZodType<Post> = z.lazy(() =>
+  z.object({
+    id: z.number(),
+    user_id: z.coerce.number().optional(),
+    county_id: z.coerce.number().nullable().optional(),
+    title: z.string(),
+    slug: z.string(),
+    excerpt: z.string().nullable().optional(),
+    body: z.string().optional(),
+    content: z.string().optional(),
+    featured_image: z.string().nullable().optional(),
+    status: z.enum(["draft", "published", "archived"]).optional(),
+    is_featured: z.boolean().optional().default(false),
+    views_count: z.coerce.number().optional().default(0),
+    comments_count: z.coerce.number().optional().default(0),
+    meta_title: z.string().nullable().optional(),
+    meta_description: z.string().nullable().optional(),
+    author: z
+      .object({
+        id: z.number(),
+        username: z.string(),
+        email: z.string().optional(),
+        profile_picture_url: z.string().nullable().optional(),
+      })
+      .optional()
+      .nullable(),
+    is_published: z.boolean().optional(),
+    published_at: z.string().nullable().optional(),
+    created_at: z.string(),
+    updated_at: z.string().optional(),
+    categories: z.array(CategorySchema).optional(),
+    tags: z.array(TagSchema).optional(),
+    county: z
+      .object({ id: z.coerce.number(), name: z.string() })
+      .optional()
+      .nullable(),
+    related_posts: z.array(z.lazy(() => PostSchema)).optional(),
+  })
+)
 
 export const PostsArraySchema = z.array(PostSchema)
 
@@ -91,7 +104,7 @@ export const PublicCategorySchema = z.object({
   name: z.string(),
   slug: z.string(),
   description: z.string().nullable().optional(),
-  post_count: z.number(),
+  post_count: z.coerce.number(),
 })
 
 export const PublicCategoriesResponseSchema = z.object({
@@ -104,7 +117,7 @@ export const PublicTagSchema = z.object({
   id: z.number(),
   name: z.string(),
   slug: z.string(),
-  post_count: z.number(),
+  post_count: z.coerce.number(),
 })
 
 export const PublicTagsResponseSchema = z.object({
@@ -126,7 +139,9 @@ export const PaginatedPostsResponseSchema = z.object({
 
 export type PublicCategory = z.infer<typeof PublicCategorySchema>
 export type PublicTag = z.infer<typeof PublicTagSchema>
-export type PaginatedPostsResponse = z.infer<typeof PaginatedPostsResponseSchema>
+export type PaginatedPostsResponse = z.infer<
+  typeof PaginatedPostsResponseSchema
+>
 
 // Helper function to extract pagination from response
 export function extractPaginationFromPosts(response: PaginatedPostsResponse) {

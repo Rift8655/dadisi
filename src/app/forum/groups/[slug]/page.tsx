@@ -340,7 +340,7 @@ export default function GroupDetailPage({ params }: GroupDetailPageProps) {
                 </span>
                 {group.county && (
                   <Badge variant="secondary">
-                    <MapPin className="mr-1 h-3 w-3" />
+                    <Users className="mr-1 h-3 w-3" />
                     {group.county.name} County
                   </Badge>
                 )}
