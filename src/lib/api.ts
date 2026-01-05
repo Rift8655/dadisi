@@ -196,6 +196,22 @@ async function apiRequest<T = unknown>(
     }
     error.status = response.status
     error.data = data
+
+    // Report to Sentry (except for typical auth/session issues)
+    if (response.status !== 401 && response.status !== 404) {
+      Sentry.captureException(error, {
+        extra: {
+          endpoint,
+          status: response.status,
+          data: data,
+        },
+        tags: {
+          api_error_type: "request_failed",
+          endpoint,
+        },
+      })
+    }
+
     throw error
   }
 
@@ -463,6 +479,8 @@ export const plansApi = {
     const res = await apiRequestWithSchema("/api/plans", PlansResponseSchema)
     return res.data
   },
+  get: (id: number) =>
+    api.get<{ success: boolean; data: any }>(`/api/plans/${id}`),
   // Admin mutations
   create: (data: unknown) => api.post("/api/plans", data),
   update: (id: number, data: unknown) => api.put(`/api/plans/${id}`, data),
@@ -906,6 +924,23 @@ export const mediaApi = {
   },
 
   delete: (id: number) => api.delete(`/api/media/${id}`),
+
+  rename: (id: number, name: string) =>
+    api.patch<{ success: boolean; data: any }>(`/api/media/${id}/rename`, {
+      name,
+    }),
+
+  updateVisibility: (
+    id: number,
+    data: {
+      visibility: "public" | "private" | "shared"
+      allow_download?: boolean
+    }
+  ) =>
+    api.patch<{ success: boolean; data: any }>(
+      `/api/media/${id}/visibility`,
+      data
+    ),
 }
 
 // Author Posts API (for user dashboard blog management)
@@ -1427,6 +1462,81 @@ export interface NotificationsResponse {
     total: number
   }
   unread_count: number
+}
+
+// Student Approval API
+export interface StudentApprovalRequest {
+  id: number
+  status: "pending" | "approved" | "rejected"
+  student_institution: string
+  submitted_at: string
+  reviewed_at: string | null
+  expires_at: string
+  rejection_reason?: string | null
+  admin_notes?: string | null
+  documentation_url?: string
+  student_email?: string
+  student_birth_date?: string
+  county?: string
+  additional_notes?: string | null
+}
+
+export const studentApprovalsApi = {
+  submit: (data: {
+    student_institution: string
+    student_email: string
+    documentation_url: string
+    birth_date?: string
+    county: string
+    additional_notes?: string
+  }) =>
+    api.post<{ success: boolean; data: any }>(
+      "/api/student-approvals/submit",
+      data
+    ),
+
+  getStatus: () =>
+    api.get<{ success: boolean; data: StudentApprovalRequest }>(
+      "/api/student-approvals/status"
+    ),
+
+  checkEligibility: () =>
+    api.get<{
+      success: boolean
+      can_request: boolean
+      reason: string
+      existing_request?: StudentApprovalRequest
+    }>("/api/student-approvals/eligible"),
+
+  // Admin endpoints
+  admin: {
+    list: (params?: { status?: string; county?: string; page?: number }) =>
+      api.get<{
+        success: boolean
+        data: any[]
+        pagination: any
+      }>("/api/student-approvals/requests", { params }),
+
+    get: (id: number) =>
+      api.get<{ success: boolean; data: StudentApprovalRequest }>(
+        `/api/student-approvals/requests/${id}`
+      ),
+
+    approve: (id: number, adminNotes?: string) =>
+      api.post<{ success: boolean; message: string }>(
+        `/api/student-approvals/requests/${id}/approve`,
+        { admin_notes: adminNotes }
+      ),
+
+    reject: (id: number, reason: string, adminNotes?: string) =>
+      api.post<{ success: boolean; message: string }>(
+        `/api/student-approvals/requests/${id}/reject`,
+        {
+          rejection_reason: reason,
+          admin_notes: adminNotes,
+        }
+      ),
+  },
 }
 
 export const notificationsApi = {

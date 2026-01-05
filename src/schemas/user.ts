@@ -1,7 +1,7 @@
 import { z } from "zod"
 
 export const UserSchema = z.object({
-  id: z.number(),
+  id: z.coerce.number(),
   username: z.string(),
   email: z.string().email(),
   email_verified_at: z.string().nullable(),
@@ -12,10 +12,7 @@ export const UserSchema = z.object({
 export const ProfilePictureUploadSchema = z.object({
   image: z
     .custom<File>((val) => val instanceof File, "Please upload a file")
-    .refine(
-      (file) => file.size <= 5 * 1024 * 1024,
-      "Max file size is 5MB"
-    )
+    .refine((file) => file.size <= 5 * 1024 * 1024, "Max file size is 5MB")
     .refine(
       (file) => file.type.startsWith("image/"),
       "Please upload a valid image file"
@@ -23,4 +20,6 @@ export const ProfilePictureUploadSchema = z.object({
 })
 
 export type User = z.infer<typeof UserSchema>
-export type ProfilePictureUploadPayload = z.infer<typeof ProfilePictureUploadSchema>
+export type ProfilePictureUploadPayload = z.infer<
+  typeof ProfilePictureUploadSchema
+>

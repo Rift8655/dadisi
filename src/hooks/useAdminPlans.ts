@@ -1,10 +1,25 @@
-import { z } from "zod"
-import { useMutation, useQueryClient } from "@tanstack/react-query"
-import { plansApi } from "@/lib/api"
 import { AdminPlanFormSchema } from "@/schemas/plan"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { z } from "zod"
+
+import { plansApi } from "@/lib/api"
 
 export type CreatePlanPayload = z.infer<typeof AdminPlanFormSchema>
 export type UpdatePlanPayload = Partial<CreatePlanPayload>
+
+/**
+ * Hook to fetch a single plan by ID including system_features
+ */
+export function usePlan(id: number) {
+  return useQuery({
+    queryKey: ["plans", id],
+    queryFn: async () => {
+      const response = await plansApi.get(id)
+      return response.data || response
+    },
+    enabled: !!id && id > 0,
+  })
+}
 
 export function useCreatePlan() {
   const queryClient = useQueryClient()
@@ -23,7 +38,13 @@ export function useCreatePlan() {
 export function useUpdatePlan() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: async ({ id, payload }: { id: number; payload: UpdatePlanPayload }) => {
+    mutationFn: async ({
+      id,
+      payload,
+    }: {
+      id: number
+      payload: UpdatePlanPayload
+    }) => {
       return await plansApi.update(id, payload)
     },
     onSuccess: () => {

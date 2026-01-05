@@ -1,25 +1,26 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useEffect, useRef, useState } from "react"
 import dynamic from "next/dynamic"
 import { useRouter } from "next/navigation"
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { ArrowLeft, Eye, Save, Send, Trash2 } from "lucide-react"
 import Swal from "sweetalert2"
 
+import { authorBlogApi, authorPostsApi } from "@/lib/api"
+import { blogApi } from "@/lib/api-admin"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
+import { Textarea } from "@/components/ui/textarea"
 import { Icons } from "@/components/icons"
-import { blogApi } from "@/lib/api-admin"
-import { Save, Send, Trash2, ArrowLeft, Eye } from "lucide-react"
+
 import { DevEditor } from "./DevEditor"
 import { FeaturedImageUpload } from "./FeaturedImageUpload"
 import { TaxonomySelector } from "./TaxonomySelector"
-import { authorBlogApi, authorPostsApi } from "@/lib/api"
 
 // Check if we should use dev editor (for local development without TinyMCE domain registration)
 const USE_DEV_EDITOR = process.env.NEXT_PUBLIC_USE_DEV_EDITOR === "true"
@@ -27,7 +28,10 @@ const USE_DEV_EDITOR = process.env.NEXT_PUBLIC_USE_DEV_EDITOR === "true"
 // TinyMCE loaded dynamically to avoid SSR issues (only if not using dev editor)
 const TinyMCEEditor = dynamic<any>(
   () => import("@tinymce/tinymce-react").then((mod) => mod.Editor as any),
-  { ssr: false, loading: () => <div className="h-96 animate-pulse bg-muted rounded" /> }
+  {
+    ssr: false,
+    loading: () => <div className="h-96 animate-pulse rounded bg-muted" />,
+  }
 )
 
 interface PostFormData {
@@ -67,7 +71,12 @@ const defaultFormData: PostFormData = {
   is_featured: false,
 }
 
-export function PostEditor({ mode, postSlug, dashboardType, onSuccess }: PostEditorProps) {
+export function PostEditor({
+  mode,
+  postSlug,
+  dashboardType,
+  onSuccess,
+}: PostEditorProps) {
   const router = useRouter()
   const queryClient = useQueryClient()
   const [formData, setFormData] = useState<PostFormData>(defaultFormData)
@@ -113,7 +122,9 @@ export function PostEditor({ mode, postSlug, dashboardType, onSuccess }: PostEdi
     },
   })
 
-  const categories = Array.isArray(categoriesData) ? categoriesData : categoriesData?.data || []
+  const categories = Array.isArray(categoriesData)
+    ? categoriesData
+    : categoriesData?.data || []
   const tags = Array.isArray(tagsData) ? tagsData : tagsData?.data || []
 
   // Populate form when post data loads
@@ -161,8 +172,8 @@ export function PostEditor({ mode, postSlug, dashboardType, onSuccess }: PostEdi
       }
 
       if (mode === "create") {
-        return dashboardType === "admin" 
-          ? blogApi.posts.create(payload) 
+        return dashboardType === "admin"
+          ? blogApi.posts.create(payload)
           : authorPostsApi.create(payload)
       } else {
         return dashboardType === "admin"
@@ -172,7 +183,11 @@ export function PostEditor({ mode, postSlug, dashboardType, onSuccess }: PostEdi
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: [dashboardType, "posts"] })
-      const action = variables.publish ? "published" : mode === "create" ? "created" : "updated"
+      const action = variables.publish
+        ? "published"
+        : mode === "create"
+          ? "created"
+          : "updated"
       Swal.fire({
         icon: "success",
         title: "Success",
@@ -202,19 +217,26 @@ export function PostEditor({ mode, postSlug, dashboardType, onSuccess }: PostEdi
     },
     onSuccess: (newCategory: any) => {
       queryClient.invalidateQueries({ queryKey: [dashboardType, "categories"] })
-      
+
       // Auto-select the newly created category
       const categoryId = newCategory.data?.id || newCategory.id
       if (categoryId) {
-        setFormData(prev => ({
+        setFormData((prev) => ({
           ...prev,
-          category_ids: [...prev.category_ids, categoryId]
+          category_ids: [...prev.category_ids, categoryId],
         }))
       } else {
-        console.error("Failed to extract category ID from response:", newCategory)
-        Swal.fire("Error", "Category created but ID not found. Please refresh.", "error")
+        console.error(
+          "Failed to extract category ID from response:",
+          newCategory
+        )
+        Swal.fire(
+          "Error",
+          "Category created but ID not found. Please refresh.",
+          "error"
+        )
       }
-      
+
       Swal.fire({
         icon: "success",
         title: "Category Created",
@@ -243,17 +265,21 @@ export function PostEditor({ mode, postSlug, dashboardType, onSuccess }: PostEdi
     },
     onSuccess: (newTag: any) => {
       queryClient.invalidateQueries({ queryKey: [dashboardType, "tags"] })
-      
+
       // Auto-select the newly created tag
       const tagId = newTag.data?.id || newTag.id
       if (tagId) {
-        setFormData(prev => ({
+        setFormData((prev) => ({
           ...prev,
-          tag_ids: [...prev.tag_ids, tagId]
+          tag_ids: [...prev.tag_ids, tagId],
         }))
       } else {
         console.error("Failed to extract tag ID from response:", newTag)
-        Swal.fire("Error", "Tag created but ID not found. Please refresh.", "error")
+        Swal.fire(
+          "Error",
+          "Tag created but ID not found. Please refresh.",
+          "error"
+        )
       }
 
       Swal.fire({
@@ -307,11 +333,19 @@ export function PostEditor({ mode, postSlug, dashboardType, onSuccess }: PostEdi
 
   const handlePublish = () => {
     if (!formData.title.trim()) {
-      Swal.fire({ icon: "warning", title: "Validation", text: "Title is required" })
+      Swal.fire({
+        icon: "warning",
+        title: "Validation",
+        text: "Title is required",
+      })
       return
     }
     if (!formData.body.trim()) {
-      Swal.fire({ icon: "warning", title: "Validation", text: "Content is required" })
+      Swal.fire({
+        icon: "warning",
+        title: "Validation",
+        text: "Content is required",
+      })
       return
     }
     saveMutation.mutate({ ...formData, publish: true })
@@ -364,7 +398,11 @@ export function PostEditor({ mode, postSlug, dashboardType, onSuccess }: PostEdi
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => router.push(backUrl)}>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => router.push(backUrl)}
+          >
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div>
@@ -386,7 +424,7 @@ export function PostEditor({ mode, postSlug, dashboardType, onSuccess }: PostEdi
               onClick={handleDelete}
               disabled={deleteMutation.isPending}
             >
-              <Trash2 className="h-4 w-4 mr-1" />
+              <Trash2 className="mr-1 h-4 w-4" />
               Delete
             </Button>
           )}
@@ -395,22 +433,22 @@ export function PostEditor({ mode, postSlug, dashboardType, onSuccess }: PostEdi
             onClick={handleSaveDraft}
             disabled={saveMutation.isPending}
           >
-            <Save className="h-4 w-4 mr-1" />
+            <Save className="mr-1 h-4 w-4" />
             Save Draft
           </Button>
           <Button onClick={handlePublish} disabled={saveMutation.isPending}>
-            <Send className="h-4 w-4 mr-1" />
+            <Send className="mr-1 h-4 w-4" />
             {formData.status === "published" ? "Update" : "Publish"}
           </Button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         {/* Main Content */}
-        <div className="lg:col-span-2 space-y-6">
+        <div className="space-y-6 lg:col-span-2">
           {/* Title & Slug */}
           <Card>
-            <CardContent className="pt-6 space-y-4">
+            <CardContent className="space-y-4 pt-6">
               <div className="space-y-2">
                 <Label htmlFor="title">Title</Label>
                 <Input
@@ -426,7 +464,9 @@ export function PostEditor({ mode, postSlug, dashboardType, onSuccess }: PostEdi
                 <Input
                   id="slug"
                   value={formData.slug}
-                  onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, slug: e.target.value })
+                  }
                   placeholder="post-url-slug"
                 />
               </div>
@@ -435,7 +475,9 @@ export function PostEditor({ mode, postSlug, dashboardType, onSuccess }: PostEdi
                 <Textarea
                   id="excerpt"
                   value={formData.excerpt}
-                  onChange={(e) => setFormData({ ...formData, excerpt: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, excerpt: e.target.value })
+                  }
                   placeholder="Brief description of the post..."
                   rows={3}
                 />
@@ -452,28 +494,51 @@ export function PostEditor({ mode, postSlug, dashboardType, onSuccess }: PostEdi
               {USE_DEV_EDITOR ? (
                 <DevEditor
                   value={formData.body}
-                  onChange={(content) => setFormData({ ...formData, body: content })}
+                  onChange={(content) =>
+                    setFormData({ ...formData, body: content })
+                  }
                   height={500}
                 />
               ) : (
                 <TinyMCEEditor
-                  apiKey={process.env.NEXT_PUBLIC_TINYMCE_API_KEY || "no-api-key"}
-                  onInit={(evt: any, editor: any) => (editorRef.current = editor)}
+                  apiKey={
+                    process.env.NEXT_PUBLIC_TINYMCE_API_KEY || "no-api-key"
+                  }
+                  onInit={(evt: any, editor: any) =>
+                    (editorRef.current = editor)
+                  }
                   value={formData.body}
-                  onEditorChange={(content: string) => setFormData({ ...formData, body: content })}
+                  onEditorChange={(content: string) =>
+                    setFormData({ ...formData, body: content })
+                  }
                   init={{
                     height: 500,
                     menubar: true,
                     plugins: [
-                      "advlist", "autolink", "lists", "link", "image", "charmap",
-                      "preview", "anchor", "searchreplace", "visualblocks", "code",
-                      "fullscreen", "insertdatetime", "media", "table", "help", "wordcount"
+                      "advlist",
+                      "autolink",
+                      "lists",
+                      "link",
+                      "image",
+                      "charmap",
+                      "preview",
+                      "anchor",
+                      "searchreplace",
+                      "visualblocks",
+                      "code",
+                      "fullscreen",
+                      "insertdatetime",
+                      "media",
+                      "table",
+                      "help",
+                      "wordcount",
                     ],
                     toolbar:
                       "undo redo | blocks | bold italic forecolor | alignleft aligncenter " +
                       "alignright alignjustify | bullist numlist outdent indent | " +
                       "removeformat | link image | help",
-                    content_style: "body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 16px; }",
+                    content_style:
+                      "body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 16px; }",
                   }}
                 />
               )}
@@ -491,7 +556,9 @@ export function PostEditor({ mode, postSlug, dashboardType, onSuccess }: PostEdi
                 <Input
                   id="meta_title"
                   value={formData.meta_title}
-                  onChange={(e) => setFormData({ ...formData, meta_title: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, meta_title: e.target.value })
+                  }
                   placeholder="SEO title (optional)"
                 />
               </div>
@@ -500,7 +567,12 @@ export function PostEditor({ mode, postSlug, dashboardType, onSuccess }: PostEdi
                 <Textarea
                   id="meta_description"
                   value={formData.meta_description}
-                  onChange={(e) => setFormData({ ...formData, meta_description: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      meta_description: e.target.value,
+                    })
+                  }
                   placeholder="SEO description (optional)"
                   rows={2}
                 />
@@ -530,7 +602,9 @@ export function PostEditor({ mode, postSlug, dashboardType, onSuccess }: PostEdi
           {/* Featured Image */}
           <FeaturedImageUpload
             value={formData.hero_image_path}
-            onChange={(path) => setFormData({ ...formData, hero_image_path: path })}
+            onChange={(path) =>
+              setFormData({ ...formData, hero_image_path: path })
+            }
           />
 
           {/* Categories */}
@@ -543,7 +617,7 @@ export function PostEditor({ mode, postSlug, dashboardType, onSuccess }: PostEdi
                 selectedIds={formData.category_ids}
                 onToggle={toggleCategory}
                 onCreate={async (name) => {
-                   await createCategoryMutation.mutateAsync(name)
+                  await createCategoryMutation.mutateAsync(name)
                 }}
                 loading={categoriesLoading}
                 creating={createCategoryMutation.isPending}
@@ -551,7 +625,7 @@ export function PostEditor({ mode, postSlug, dashboardType, onSuccess }: PostEdi
               />
             </CardContent>
           </Card>
- 
+
           {/* Tags */}
           <Card>
             <CardContent className="pt-6">
@@ -562,7 +636,7 @@ export function PostEditor({ mode, postSlug, dashboardType, onSuccess }: PostEdi
                 selectedIds={formData.tag_ids}
                 onToggle={toggleTag}
                 onCreate={async (name) => {
-                   await createTagMutation.mutateAsync(name)
+                  await createTagMutation.mutateAsync(name)
                 }}
                 loading={tagsLoading}
                 creating={createTagMutation.isPending}
@@ -571,23 +645,30 @@ export function PostEditor({ mode, postSlug, dashboardType, onSuccess }: PostEdi
             </CardContent>
           </Card>
 
-          {/* Featured */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Options</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={formData.is_featured}
-                  onChange={(e) => setFormData({ ...formData, is_featured: e.target.checked })}
-                  className="rounded border-gray-300"
-                />
-                <span className="text-sm">Featured post</span>
-              </label>
-            </CardContent>
-          </Card>
+          {/* Featured - Only for Admin/Staff */}
+          {dashboardType === "admin" && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Options</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <label className="flex cursor-pointer items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={formData.is_featured}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        is_featured: e.target.checked,
+                      })
+                    }
+                    className="rounded border-gray-300"
+                  />
+                  <span className="text-sm">Featured post</span>
+                </label>
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
     </div>

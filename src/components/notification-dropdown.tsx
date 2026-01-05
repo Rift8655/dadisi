@@ -1,7 +1,18 @@
 "use client"
 
-import { useEffect } from "react"
-import { Bell, Check, CheckCheck, Trash2, X } from "lucide-react"
+import Link from "next/link"
+import { useAuth } from "@/store/auth"
+import { formatDistanceToNow } from "date-fns"
+import { Bell, Check, CheckCheck, X } from "lucide-react"
+
+import { cn } from "@/lib/utils"
+import {
+  useDeleteNotification,
+  useMarkAllAsRead,
+  useMarkAsRead,
+  useNotificationsList,
+  useUnreadCount,
+} from "@/hooks/useNotifications"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -12,46 +23,39 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { cn } from "@/lib/utils"
-import { useNotifications } from "@/store/notifications"
-import { useAuth } from "@/store/auth"
-import { formatDistanceToNow } from "date-fns"
-import Link from "next/link"
 
 export function NotificationDropdown() {
   const { isAuthenticated } = useAuth()
-  const {
-    notifications,
-    unreadCount,
-    isLoading,
-    fetchNotifications,
-    fetchUnreadCount,
-    markAsRead,
-    markAllAsRead,
-    deleteNotification,
-  } = useNotifications()
 
-  // Fetch notifications on mount and periodically
-  useEffect(() => {
-    if (!isAuthenticated) return
+  // TanStack Query hooks - automatic deduplication and visibility-aware polling
+  const { data: unreadCount = 0 } = useUnreadCount()
+  const { data: notificationsData, isLoading } = useNotificationsList({
+    per_page: 10,
+  })
+  const markAsReadMutation = useMarkAsRead()
+  const markAllAsReadMutation = useMarkAllAsRead()
+  const deleteNotificationMutation = useDeleteNotification()
 
-    // Initial fetch
-    fetchNotifications()
-
-    // Poll for unread count every 30 seconds
-    const interval = setInterval(() => {
-      fetchUnreadCount()
-    }, 30000)
-
-    return () => clearInterval(interval)
-  }, [isAuthenticated, fetchNotifications, fetchUnreadCount])
+  const notifications = notificationsData?.data?.data ?? []
 
   if (!isAuthenticated) return null
 
-  const handleNotificationClick = (notification: typeof notifications[0]) => {
+  const handleNotificationClick = (notification: (typeof notifications)[0]) => {
     if (!notification.read_at) {
-      markAsRead(notification.id)
+      markAsReadMutation.mutate(notification.id)
     }
+  }
+
+  const handleMarkAsRead = (id: string) => {
+    markAsReadMutation.mutate(id)
+  }
+
+  const handleMarkAllAsRead = () => {
+    markAllAsReadMutation.mutate()
+  }
+
+  const handleDelete = (id: string) => {
+    deleteNotificationMutation.mutate(id)
   }
 
   const getNotificationIcon = (type: string) => {
@@ -77,7 +81,7 @@ export function NotificationDropdown() {
         <Button variant="ghost" size="icon" className="relative">
           <Bell className="h-5 w-5" />
           {unreadCount > 0 && (
-            <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] font-medium text-primary-foreground">
+            <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] font-medium text-primary-foreground">
               {unreadCount > 99 ? "99+" : unreadCount}
             </span>
           )}
@@ -91,7 +95,7 @@ export function NotificationDropdown() {
             <Button
               variant="ghost"
               size="sm"
-              onClick={markAllAsRead}
+              onClick={handleMarkAllAsRead}
               className="h-auto p-1 text-xs text-muted-foreground hover:text-foreground"
             >
               <CheckCheck className="mr-1 h-3 w-3" />
@@ -122,26 +126,26 @@ export function NotificationDropdown() {
                 <span className="text-lg">
                   {getNotificationIcon(notification.type)}
                 </span>
-                <div className="flex-1 min-w-0">
+                <div className="min-w-0 flex-1">
                   {notification.data.link ? (
                     <Link
                       href={notification.data.link}
                       onClick={() => handleNotificationClick(notification)}
                       className="block"
                     >
-                      <p className="text-sm font-medium line-clamp-1">
+                      <p className="line-clamp-1 text-sm font-medium">
                         {notification.data.title}
                       </p>
-                      <p className="text-xs text-muted-foreground line-clamp-2">
+                      <p className="line-clamp-2 text-xs text-muted-foreground">
                         {notification.data.message}
                       </p>
                     </Link>
                   ) : (
                     <div onClick={() => handleNotificationClick(notification)}>
-                      <p className="text-sm font-medium line-clamp-1">
+                      <p className="line-clamp-1 text-sm font-medium">
                         {notification.data.title}
                       </p>
-                      <p className="text-xs text-muted-foreground line-clamp-2">
+                      <p className="line-clamp-2 text-xs text-muted-foreground">
                         {notification.data.message}
                       </p>
                     </div>
@@ -152,13 +156,13 @@ export function NotificationDropdown() {
                     })}
                   </p>
                 </div>
-                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
                   {!notification.read_at && (
                     <Button
                       variant="ghost"
                       size="icon"
                       className="h-6 w-6"
-                      onClick={() => markAsRead(notification.id)}
+                      onClick={() => handleMarkAsRead(notification.id)}
                     >
                       <Check className="h-3 w-3" />
                     </Button>
@@ -167,28 +171,18 @@ export function NotificationDropdown() {
                     variant="ghost"
                     size="icon"
                     className="h-6 w-6 text-destructive hover:text-destructive"
-                    onClick={() => deleteNotification(notification.id)}
+                    onClick={() => handleDelete(notification.id)}
                   >
                     <X className="h-3 w-3" />
                   </Button>
                 </div>
                 {!notification.read_at && (
-                  <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary rounded-l" />
+                  <div className="absolute bottom-0 left-0 top-0 w-1 rounded-l bg-primary" />
                 )}
               </div>
             ))}
           </ScrollArea>
         )}
-
-        <DropdownMenuSeparator />
-        <DropdownMenuItem asChild>
-          <Link
-            href="/dashboard/notifications"
-            className="w-full justify-center text-center text-sm"
-          >
-            View all notifications
-          </Link>
-        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   )

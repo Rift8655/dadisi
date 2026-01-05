@@ -32,6 +32,7 @@ interface PlanDetailDialogProps {
       yearly: { active: boolean; discount_percent: number } | null
     }
     currency: string
+    requires_student_approval: boolean
   }
 }
 
@@ -235,8 +236,16 @@ export function PlanDetailDialog({
 
               {/* Subscribe button */}
               <Button onClick={handleSubscribe} className="w-full" size="lg">
-                {`Subscribe - ${formatPrice(selectedPrice)}${billingInterval === "monthly" ? "/mo" : "/yr"}`}
+                {plan.requires_student_approval
+                  ? "Join with Verification"
+                  : `Subscribe - ${formatPrice(selectedPrice)}${billingInterval === "monthly" ? "/mo" : "/yr"}`}
               </Button>
+
+              {plan.requires_student_approval && (
+                <p className="mt-2 text-center text-[11px] text-muted-foreground">
+                  Verification of student status is required before payment.
+                </p>
+              )}
             </div>
           )}
         </div>

@@ -7,8 +7,18 @@ import { Plus, Search } from "lucide-react"
 import Swal from "sweetalert2"
 
 import { AdminRole, AdminUser, PaginatedResponse } from "@/types/admin"
-import { useUsers, useDeleteUser, useRestoreUser, useForceDeleteUser, useInviteUser, useBulkDeleteUsers, useBulkRestoreUsers, useBulkAssignRole, useBulkRemoveRole } from "@/hooks/useUsers"
 import { useRoles } from "@/hooks/useRoles"
+import {
+  useBulkAssignRole,
+  useBulkDeleteUsers,
+  useBulkRemoveRole,
+  useBulkRestoreUsers,
+  useDeleteUser,
+  useForceDeleteUser,
+  useInviteUser,
+  useRestoreUser,
+  useUsers,
+} from "@/hooks/useUsers"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -20,6 +30,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { AdminDashboardShell } from "@/components/admin-dashboard-shell"
 import { ConfirmationDialog } from "@/components/admin/confirmation-dialog"
+import { UserCreateDialog } from "@/components/admin/user-create-dialog"
 import { UserInviteDialog } from "@/components/admin/user-invite-dialog"
 import { UserList } from "@/components/admin/user-list"
 import { Unauthorized } from "@/components/unauthorized"
@@ -37,7 +48,11 @@ export default function UsersPage() {
     setUsersPagination,
   } = useAdminUI()
 
-  const { data: usersData, isLoading: usersLoading, error: usersError } = useUsers({
+  const {
+    data: usersData,
+    isLoading: usersLoading,
+    error: usersError,
+  } = useUsers({
     search: filters.userSearch,
     role: filters.userRoleFilter || undefined,
     status: filters.userStatusFilter,
@@ -57,10 +72,21 @@ export default function UsersPage() {
   const bulkRemoveRoleMutation = useBulkRemoveRole()
 
   const users = Array.isArray(usersData) ? usersData : usersData?.data || []
-  const roles = Array.isArray(rolesData) ? rolesData : rolesData?.data || []
-  const totalPages = Array.isArray(usersData) ? 1 : (usersData?.last_page || usersData?.meta?.last_page || 1)
+  const roles = (
+    Array.isArray(rolesData) ? rolesData : rolesData?.data || []
+  ) as AdminRole[]
+  const totalPages = Array.isArray(usersData)
+    ? 1
+    : usersData?.last_page ||
+      usersData?.meta?.last_page ||
+      usersData?.pagination?.last_page ||
+      1
+  const totalUsers = Array.isArray(usersData)
+    ? usersData.length
+    : usersData?.total || usersData?.meta?.total || usersData?.pagination?.total
 
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false)
+  const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [authorizationError, setAuthorizationError] = useState(false)
   const [confirmDialog, setConfirmDialog] = useState<{
     open: boolean
@@ -72,7 +98,6 @@ export default function UsersPage() {
     user: null,
   })
 
-
   useEffect(() => {
     if (usersError) {
       const status = (usersError as any).status
@@ -81,7 +106,10 @@ export default function UsersPage() {
       } else if (status === 401) {
         logout()
       } else {
-        const errorMessage = usersError instanceof Error ? usersError.message : "Failed to load users"
+        const errorMessage =
+          usersError instanceof Error
+            ? usersError.message
+            : "Failed to load users"
         Swal.fire({ icon: "error", title: "Error", text: errorMessage })
       }
     }
@@ -128,18 +156,36 @@ export default function UsersPage() {
           break
       }
 
-      await Swal.fire({ icon: "success", title: "Success", text: `User ${action === "delete" ? "deleted" : action === "restore" ? "restored" : "permanently deleted"} successfully`, timer: 1500 })
+      await Swal.fire({
+        icon: "success",
+        title: "Success",
+        text: `User ${action === "delete" ? "deleted" : action === "restore" ? "restored" : "permanently deleted"} successfully`,
+        timer: 1500,
+      })
 
       setConfirmDialog({ open: false, action: null, user: null })
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "Failed to perform action"
+      const errorMessage =
+        error instanceof Error ? error.message : "Failed to perform action"
       Swal.fire({ icon: "error", title: "Error", text: errorMessage })
     }
   }
 
-  const handleInvite = async (email: string, username: string, roleIds: number[], sendNotification: boolean) => {
-    const roleNames = roles.filter((r) => roleIds.includes(r.id)).map((r) => r.name)
-    await inviteMutation.mutateAsync({ email, username, roles: roleNames, send_notification: sendNotification })
+  const handleInvite = async (
+    email: string,
+    username: string,
+    roleIds: number[],
+    sendNotification: boolean
+  ) => {
+    const roleNames = roles
+      .filter((r) => roleIds.includes(r.id))
+      .map((r) => r.name)
+    await inviteMutation.mutateAsync({
+      email,
+      username,
+      roles: roleNames,
+      send_notification: sendNotification,
+    })
   }
 
   const handleBulkDelete = async (selectedUsers: AdminUser[]) => {
@@ -191,11 +237,14 @@ export default function UsersPage() {
     }
   }
 
-  const handleBulkAssignRole = async (selectedUsers: AdminUser[], roleName: string) => {
+  const handleBulkAssignRole = async (
+    selectedUsers: AdminUser[],
+    roleName: string
+  ) => {
     if (selectedUsers.length === 0 || !roleName) return
 
     try {
-      const userIds = selectedUsers.map(u => u.id)
+      const userIds = selectedUsers.map((u) => u.id)
       await bulkAssignRoleMutation.mutateAsync({ ids: userIds, roleName })
 
       await Swal.fire({
@@ -206,7 +255,9 @@ export default function UsersPage() {
       })
     } catch (error) {
       const errorMessage =
-        error instanceof Error ? error.message : "Failed to assign role to users"
+        error instanceof Error
+          ? error.message
+          : "Failed to assign role to users"
       Swal.fire({
         icon: "error",
         title: "Error",
@@ -215,7 +266,10 @@ export default function UsersPage() {
     }
   }
 
-  const handleBulkRemoveRole = async (selectedUsers: AdminUser[], roleName: string) => {
+  const handleBulkRemoveRole = async (
+    selectedUsers: AdminUser[],
+    roleName: string
+  ) => {
     if (selectedUsers.length === 0 || !roleName) return
 
     try {
@@ -230,7 +284,9 @@ export default function UsersPage() {
       })
     } catch (error) {
       const errorMessage =
-        error instanceof Error ? error.message : "Failed to remove role from users"
+        error instanceof Error
+          ? error.message
+          : "Failed to remove role from users"
       Swal.fire({
         icon: "error",
         title: "Error",
@@ -238,7 +294,6 @@ export default function UsersPage() {
       })
     }
   }
-
 
   if (isLoading || !user) {
     return (
@@ -266,12 +321,21 @@ export default function UsersPage() {
                   Manage platform users and their roles
                 </CardDescription>
               </div>
-                {user?.ui_permissions.can_invite_users && (
-                  <Button onClick={() => setInviteDialogOpen(true)}>
+              {user?.ui_permissions.can_invite_users && (
+                <div className="flex gap-2">
+                  <Button onClick={() => setCreateDialogOpen(true)}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Create Staff User
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => setInviteDialogOpen(true)}
+                  >
                     <Plus className="mr-2 h-4 w-4" />
                     Invite User
                   </Button>
-                )}
+                </div>
+              )}
             </div>
           </CardHeader>
         </Card>
@@ -338,18 +402,47 @@ export default function UsersPage() {
               onDelete={handleDelete}
               onRestore={handleRestore}
               onForceDelete={handleForceDelete}
-              onBulkDelete={user?.ui_permissions.can_bulk_manage_users ? handleBulkDelete : undefined}
-              onBulkRestore={user?.ui_permissions.can_bulk_manage_users ? handleBulkRestore : undefined}
-              onBulkAssignRole={user?.ui_permissions.can_bulk_manage_users ? handleBulkAssignRole : undefined}
-              onBulkRemoveRole={user?.ui_permissions.can_bulk_manage_users ? handleBulkRemoveRole : undefined}
+              onBulkDelete={
+                user?.ui_permissions.can_bulk_manage_users
+                  ? handleBulkDelete
+                  : undefined
+              }
+              onBulkRestore={
+                user?.ui_permissions.can_bulk_manage_users
+                  ? handleBulkRestore
+                  : undefined
+              }
+              onBulkAssignRole={
+                user?.ui_permissions.can_bulk_manage_users
+                  ? handleBulkAssignRole
+                  : undefined
+              }
+              onBulkRemoveRole={
+                user?.ui_permissions.can_bulk_manage_users
+                  ? handleBulkRemoveRole
+                  : undefined
+              }
               roles={roles}
               currentPage={pagination.usersPage}
               totalPages={totalPages}
+              perPage={pagination.usersPerPage}
+              totalItems={totalUsers}
               onPageChange={(page) => setUsersPagination(page)}
+              onPerPageChange={(perPage) => setUsersPagination(1, perPage)}
             />
           </CardContent>
         </Card>
       </div>
+
+      <UserCreateDialog
+        open={createDialogOpen}
+        roles={roles}
+        onClose={() => setCreateDialogOpen(false)}
+        onSuccess={() => {
+          // Refetch users list
+          window.location.reload()
+        }}
+      />
 
       <UserInviteDialog
         open={inviteDialogOpen}

@@ -8,7 +8,7 @@ export interface AdminUser {
   updated_at: string
   deleted_at: string | null
   roles: AdminRole[]
-  profile?: AdminMemberProfile
+  member_profile?: AdminMemberProfile
 }
 
 export interface AdminMemberProfile {
@@ -20,6 +20,9 @@ export interface AdminMemberProfile {
   date_of_birth: string | null
   gender: string | null
   county_id: number | null
+  county?: { id: number; name: string } | null
+  sub_county?: string | null
+  ward?: string | null
   bio: string | null
   avatar_url: string | null
   created_at: string
@@ -29,11 +32,11 @@ export interface AdminMemberProfile {
 export interface AdminRole {
   id: number
   name: string
-  guard_name: string
+  guard_name?: string
   permissions?: AdminPermission[]
   users_count?: number
-  created_at: string
-  updated_at: string
+  created_at?: string
+  updated_at?: string
 }
 
 export interface AdminPermission {

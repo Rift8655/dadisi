@@ -55,6 +55,7 @@
     "icon": "dollar-sign",
     "children": [
       { "title": "Subscriptions", "href": "/admin/subscriptions/renewals", "icon": "dollar-sign" },
+      { "title": "Approvals", "href": "/admin/membership/approvals", "icon": "shield" },
       { "title": "Reconciliation", "href": "/admin/reconciliation", "icon": "creditcard" },
       { "title": "Plans", "href": "/admin/plans", "icon": "dollar-sign" }
     ]

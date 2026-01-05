@@ -1,4 +1,5 @@
 import { useAuth } from "@/store/auth"
+
 import { AdminPermission, AdminRole, AdminUser } from "@/types/admin"
 
 /**
@@ -40,8 +41,9 @@ export function hasAllRoles(
   roleNames: string[]
 ): boolean {
   if (!user || !user.roles) return false
+  const roles = user.roles
   return roleNames.every((name) =>
-    user.roles.some(
+    roles.some(
       (role) =>
         role.name === name || role.name.toLowerCase() === name.toLowerCase()
     )
@@ -203,9 +205,9 @@ export function getAllPermissions(
   user: AdminUser | null | undefined
 ): AdminPermission[] {
   if (!user || !user.roles) return []
- 
+
   const permissionsMap = new Map<string, AdminPermission>()
- 
+
   for (const role of user.roles) {
     if (role.permissions) {
       for (const perm of role.permissions) {
@@ -213,7 +215,7 @@ export function getAllPermissions(
       }
     }
   }
- 
+
   return Array.from(permissionsMap.values())
 }
 

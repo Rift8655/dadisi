@@ -1,14 +1,13 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+
 import { userApi } from "@/lib/api-admin"
-import { AdminUserSchema, PaginatedSchema } from "@/schemas/admin"
-import { z } from "zod"
 
 export function useUsers(params?: Record<string, unknown>) {
   return useQuery({
     queryKey: ["admin-users", params || {}],
     queryFn: async () => {
-      const response = await userApi.list(params)
-      return PaginatedSchema(AdminUserSchema).or(z.array(AdminUserSchema)).parse(response)
+      // userApi.list() already validates the response with safeParse
+      return await userApi.list(params)
     },
   })
 }
@@ -17,8 +16,8 @@ export function useUser(id: number) {
   return useQuery({
     queryKey: ["admin-user", id],
     queryFn: async () => {
-      const response = await userApi.get(id)
-      return AdminUserSchema.parse(response)
+      // userApi.get() already validates the response with safeParse
+      return await userApi.get(id)
     },
     enabled: !!id,
   })
@@ -100,7 +99,13 @@ export function useBulkRestoreUsers() {
 export function useBulkAssignRole() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: async ({ ids, roleName }: { ids: number[]; roleName: string }) => {
+    mutationFn: async ({
+      ids,
+      roleName,
+    }: {
+      ids: number[]
+      roleName: string
+    }) => {
       return await userApi.bulkAssignRole(ids, roleName)
     },
     onSuccess: () => {
@@ -112,7 +117,13 @@ export function useBulkAssignRole() {
 export function useBulkRemoveRole() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: async ({ ids, roleName }: { ids: number[]; roleName: string }) => {
+    mutationFn: async ({
+      ids,
+      roleName,
+    }: {
+      ids: number[]
+      roleName: string
+    }) => {
       return await userApi.bulkRemoveRole(ids, roleName)
     },
     onSuccess: () => {
@@ -136,7 +147,13 @@ export function useForceDeleteUser() {
 export function useSyncUserRoles() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: async ({ id, roleNames }: { id: number; roleNames: string[] }) => {
+    mutationFn: async ({
+      id,
+      roleNames,
+    }: {
+      id: number
+      roleNames: string[]
+    }) => {
       return await userApi.syncRoles(id, roleNames)
     },
     onSuccess: (_, variables) => {

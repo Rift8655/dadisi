@@ -59,7 +59,7 @@ export function Navbar() {
   }
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <header className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-14 items-center justify-between gap-2">
         <AuthDialog
           open={authDialogState.open}
@@ -73,46 +73,50 @@ export function Navbar() {
         >
           <span className="sr-only">Dadisi</span>
           {/* Mobile View - Light Mode */}
-          <Image
-            src="/images/brand/logo-mobile-light.png"
-            alt="Dadisi"
-            width={32}
-            height={32}
-            className="block h-8 w-auto dark:hidden sm:hidden"
-            unoptimized
-            priority
-          />
+          <div className="relative block h-8 w-8 dark:hidden sm:hidden">
+            <Image
+              src="/images/brand/logo-mobile-light.png"
+              alt="Dadisi"
+              fill
+              className="object-contain"
+              unoptimized
+              priority
+            />
+          </div>
           {/* Mobile View - Dark Mode */}
-          <Image
-            src="/images/brand/logo-mobile-dark.png"
-            alt="Dadisi"
-            width={32}
-            height={32}
-            className="hidden h-8 w-auto dark:block sm:dark:hidden"
-            unoptimized
-            priority
-          />
+          <div className="relative hidden h-8 w-8 dark:block sm:dark:hidden">
+            <Image
+              src="/images/brand/logo-mobile-dark-v2.png"
+              alt="Dadisi"
+              fill
+              className="object-contain"
+              unoptimized
+              priority
+            />
+          </div>
 
           {/* Desktop View - Light Mode */}
-          <Image
-            src="/images/brand/logo-desktop-light.png"
-            alt="Dadisi"
-            width={140}
-            height={32}
-            className="hidden h-8 w-auto dark:hidden sm:block"
-            unoptimized
-            priority
-          />
+          <div className="relative hidden h-8 w-32 dark:hidden sm:block">
+            <Image
+              src="/images/brand/logo-desktop-light.png"
+              alt="Dadisi"
+              fill
+              className="object-contain"
+              unoptimized
+              priority
+            />
+          </div>
           {/* Desktop View - Dark Mode */}
-          <Image
-            src="/images/brand/logo-desktop-dark.png"
-            alt="Dadisi"
-            width={140}
-            height={32}
-            className="hidden h-8 w-auto dark:sm:block"
-            unoptimized
-            priority
-          />
+          <div className="relative hidden h-8 w-32 dark:sm:block">
+            <Image
+              src="/images/brand/logo-desktop-dark-v2.png"
+              alt="Dadisi"
+              fill
+              className="object-contain"
+              unoptimized
+              priority
+            />
+          </div>
         </Link>
         <nav className="hidden items-center gap-4 text-sm font-medium lg:flex">
           {links.map((l) => (
@@ -202,7 +206,7 @@ export function Navbar() {
         </div>
       </div>
       {menuOpen && (
-        <div className="fixed inset-x-0 top-14 z-40 border-b bg-background lg:hidden">
+        <div className="fixed inset-x-0 top-14 z-50 border-b bg-background lg:hidden">
           <nav className="divide-y divide-border">
             {links.map((l) => (
               <Link

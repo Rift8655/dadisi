@@ -3,10 +3,10 @@ export interface AdminUser {
   name?: string | null
   username: string
   email: string
-  email_verified_at: string | null
-  created_at: string
-  updated_at: string
-  deleted_at: string | null
+  email_verified_at?: string | null
+  created_at?: string
+  updated_at?: string
+  deleted_at?: string | null
   active_subscription_id?: number | null
   plan_id?: number | null
   subscription_status?: string | null
@@ -14,23 +14,23 @@ export interface AdminUser {
   last_payment_date?: string | null
   subscription_activated_at?: string | null
   profile_picture_url?: string | null
-  roles: AdminRole[]
+  roles?: AdminRole[]
   member_profile?: AdminMemberProfile | null
 }
 
 export interface AdminMemberProfile {
   id: number
   user_id: number
-  first_name: string
-  last_name: string
-  phone_number: string | null
-  date_of_birth: string | null
-  gender: string | null
-  county_id: number | null
+  first_name?: string | null
+  last_name?: string | null
+  phone_number?: string | null
+  date_of_birth?: string | null
+  gender?: string | null
+  county_id?: number | null
   sub_county?: string | null
   ward?: string | null
   interests?: string | null
-  bio: string | null
+  bio?: string | null
   is_staff?: boolean
   plan_id?: number | null
   plan_type?: string | null
@@ -40,8 +40,8 @@ export interface AdminMemberProfile {
   emergency_contact_phone?: string | null
   terms_accepted?: boolean
   marketing_consent?: boolean
-  created_at: string
-  updated_at: string
+  created_at?: string
+  updated_at?: string
   deleted_at?: string | null
 }
 
@@ -181,6 +181,9 @@ export const PERMISSION_CATEGORIES: Record<string, PermissionCategory> = {
   manage_own_profile: "Settings",
   rsvp_events: "Event Management",
   make_donations: "Financial",
+  view_student_approvals: "User Management",
+  approve_student_approvals: "User Management",
+  reject_student_approvals: "User Management",
 }
 
 export const BUILT_IN_ROLES = [
@@ -202,7 +205,7 @@ export interface AdminRenewalJob {
     email: string
   }
   plan_name?: string
-  status: 'pending' | 'processing' | 'completed' | 'failed'
+  status: "pending" | "processing" | "completed" | "failed"
   attempts: number
   last_attempt_at: string | null
   next_attempt_at: string | null
@@ -216,7 +219,7 @@ export interface AdminWebhookEvent {
   provider: string
   event_type: string
   payload: Record<string, unknown>
-  status: 'processed' | 'failed' | 'ignored'
+  status: "processed" | "failed" | "ignored"
   error: string | null
   processed_at: string | null
   created_at: string
@@ -346,4 +349,24 @@ export interface PesapalSettings {
   consumer_secret: string
   callback_url: string
   webhook_url: string
+}
+
+export interface AdminStudentApprovalRequest {
+  id: number
+  user_id: number
+  user_name: string
+  user_email?: string
+  status: "pending" | "approved" | "rejected"
+  student_institution: string
+  student_email: string
+  student_birth_date?: string | null
+  county: string
+  documentation_url: string
+  additional_notes?: string | null
+  submitted_at: string
+  reviewed_at?: string | null
+  reviewed_by?: number | null
+  rejection_reason?: string | null
+  admin_notes?: string | null
+  expires_at: string
 }

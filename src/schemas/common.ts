@@ -18,13 +18,31 @@ export const MemberProfileSchema = z.object({
   updated_at: z.string(),
 })
 
-export const MemberProfileResponseSchema = z.object({ data: MemberProfileSchema })
+export const MemberProfileResponseSchema = z.object({
+  data: MemberProfileSchema,
+})
 
-export const DonationSchema = z.object({ id: z.number(), amount: z.number(), redirect_url: z.string().optional() })
+export const DonationSchema = z.object({
+  id: z.number(),
+  amount: z.number(),
+  redirect_url: z.string().optional(),
+})
 
-export const MediaSchema = z.object({ id: z.number(), url: z.string(), type: z.string().optional() })
+export const MediaSchema = z.object({
+  id: z.number(),
+  url: z.string(),
+  original_url: z.string().optional(),
+  file_name: z.string().optional(),
+  mime_type: z.string().optional(),
+  size: z.number(),
+  type: z.string().optional(),
+  visibility: z.enum(["public", "private", "shared"]).optional(),
+  share_token: z.string().optional().nullable(),
+  allow_download: z.boolean().optional(),
+  created_at: z.string(),
+  updated_at: z.string(),
+})
 export const MediaListSchema = z.object({ data: z.array(MediaSchema) })
-
 
 export const LoginResponseSchema = z.object({
   user: z.any(),

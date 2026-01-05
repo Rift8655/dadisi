@@ -1,12 +1,13 @@
 "use client"
 
-import { useState, useMemo } from "react"
-import { Search, Plus, Check, Loader2 } from "lucide-react"
-import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { ScrollArea } from "@/components/ui/scroll-area"
+import { useMemo, useState } from "react"
+import { Check, Loader2, Plus, Search } from "lucide-react"
+
 import { cn } from "@/lib/utils"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { ScrollArea } from "@/components/ui/scroll-area"
 
 interface TaxonomyItem {
   id: number
@@ -58,6 +59,7 @@ export function TaxonomySelector({
         await onCreate(name.trim())
         setNewName("")
         setShowAddInput(false)
+        // Clear search to show all items including the newly created one
         setSearch("")
         // Show success flash
         setFlash(true)
@@ -87,11 +89,18 @@ export function TaxonomySelector({
   }
 
   return (
-    <div className={cn("space-y-3 transition-all", flash && "ring-2 ring-green-500 ring-offset-2 rounded-lg")}>
+    <div
+      className={cn(
+        "space-y-3 transition-all",
+        flash && "rounded-lg ring-2 ring-green-500 ring-offset-2"
+      )}
+    >
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-medium">{title}</h3>
         <div className="flex items-center gap-2">
-          {loading && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
+          {loading && (
+            <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
+          )}
           <Button
             type="button"
             variant="ghost"
@@ -100,7 +109,7 @@ export function TaxonomySelector({
             onClick={() => setShowAddInput(!showAddInput)}
             disabled={creating}
           >
-            <Plus className="h-3 w-3 mr-1" />
+            <Plus className="mr-1 h-3 w-3" />
             Add
           </Button>
         </div>
@@ -108,7 +117,7 @@ export function TaxonomySelector({
 
       {/* Quick Add Input */}
       {showAddInput && (
-        <div className="flex gap-2 p-2 bg-muted/50 rounded-md border border-dashed">
+        <div className="flex gap-2 rounded-md border border-dashed bg-muted/50 p-2">
           <Input
             placeholder={`New ${type} name...`}
             className="h-8 text-sm"
@@ -124,11 +133,7 @@ export function TaxonomySelector({
             onClick={() => handleCreate(newName)}
             disabled={creating || !newName.trim()}
           >
-            {creating ? (
-              <Loader2 className="h-3 w-3 animate-spin" />
-            ) : (
-              "Create"
-            )}
+            {creating ? <Loader2 className="h-3 w-3 animate-spin" /> : "Create"}
           </Button>
         </div>
       )}
@@ -137,7 +142,7 @@ export function TaxonomySelector({
         <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
         <Input
           placeholder={placeholder}
-          className="pl-9 h-9"
+          className="h-9 pl-9"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           onKeyDown={handleKeyDown}
@@ -148,9 +153,13 @@ export function TaxonomySelector({
         {type === "category" ? (
           <div className="space-y-1">
             {filteredItems.length === 0 && !search.trim() ? (
-              <p className="text-sm text-muted-foreground py-2 text-center">No {title.toLowerCase()} found</p>
+              <p className="py-2 text-center text-sm text-muted-foreground">
+                No {title.toLowerCase()} found
+              </p>
             ) : filteredItems.length === 0 ? (
-              <p className="text-sm text-muted-foreground py-2 text-center">No match found</p>
+              <p className="py-2 text-center text-sm text-muted-foreground">
+                No match found
+              </p>
             ) : (
               filteredItems.map((item) => {
                 const isSelected = selectedIds.includes(item.id)
@@ -158,14 +167,18 @@ export function TaxonomySelector({
                   <label
                     key={item.id}
                     className={cn(
-                      "flex items-center gap-2 cursor-pointer hover:bg-muted p-1.5 rounded transition-colors group",
+                      "group flex cursor-pointer items-center gap-2 rounded p-1.5 transition-colors hover:bg-muted",
                       isSelected && "bg-accent/50"
                     )}
                   >
-                    <div className={cn(
-                        "h-4 w-4 rounded-sm border border-primary flex items-center justify-center transition-colors",
-                        isSelected ? "bg-primary text-primary-foreground" : "group-hover:border-primary/70"
-                    )}>
+                    <div
+                      className={cn(
+                        "flex h-4 w-4 items-center justify-center rounded-sm border border-primary transition-colors",
+                        isSelected
+                          ? "bg-primary text-primary-foreground"
+                          : "group-hover:border-primary/70"
+                      )}
+                    >
                       {isSelected && <Check className="h-3 w-3" />}
                     </div>
                     <input
@@ -174,7 +187,7 @@ export function TaxonomySelector({
                       checked={isSelected}
                       onChange={() => onToggle(item.id)}
                     />
-                    <span className="text-sm select-none">{item.name}</span>
+                    <span className="select-none text-sm">{item.name}</span>
                   </label>
                 )
               })
@@ -183,19 +196,25 @@ export function TaxonomySelector({
         ) : (
           <div className="flex flex-wrap gap-2 pt-1">
             {filteredItems.length === 0 && !search.trim() ? (
-              <p className="text-sm text-muted-foreground w-full py-2 text-center">No {title.toLowerCase()} found</p>
+              <p className="w-full py-2 text-center text-sm text-muted-foreground">
+                No {title.toLowerCase()} found
+              </p>
             ) : filteredItems.length === 0 ? (
-              <p className="text-sm text-muted-foreground w-full py-2 text-center">No match found</p>
+              <p className="w-full py-2 text-center text-sm text-muted-foreground">
+                No match found
+              </p>
             ) : (
               filteredItems.map((item) => {
                 const isSelected = selectedIds.includes(item.id)
                 return (
                   <Badge
                     key={item.id}
-                    variant={isSelected ? "default" : undefined}
+                    variant={isSelected ? "default" : "secondary"}
                     className={cn(
-                      "cursor-pointer transition-all",
-                      isSelected ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted/80"
+                      "cursor-pointer select-none transition-all",
+                      isSelected
+                        ? "bg-primary text-primary-foreground ring-2 ring-primary/30"
+                        : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
                     )}
                     onClick={() => onToggle(item.id)}
                   >
@@ -214,14 +233,14 @@ export function TaxonomySelector({
           type="button"
           variant="outline"
           size="sm"
-          className="w-full text-xs h-8 border-dashed hover:bg-primary/10"
+          className="h-8 w-full border-dashed text-xs hover:bg-primary/10"
           onClick={() => handleCreate(search.trim())}
           disabled={creating}
         >
           {creating ? (
-            <Loader2 className="h-3 w-3 animate-spin mr-2" />
+            <Loader2 className="mr-2 h-3 w-3 animate-spin" />
           ) : (
-            <Plus className="h-3 w-3 mr-2" />
+            <Plus className="mr-2 h-3 w-3" />
           )}
           Add &quot;{search}&quot; as new {type}
         </Button>

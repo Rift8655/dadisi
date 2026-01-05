@@ -4,36 +4,36 @@ import Swal from "sweetalert2"
 
 // Detect if dark mode is active
 const isDarkMode = () => {
-  if (typeof window === 'undefined') return false
-  return document.documentElement.classList.contains('dark')
+  if (typeof window === "undefined") return false
+  return document.documentElement.classList.contains("dark")
 }
 
 // Get theme-aware colors
 const getThemeColors = () => {
   const dark = isDarkMode()
   return {
-    background: dark ? '#1f2937' : '#ffffff',
-    text: dark ? '#f9fafb' : '#111827',
-    border: dark ? '#374151' : '#e5e7eb',
+    background: dark ? "#1f2937" : "#ffffff",
+    text: dark ? "#f9fafb" : "#111827",
+    border: dark ? "#374151" : "#e5e7eb",
   }
 }
 
 // Custom classes for modern, theme-aware styling
-const getSwalCustomClass = () => ({
-  container: 'swal2-modern-container',
-  popup: 'swal2-modern-popup',
-  title: 'swal2-modern-title',
-  htmlContainer: 'swal2-modern-text',
-  confirmButton: 'swal2-modern-confirm',
-  cancelButton: 'swal2-modern-cancel',
-  actions: 'swal2-modern-actions',
+export const getSwalCustomClass = () => ({
+  container: "swal2-modern-container",
+  popup: "swal2-modern-popup",
+  title: "swal2-modern-title",
+  htmlContainer: "swal2-modern-text",
+  confirmButton: "swal2-modern-confirm",
+  cancelButton: "swal2-modern-cancel",
+  actions: "swal2-modern-actions",
 })
 
 // Inject modern styles that adapt to theme
-if (typeof window !== 'undefined') {
-  const styleId = 'swal2-modern-styles'
+if (typeof window !== "undefined") {
+  const styleId = "swal2-modern-styles"
   if (!document.getElementById(styleId)) {
-    const style = document.createElement('style')
+    const style = document.createElement("style")
     style.id = styleId
     style.textContent = `
       /* High z-index to appear above Radix dialogs */
@@ -169,17 +169,17 @@ if (typeof window !== 'undefined') {
 }
 
 // Base configuration for all alerts
-const getBaseConfig = () => ({
+export const getBaseConfig = () => ({
   customClass: getSwalCustomClass(),
   allowOutsideClick: true,
   allowEscapeKey: true,
   showClass: {
-    popup: 'swal2-show',
-    backdrop: 'swal2-backdrop-show',
+    popup: "swal2-show",
+    backdrop: "swal2-backdrop-show",
   },
   hideClass: {
-    popup: 'swal2-hide',
-    backdrop: 'swal2-backdrop-hide',
+    popup: "swal2-hide",
+    backdrop: "swal2-backdrop-hide",
   },
 })
 
@@ -251,4 +251,3 @@ export const showConfirm = (title: string, text?: string) => {
     allowEscapeKey: false,
   })
 }
-

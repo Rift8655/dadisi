@@ -4,22 +4,33 @@ import { useEffect, useState } from "react"
 import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
 import { useAuth } from "@/store/auth"
-import { ArrowLeft, Plus, RotateCcw, Trash2, Zap, X, Loader2, AlertCircle } from "lucide-react"
+import {
+  AlertCircle,
+  ArrowLeft,
+  Loader2,
+  Plus,
+  RotateCcw,
+  Trash2,
+  X,
+  Zap,
+} from "lucide-react"
 import Swal from "sweetalert2"
 
 import { AdminRole, AdminUser } from "@/types/admin"
-import {
-  useUser,
-  useUpdateUser,
-  useDeleteUser,
-  useRestoreUser,
-  useForceDeleteUser,
-  useSyncUserRoles,
-  useAssignUserRole,
-  useRemoveUserRole,
-} from "@/hooks/useUsers"
-import { useRoles } from "@/hooks/useRoles"
+import { memberProfileApi } from "@/lib/api"
 import { canManageUser } from "@/lib/rbac"
+import { useRoles } from "@/hooks/useRoles"
+import {
+  useAssignUserRole,
+  useDeleteUser,
+  useForceDeleteUser,
+  useRemoveUserRole,
+  useRestoreUser,
+  useSyncUserRoles,
+  useUpdateUser,
+  useUser,
+} from "@/hooks/useUsers"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -29,12 +40,12 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
+import { Skeleton } from "@/components/ui/skeleton"
+import { Switch } from "@/components/ui/switch"
 import { AdminDashboardShell } from "@/components/admin-dashboard-shell"
 import { ConfirmationDialog } from "@/components/admin/confirmation-dialog"
 import { RoleSelector } from "@/components/admin/role-selector"
 import { Unauthorized } from "@/components/unauthorized"
-import { Skeleton } from "@/components/ui/skeleton"
-import { Badge } from "@/components/ui/badge"
 
 export default function UserDetailPage() {
   const params = useParams()
@@ -43,8 +54,12 @@ export default function UserDetailPage() {
   const logout = useAuth((s) => s.logout)
 
   const { data: user, isLoading: loading, error: userError } = useUser(userId)
-  const { data: rolesResponse, isLoading: loadingRoles } = useRoles({ per_page: 100 })
-  const roles = Array.isArray(rolesResponse) ? rolesResponse : rolesResponse?.data || []
+  const { data: rolesResponse, isLoading: loadingRoles } = useRoles({
+    per_page: 100,
+  })
+  const roles = (
+    Array.isArray(rolesResponse) ? rolesResponse : rolesResponse?.data || []
+  ) as AdminRole[]
 
   const updateMutation = useUpdateUser()
   const deleteMutation = useDeleteUser()
@@ -66,11 +81,14 @@ export default function UserDetailPage() {
   })
   const [showAddRole, setShowAddRole] = useState(false)
   const [selectedRoleToAdd, setSelectedRoleToAdd] = useState<string>("")
+  const [isStaff, setIsStaff] = useState(false)
+  const [staffToggleLoading, setStaffToggleLoading] = useState(false)
 
   useEffect(() => {
     if (user) {
       setEditData({ username: user.username || "", email: user.email })
-      setSelectedRoles(user.roles || [])
+      setSelectedRoles((user.roles || []) as AdminRole[])
+      setIsStaff(user.member_profile?.is_staff || false)
     }
   }, [user])
 
@@ -120,7 +138,11 @@ export default function UserDetailPage() {
       })
       router.push("/admin/users")
     } catch (error: any) {
-      Swal.fire({ icon: "error", title: "Error", text: error.message || "Failed to delete user" })
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: error.message || "Failed to delete user",
+      })
     }
   }
 
@@ -136,7 +158,11 @@ export default function UserDetailPage() {
         showConfirmButton: false,
       })
     } catch (error: any) {
-      Swal.fire({ icon: "error", title: "Error", text: error.message || "Failed to restore user" })
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: error.message || "Failed to restore user",
+      })
     }
   }
 
@@ -153,14 +179,21 @@ export default function UserDetailPage() {
       })
       router.push("/admin/users")
     } catch (error: any) {
-      Swal.fire({ icon: "error", title: "Error", text: error.message || "Failed to permanently delete user" })
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: error.message || "Failed to permanently delete user",
+      })
     }
   }
 
   const handleAssignRole = async () => {
     if (!user || !selectedRoleToAdd) return
     try {
-      await assignRoleMutation.mutateAsync({ id: user.id, roleName: selectedRoleToAdd })
+      await assignRoleMutation.mutateAsync({
+        id: user.id,
+        roleName: selectedRoleToAdd,
+      })
       await Swal.fire({
         icon: "success",
         title: "Success",
@@ -171,7 +204,11 @@ export default function UserDetailPage() {
       setSelectedRoleToAdd("")
       setShowAddRole(false)
     } catch (error: any) {
-      Swal.fire({ icon: "error", title: "Error", text: error.message || "Failed to assign role" })
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: error.message || "Failed to assign role",
+      })
     }
   }
 
@@ -187,7 +224,38 @@ export default function UserDetailPage() {
         showConfirmButton: false,
       })
     } catch (error: any) {
-      Swal.fire({ icon: "error", title: "Error", text: error.message || "Failed to remove role" })
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: error.message || "Failed to remove role",
+      })
+    }
+  }
+
+  const handleStaffToggle = async (checked: boolean) => {
+    if (!user?.member_profile) return
+
+    setStaffToggleLoading(true)
+    try {
+      await memberProfileApi.update(user.member_profile.id, {
+        is_staff: checked,
+      })
+      setIsStaff(checked)
+      await Swal.fire({
+        icon: "success",
+        title: "Success",
+        text: `User ${checked ? "marked as" : "removed from"} staff`,
+        timer: 1500,
+        showConfirmButton: false,
+      })
+    } catch (error: any) {
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: error.message || "Failed to update staff status",
+      })
+    } finally {
+      setStaffToggleLoading(false)
     }
   }
 
@@ -201,7 +269,7 @@ export default function UserDetailPage() {
     return (
       <AdminDashboardShell title="Error">
         <div className="p-8 text-center">
-          <AlertCircle className="h-12 w-12 text-destructive mx-auto mb-4" />
+          <AlertCircle className="mx-auto mb-4 h-12 w-12 text-destructive" />
           <p className="text-lg font-medium">Failed to load user</p>
           <p className="text-muted-foreground">{userError.message}</p>
         </div>
@@ -253,7 +321,12 @@ export default function UserDetailPage() {
                 {isDeleted ? (
                   <Badge variant="destructive">Deleted</Badge>
                 ) : (
-                  <Badge variant="outline" className="bg-green-100 text-green-800 border-green-200">Active</Badge>
+                  <Badge
+                    variant="outline"
+                    className="border-green-200 bg-green-100 text-green-800"
+                  >
+                    Active
+                  </Badge>
                 )}
               </div>
             </div>
@@ -271,7 +344,9 @@ export default function UserDetailPage() {
                   <label className="text-sm font-medium">Username</label>
                   <Input
                     value={editData.username}
-                    onChange={(e) => setEditData({ ...editData, username: e.target.value })}
+                    onChange={(e) =>
+                      setEditData({ ...editData, username: e.target.value })
+                    }
                     disabled={isSaving}
                   />
                 </div>
@@ -281,7 +356,9 @@ export default function UserDetailPage() {
                   <Input
                     type="email"
                     value={editData.email}
-                    onChange={(e) => setEditData({ ...editData, email: e.target.value })}
+                    onChange={(e) =>
+                      setEditData({ ...editData, email: e.target.value })
+                    }
                     disabled={isSaving}
                   />
                 </div>
@@ -301,8 +378,11 @@ export default function UserDetailPage() {
                     variant="outline"
                     onClick={() => {
                       setIsEditing(false)
-                      setEditData({ username: user.username || "", email: user.email })
-                      setSelectedRoles(user.roles || [])
+                      setEditData({
+                        username: user.username || "",
+                        email: user.email,
+                      })
+                      setSelectedRoles((user.roles || []) as AdminRole[])
                     }}
                     disabled={isSaving}
                   >
@@ -383,7 +463,9 @@ export default function UserDetailPage() {
                         <div className="flex gap-2">
                           <select
                             value={selectedRoleToAdd}
-                            onChange={(e) => setSelectedRoleToAdd(e.target.value)}
+                            onChange={(e) =>
+                              setSelectedRoleToAdd(e.target.value)
+                            }
                             className="rounded border px-2 py-1 text-sm"
                             disabled={assignRoleMutation.isPending}
                           >
@@ -391,7 +473,9 @@ export default function UserDetailPage() {
                             {roles
                               .filter(
                                 (role) =>
-                                  !user.roles?.some((ur) => ur.name === role.name)
+                                  !user.roles?.some(
+                                    (ur) => ur.name === role.name
+                                  )
                               )
                               .map((role) => (
                                 <option key={role.id} value={role.name}>
@@ -436,14 +520,17 @@ export default function UserDetailPage() {
             <CardHeader>
               <CardTitle>Profile Information</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="grid grid-cols-2 gap-4">
+            <CardContent className="space-y-4">
+              {/* Name */}
+              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
                 {user.member_profile.first_name && (
                   <div>
                     <p className="text-xs uppercase tracking-wide text-gray-500">
                       First Name
                     </p>
-                    <p className="font-medium">{user.member_profile.first_name}</p>
+                    <p className="font-medium">
+                      {user.member_profile.first_name}
+                    </p>
                   </div>
                 )}
                 {user.member_profile.last_name && (
@@ -451,9 +538,185 @@ export default function UserDetailPage() {
                     <p className="text-xs uppercase tracking-wide text-gray-500">
                       Last Name
                     </p>
-                    <p className="font-medium">{user.member_profile.last_name}</p>
+                    <p className="font-medium">
+                      {user.member_profile.last_name}
+                    </p>
                   </div>
                 )}
+                {user.member_profile.phone_number && (
+                  <div>
+                    <p className="text-xs uppercase tracking-wide text-gray-500">
+                      Phone
+                    </p>
+                    <p className="font-medium">
+                      {user.member_profile.phone_number}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Demographics */}
+              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+                {user.member_profile.date_of_birth && (
+                  <div>
+                    <p className="text-xs uppercase tracking-wide text-gray-500">
+                      Date of Birth
+                    </p>
+                    <p className="font-medium">
+                      {new Date(
+                        user.member_profile.date_of_birth
+                      ).toLocaleDateString()}
+                    </p>
+                  </div>
+                )}
+                {user.member_profile.gender && (
+                  <div>
+                    <p className="text-xs uppercase tracking-wide text-gray-500">
+                      Gender
+                    </p>
+                    <p className="font-medium capitalize">
+                      {user.member_profile.gender}
+                    </p>
+                  </div>
+                )}
+                {user.member_profile.occupation && (
+                  <div>
+                    <p className="text-xs uppercase tracking-wide text-gray-500">
+                      Occupation
+                    </p>
+                    <p className="font-medium">
+                      {user.member_profile.occupation}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Location */}
+              {(user.member_profile.county ||
+                user.member_profile.sub_county ||
+                user.member_profile.ward) && (
+                <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+                  {user.member_profile.county && (
+                    <div>
+                      <p className="text-xs uppercase tracking-wide text-gray-500">
+                        County
+                      </p>
+                      <p className="font-medium">
+                        {user.member_profile.county.name}
+                      </p>
+                    </div>
+                  )}
+                  {user.member_profile.sub_county && (
+                    <div>
+                      <p className="text-xs uppercase tracking-wide text-gray-500">
+                        Sub-County
+                      </p>
+                      <p className="font-medium">
+                        {user.member_profile.sub_county}
+                      </p>
+                    </div>
+                  )}
+                  {user.member_profile.ward && (
+                    <div>
+                      <p className="text-xs uppercase tracking-wide text-gray-500">
+                        Ward
+                      </p>
+                      <p className="font-medium">{user.member_profile.ward}</p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Interests & Bio */}
+              {user.member_profile.interests && (
+                <div>
+                  <p className="text-xs uppercase tracking-wide text-gray-500">
+                    Interests
+                  </p>
+                  <p className="font-medium">{user.member_profile.interests}</p>
+                </div>
+              )}
+              {user.member_profile.bio && (
+                <div>
+                  <p className="text-xs uppercase tracking-wide text-gray-500">
+                    Bio
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    {user.member_profile.bio}
+                  </p>
+                </div>
+              )}
+
+              {/* Emergency Contact */}
+              {(user.member_profile.emergency_contact_name ||
+                user.member_profile.emergency_contact_phone) && (
+                <div className="rounded-lg border bg-muted/50 p-3">
+                  <p className="mb-2 text-xs uppercase tracking-wide text-gray-500">
+                    Emergency Contact
+                  </p>
+                  <div className="grid grid-cols-2 gap-4">
+                    {user.member_profile.emergency_contact_name && (
+                      <div>
+                        <p className="text-sm text-muted-foreground">Name</p>
+                        <p className="font-medium">
+                          {user.member_profile.emergency_contact_name}
+                        </p>
+                      </div>
+                    )}
+                    {user.member_profile.emergency_contact_phone && (
+                      <div>
+                        <p className="text-sm text-muted-foreground">Phone</p>
+                        <p className="font-medium">
+                          {user.member_profile.emergency_contact_phone}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Consent Flags */}
+              <div className="flex flex-wrap gap-4">
+                <Badge
+                  variant={
+                    user.member_profile.terms_accepted ? "default" : "outline"
+                  }
+                >
+                  Terms{" "}
+                  {user.member_profile.terms_accepted
+                    ? "Accepted"
+                    : "Not Accepted"}
+                </Badge>
+                <Badge
+                  variant={
+                    user.member_profile.marketing_consent
+                      ? "default"
+                      : "outline"
+                  }
+                >
+                  Marketing{" "}
+                  {user.member_profile.marketing_consent
+                    ? "Opted In"
+                    : "Opted Out"}
+                </Badge>
+              </div>
+
+              {/* Staff Status Toggle */}
+              <div className="flex items-center justify-between rounded-lg border p-4">
+                <div className="space-y-0.5">
+                  <label htmlFor="staff-toggle" className="text-sm font-medium">
+                    Staff Member
+                  </label>
+                  <p className="text-sm text-muted-foreground">
+                    Mark this user as a staff member of Dadisi
+                  </p>
+                </div>
+                <Switch
+                  id="staff-toggle"
+                  checked={isStaff}
+                  onCheckedChange={handleStaffToggle}
+                  disabled={staffToggleLoading}
+                />
               </div>
             </CardContent>
           </Card>

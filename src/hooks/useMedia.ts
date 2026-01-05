@@ -1,7 +1,8 @@
-import { useQuery, useMutation } from "@tanstack/react-query"
+import { MediaListSchema } from "@/schemas/common"
+import { useMutation, useQuery } from "@tanstack/react-query"
+
 import { mediaApi } from "@/lib/api"
 import { queryClient } from "@/lib/queryClient"
-import { MediaListSchema } from "@/schemas/common"
 
 export function useMedia(params?: { page?: number; type?: string }) {
   return useQuery({
@@ -34,6 +35,36 @@ export function useDeleteMedia() {
   return useMutation({
     mutationFn: async (id: number) => {
       await mediaApi.delete(id)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["media"] })
+    },
+  })
+}
+
+export function useRenameMedia() {
+  return useMutation({
+    mutationFn: async ({ id, name }: { id: number; name: string }) => {
+      await mediaApi.rename(id, name)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["media"] })
+    },
+  })
+}
+
+export function useUpdateMediaVisibility() {
+  return useMutation({
+    mutationFn: async ({
+      id,
+      visibility,
+      allow_download,
+    }: {
+      id: number
+      visibility: "public" | "private" | "shared"
+      allow_download?: boolean
+    }) => {
+      await mediaApi.updateVisibility(id, { visibility, allow_download })
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["media"] })

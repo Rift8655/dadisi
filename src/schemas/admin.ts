@@ -11,58 +11,116 @@ export const AdminPermissionSchema = z.object({
 export const AdminRoleSchema = z.object({
   id: z.number(),
   name: z.string(),
-  guard_name: z.string(),
+  guard_name: z.string().optional(),
   permissions: z.array(AdminPermissionSchema).optional(),
   users_count: z.number().optional(),
-  created_at: z.string(),
-  updated_at: z.string(),
+  created_at: z.string().optional(),
+  updated_at: z.string().optional(),
 })
 
 export const AdminMemberProfileSchema = z.object({
-  id: z.number(),
-  user_id: z.number(),
-  first_name: z.string(),
-  last_name: z.string(),
-  phone_number: z.string().nullable(),
-  date_of_birth: z.string().nullable(),
-  gender: z.string().nullable(),
-  county_id: z.number().nullable(),
+  id: z.preprocess((val) => (val == null ? 0 : val), z.coerce.number()),
+  first_name: z.string().nullable().optional().default(""),
+  last_name: z.string().nullable().optional().default(""),
+  phone_number: z.string().nullable().optional(),
+  date_of_birth: z.string().nullable().optional(),
+  gender: z.string().nullable().optional(),
+  county_id: z.preprocess(
+    (val) => (val == null ? null : val),
+    z.coerce.number().nullable().optional()
+  ),
+  county: z
+    .object({
+      id: z.number(),
+      name: z.string(),
+    })
+    .nullable()
+    .optional(),
   sub_county: z.string().nullable().optional(),
   ward: z.string().nullable().optional(),
-  interests: z.string().nullable().optional(),
-  bio: z.string().nullable(),
+  interests: z.preprocess((val) => {
+    if (typeof val === "string") {
+      try {
+        return JSON.parse(val)
+      } catch (e) {
+        return []
+      }
+    }
+    return val
+  }, z.array(z.string()).nullable().optional()),
+  bio: z.string().nullable().optional(),
   is_staff: z.boolean().optional(),
-  plan_id: z.number().nullable().optional(),
-  plan_type: z.string().nullable().optional(),
-  plan_expires_at: z.string().nullable().optional(),
   occupation: z.string().nullable().optional(),
   emergency_contact_name: z.string().nullable().optional(),
   emergency_contact_phone: z.string().nullable().optional(),
   terms_accepted: z.boolean().optional(),
   marketing_consent: z.boolean().optional(),
-  created_at: z.string(),
-  updated_at: z.string(),
-  deleted_at: z.string().nullable().optional(),
+  public_profile_enabled: z.boolean().optional(),
+  public_bio: z.string().nullable().optional(),
+  show_email: z.boolean().optional(),
+  show_location: z.boolean().optional(),
+  show_join_date: z.boolean().optional(),
+  show_post_count: z.boolean().optional(),
+  show_interests: z.boolean().optional(),
+  show_occupation: z.boolean().optional(),
 })
 
 export const AdminUserSchema = z.object({
-  id: z.number(),
+  id: z.coerce.number(),
   name: z.string().nullable().optional(),
   username: z.string(),
   email: z.string(),
-  email_verified_at: z.string().nullable(),
-  created_at: z.string(),
-  updated_at: z.string(),
-  deleted_at: z.string().nullable(),
-  active_subscription_id: z.number().nullable().optional(),
-  plan_id: z.number().nullable().optional(),
-  subscription_status: z.string().nullable().optional(),
-  subscription_expires_at: z.string().nullable().optional(),
-  last_payment_date: z.string().nullable().optional(),
-  subscription_activated_at: z.string().nullable().optional(),
+  email_verified_at: z.string().nullable().optional(),
+  created_at: z.string().optional(),
+  updated_at: z.string().optional(),
+  deleted_at: z.string().nullable().optional(),
   profile_picture_url: z.string().nullable().optional(),
-  roles: z.array(AdminRoleSchema),
+  roles: z.array(AdminRoleSchema).optional().default([]),
   member_profile: AdminMemberProfileSchema.nullable().optional(),
+  subscriptions: z.array(z.any()).optional(),
+  donations: z.array(z.any()).optional(),
+  event_orders: z
+    .array(
+      z.object({
+        id: z.number(),
+        event: z
+          .object({ id: z.number(), title: z.string() })
+          .nullable()
+          .optional(),
+        quantity: z.number(),
+        total_amount: z.coerce.number(),
+        currency: z.string(),
+        status: z.string(),
+        reference: z.string(),
+        checked_in_at: z.string().nullable().optional(),
+        created_at: z.string().optional(),
+      })
+    )
+    .optional(),
+  lab_bookings: z.array(z.any()).optional(),
+  forum_threads: z
+    .array(
+      z.object({
+        id: z.number(),
+        title: z.string(),
+        created_at: z.string().optional(),
+      })
+    )
+    .optional(),
+  forum_posts: z
+    .array(
+      z.object({
+        id: z.number(),
+        thread_title: z.string().nullable().optional(),
+        created_at: z.string().optional(),
+      })
+    )
+    .optional(),
+  ui_permissions: z
+    .object({
+      can_access_admin: z.boolean().optional(),
+    })
+    .optional(),
 })
 
 export const AdminRetentionSettingSchema = z.object({
@@ -101,9 +159,16 @@ export const AdminRenewalJobSchema = z.object({
   id: z.number(),
   subscription_id: z.number(),
   user_id: z.number(),
-  user: z.object({ id: z.number(), name: z.string(), email: z.string() }).optional(),
+  user: z
+    .object({ id: z.number(), name: z.string(), email: z.string() })
+    .optional(),
   plan_name: z.string().optional(),
-  status: z.union([z.literal("pending"), z.literal("processing"), z.literal("completed"), z.literal("failed")]),
+  status: z.union([
+    z.literal("pending"),
+    z.literal("processing"),
+    z.literal("completed"),
+    z.literal("failed"),
+  ]),
   attempts: z.number(),
   last_attempt_at: z.string().nullable(),
   next_attempt_at: z.string().nullable(),
@@ -263,14 +328,14 @@ export const AdminPlanSchema = z.object({
 export const PaginatedSchema = <T extends z.ZodTypeAny>(itemSchema: T) =>
   z.object({
     data: z.array(itemSchema),
-    // Laravel direct pagination fields
+    // Laravel direct pagination fields (when at top level)
     current_page: z.number().optional(),
     from: z.number().nullable().optional(),
     last_page: z.number().optional(),
     per_page: z.number().optional(),
     to: z.number().nullable().optional(),
     total: z.number().optional(),
-    // Optional meta wrapper
+    // Optional meta wrapper (Laravel API Resources style)
     meta: z
       .object({
         current_page: z.number(),
@@ -281,6 +346,17 @@ export const PaginatedSchema = <T extends z.ZodTypeAny>(itemSchema: T) =>
         total: z.number(),
       })
       .optional(),
+    // Custom pagination wrapper (used by some controllers)
+    pagination: z
+      .object({
+        current_page: z.number().optional(),
+        last_page: z.number().optional(),
+        per_page: z.number().optional(),
+        total: z.number().optional(),
+      })
+      .optional(),
+    // Success flag (some endpoints include this)
+    success: z.boolean().optional(),
   })
 
 export type AdminUser = z.infer<typeof AdminUserSchema>

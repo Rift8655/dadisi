@@ -1,73 +1,72 @@
 /**
  * Token Encryption Utilities
- * 
+ *
  * AES-GCM encryption for localStorage tokens to mitigate XSS token theft.
  * Uses a derived key from device fingerprint + app secret.
  */
 
-const ALGORITHM = 'AES-GCM';
-const SALT = 'dadisi-token-salt-v1';
-const ITERATIONS = 100000;
+const ALGORITHM = "AES-GCM"
+const SALT = "dadisi-token-salt-v1"
+const ITERATIONS = 100000
 
 /**
  * Generate a device fingerprint for key derivation.
  * This isn't perfect but raises the bar for token theft.
  */
 function getDeviceFingerprint(): string {
-  if (typeof window === 'undefined') {
-    return 'server-side-default';
+  if (typeof window === "undefined") {
+    return "server-side-default"
   }
-  
+
   const components = [
     screen.width,
     screen.height,
     screen.colorDepth,
     Intl.DateTimeFormat().resolvedOptions().timeZone,
     navigator.language,
-    navigator.hardwareConcurrency || 'unknown',
-  ];
-  
-  return components.join('|');
+  ]
+
+  return components.join("|")
 }
 
 /**
  * Derive an encryption key from the device fingerprint.
  * Cached in memory for performance.
  */
-let cachedKey: CryptoKey | null = null;
+let cachedKey: CryptoKey | null = null
 
 async function getEncryptionKey(): Promise<CryptoKey> {
   if (cachedKey) {
-    return cachedKey;
+    return cachedKey
   }
-  
-  const fingerprint = getDeviceFingerprint();
-  const encoder = new TextEncoder();
-  
+
+  const fingerprint = getDeviceFingerprint()
+  const encoder = new TextEncoder()
+
   // Import fingerprint as key material
   const keyMaterial = await crypto.subtle.importKey(
-    'raw',
+    "raw",
     encoder.encode(fingerprint),
-    'PBKDF2',
+    "PBKDF2",
     false,
-    ['deriveKey']
-  );
-  
+    ["deriveKey"]
+  )
+
   // Derive AES-GCM key using PBKDF2
   cachedKey = await crypto.subtle.deriveKey(
     {
-      name: 'PBKDF2',
+      name: "PBKDF2",
       salt: encoder.encode(SALT),
       iterations: ITERATIONS,
-      hash: 'SHA-256',
+      hash: "SHA-256",
     },
     keyMaterial,
     { name: ALGORITHM, length: 256 },
     false,
-    ['encrypt', 'decrypt']
-  );
-  
-  return cachedKey;
+    ["encrypt", "decrypt"]
+  )
+
+  return cachedKey
 }
 
 /**
@@ -75,70 +74,78 @@ async function getEncryptionKey(): Promise<CryptoKey> {
  * Returns base64-encoded ciphertext with IV prepended.
  */
 export async function encryptToken(token: string): Promise<string> {
-  if (!token) return '';
-  
+  if (!token) return ""
+
   try {
-    const key = await getEncryptionKey();
-    const encoder = new TextEncoder();
-    
+    const key = await getEncryptionKey()
+    const encoder = new TextEncoder()
+
     // Generate random IV for each encryption
-    const iv = crypto.getRandomValues(new Uint8Array(12));
-    
+    const iv = crypto.getRandomValues(new Uint8Array(12))
+
     // Encrypt the token
     const encrypted = await crypto.subtle.encrypt(
       { name: ALGORITHM, iv },
       key,
       encoder.encode(token)
-    );
-    
+    )
+
     // Combine IV + encrypted data
-    const combined = new Uint8Array(iv.length + encrypted.byteLength);
-    combined.set(iv);
-    combined.set(new Uint8Array(encrypted), iv.length);
-    
+    const combined = new Uint8Array(iv.length + encrypted.byteLength)
+    combined.set(iv)
+    combined.set(new Uint8Array(encrypted), iv.length)
+
     // Encode as base64 (convert Uint8Array to regular array to avoid spread issues)
-    return btoa(String.fromCharCode.apply(null, Array.from(combined)));
+    return btoa(String.fromCharCode.apply(null, Array.from(combined)))
   } catch (error) {
-    console.error('Token encryption failed:', error);
+    console.error("Token encryption failed:", error)
     // Fallback: return original token (less secure but functional)
-    return token;
+    return token
   }
 }
 
 /**
  * Decrypt a token string.
  * Expects base64-encoded ciphertext with IV prepended.
+ * Returns the original string if it doesn't appear to be encrypted (legacy support).
  */
-export async function decryptToken(encrypted: string): Promise<string> {
-  if (!encrypted) return '';
-  
+export async function decryptToken(encrypted: string): Promise<string | null> {
+  if (!encrypted) return ""
+
+  // Check if the token appears to be encrypted (base64 format)
+  // If not, it might be a legacy unencrypted token - return as-is
+  if (!isEncryptedToken(encrypted)) {
+    console.log("[Crypto] Token appears unencrypted, returning as-is")
+    return encrypted
+  }
+
   try {
-    const key = await getEncryptionKey();
-    
+    const key = await getEncryptionKey()
+
     // Decode from base64
-    const binaryString = atob(encrypted);
-    const combined = new Uint8Array(binaryString.length);
+    const binaryString = atob(encrypted)
+    const combined = new Uint8Array(binaryString.length)
     for (let i = 0; i < binaryString.length; i++) {
-      combined[i] = binaryString.charCodeAt(i);
+      combined[i] = binaryString.charCodeAt(i)
     }
-    
+
     // Extract IV and encrypted data
-    const iv = combined.slice(0, 12);
-    const data = combined.slice(12);
-    
+    const iv = combined.slice(0, 12)
+    const data = combined.slice(12)
+
     // Decrypt
     const decrypted = await crypto.subtle.decrypt(
       { name: ALGORITHM, iv },
       key,
       data
-    );
-    
-    return new TextDecoder().decode(decrypted);
+    )
+
+    return new TextDecoder().decode(decrypted)
   } catch (error) {
-    console.error('Token decryption failed:', error);
-    // If decryption fails, it might be an unencrypted legacy token
-    // Return as-is to maintain backward compatibility
-    return encrypted;
+    console.error("Token decryption failed:", error)
+    // If decryption fails (e.g. key mismatch across tabs), return null
+    // This allows the store to handle the failure cleanly (e.g. by logging out)
+    return null
   }
 }
 
@@ -146,14 +153,14 @@ export async function decryptToken(encrypted: string): Promise<string> {
  * Check if a string appears to be encrypted (base64 with correct structure).
  */
 export function isEncryptedToken(value: string): boolean {
-  if (!value) return false;
-  
+  if (!value) return false
+
   try {
-    const decoded = atob(value);
+    const decoded = atob(value)
     // Encrypted tokens should be at least IV (12 bytes) + some ciphertext
-    return decoded.length > 20;
+    return decoded.length > 20
   } catch {
-    return false;
+    return false
   }
 }
 
@@ -161,5 +168,5 @@ export function isEncryptedToken(value: string): boolean {
  * Clear the cached encryption key (call on logout).
  */
 export function clearEncryptionCache(): void {
-  cachedKey = null;
+  cachedKey = null
 }

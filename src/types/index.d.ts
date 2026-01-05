@@ -105,7 +105,14 @@ export interface Subscription {
   user_id: number
   plan_id: number
   plan: Plan
-  status: "active" | "canceled" | "cancelled" | "expired" | "past_due" | "pending" | "payment_pending"
+  status:
+    | "active"
+    | "canceled"
+    | "cancelled"
+    | "expired"
+    | "past_due"
+    | "pending"
+    | "payment_pending"
   starts_at: string
   ends_at: string | null
   canceled_at: string | null
@@ -214,7 +221,13 @@ export interface Event {
   image_path: string | null
   price: number
   currency: string
-  status: "draft" | "published" | "suspended" | "pending_approval" | "rejected" | "cancelled"
+  status:
+    | "draft"
+    | "published"
+    | "suspended"
+    | "pending_approval"
+    | "rejected"
+    | "cancelled"
 
   featured: boolean
   featured_until: string | null
@@ -274,15 +287,23 @@ export interface Donation {
 
 export interface Media {
   id: number
-  model_type: string
-  model_id: number
-  collection_name: string
-  name: string
-  file_name: string
-  mime_type: string
+  file_name?: string
+  file_path?: string
+  type?: string
+  mime_type?: string
   size: number
-  original_url: string
-  preview_url: string
+  visibility?: "public" | "private" | "shared"
+  share_token?: string | null
+  allow_download?: boolean
+  is_public?: boolean
+  url: string
+  original_url?: string
+  attached_to?: string | null
+  attached_to_id?: number | null
+  owner?: {
+    id: number
+    name?: string
+  }
   created_at: string
   updated_at: string
 }

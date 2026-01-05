@@ -379,7 +379,9 @@ export default function GroupDetailPage({ params }: GroupDetailPageProps) {
                         </p>
                         <p className="text-xs text-muted-foreground">
                           Joined{" "}
-                          {format(new Date(member.joined_at), "MMM d, yyyy")}
+                          {member.joined_at
+                            ? format(new Date(member.joined_at), "MMM d, yyyy")
+                            : "recently"}
                         </p>
                       </div>
                     </div>

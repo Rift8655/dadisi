@@ -46,20 +46,27 @@ export const PlanSchema = z.object({
   price: z.number().optional(),
   active: z.boolean().optional(),
   is_active: z.boolean().optional(),
+  requires_student_approval: z.boolean().optional(),
   description: z.string().optional(),
   interval: z.string().optional(),
   // Add flexible fields for admin view compatibility if needed
   features: z.array(z.any()).optional(),
   system_features: z.array(PlanSystemFeatureSchema).optional(),
   promotions: z.any().optional(),
-  monthly_promotion: z.object({
-    discount_percent: z.number(),
-    expires_at: z.string().nullable().optional(),
-  }).nullable().optional(),
-  yearly_promotion: z.object({
-    discount_percent: z.number(),
-    expires_at: z.string().nullable().optional(),
-  }).nullable().optional(),
+  monthly_promotion: z
+    .object({
+      discount_percent: z.number(),
+      expires_at: z.string().nullable().optional(),
+    })
+    .nullable()
+    .optional(),
+  yearly_promotion: z
+    .object({
+      discount_percent: z.number(),
+      expires_at: z.string().nullable().optional(),
+    })
+    .nullable()
+    .optional(),
   pricing: z
     .object({
       kes: z
@@ -105,7 +112,10 @@ export type PlanFeature = z.infer<typeof PlanFeatureSchema>
 
 export const AdminPlanFormSchema = z.object({
   name: z.string().min(1, "Name is required"),
-  description: z.string().max(500, "Description must be 500 characters or less").optional(),
+  description: z
+    .string()
+    .max(500, "Description must be 500 characters or less")
+    .optional(),
   monthly_price_kes: z.coerce.number().min(0, "Price must be positive"),
   currency: z.string().default("KES"),
   // Promotions
@@ -113,9 +123,12 @@ export const AdminPlanFormSchema = z.object({
   yearly_promotion: PlanPromotionSchema.nullable().optional(),
   // Features as array of objects with name, limit, and description (legacy)
   features: z.array(PlanFeatureSchema).optional(),
+  // Display Features - simple string array for UI display only
+  display_features: z.array(z.string()).optional().default([]),
   // System Features (new built-in features)
   system_features: z.array(SystemFeatureInputSchema).optional(),
   is_active: z.boolean().default(true),
+  requires_student_approval: z.boolean().default(false),
 })
 
 export type AdminPlanFormValues = z.infer<typeof AdminPlanFormSchema>
@@ -126,4 +139,3 @@ export const CreateSubscriptionSchema = z.object({
 })
 
 export type CreateSubscriptionPayload = z.infer<typeof CreateSubscriptionSchema>
-

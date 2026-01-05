@@ -3,15 +3,17 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/store/auth"
-import { useMemberProfileQuery, useCountiesQuery, useUpdateProfileMutation } from "@/hooks/useMemberProfileQuery"
 import { AlertCircle, Check, Edit2, Loader2, Save, X } from "lucide-react"
 
 import type { County, MemberProfile } from "@/types/index"
 // memberProfileApi calls moved into `useMemberProfile` store
 import { showError, showSuccess } from "@/lib/sweetalert"
-
 import { mapZodErrorToFieldErrors } from "@/lib/zodUtils"
-
+import {
+  useCountiesQuery,
+  useMemberProfileQuery,
+  useUpdateProfileMutation,
+} from "@/hooks/useMemberProfileQuery"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -25,9 +27,9 @@ import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
 import { ChangePasswordDialog } from "@/components/change-password-dialog"
-import { DashboardShell } from "@/components/dashboard-shell"
-import { VerifyEmailButton } from "@/components/verify-email-button"
 import { ProfilePictureUpload } from "@/components/profile/ProfilePictureUpload"
+import { UserDashboardShell } from "@/components/user-dashboard-shell"
+import { VerifyEmailButton } from "@/components/verify-email-button"
 
 type ValidationErrors = Record<string, string>
 
@@ -40,9 +42,12 @@ export default function ProfilePage() {
   // Data: use React Query for server-state
   const updateMutation = useUpdateProfileMutation()
 
-
-  const { data: profile, isLoading: profileLoading, error: profileError, refetch: refetchProfile } =
-    useMemberProfileQuery()
+  const {
+    data: profile,
+    isLoading: profileLoading,
+    error: profileError,
+    refetch: refetchProfile,
+  } = useMemberProfileQuery()
   const { data: counties = [], isLoading: countiesLoading } = useCountiesQuery()
 
   // Editing states
@@ -114,8 +119,10 @@ export default function ProfilePage() {
           fieldName === "emergency_contact_phone"
             ? value
             : editingData.emergency_contact_phone
-        const hasName = typeof currentName === "string" ? currentName.trim() : ""
-        const hasPhone = typeof currentPhone === "string" ? currentPhone.trim() : ""
+        const hasName =
+          typeof currentName === "string" ? currentName.trim() : ""
+        const hasPhone =
+          typeof currentPhone === "string" ? currentPhone.trim() : ""
         if ((hasName || hasPhone) && (!hasName || !hasPhone)) {
           return "Both emergency contact name and phone are required"
         }
@@ -216,12 +223,55 @@ export default function ProfilePage() {
 
     const error = validateField(fieldName, value)
     setErrors((prev) => {
+      const newErrors = { ...prev }
+
       if (error) {
-        return { ...prev, [fieldName]: error }
+        newErrors[fieldName] = error
       } else {
-        const { [fieldName]: _, ...rest } = prev
-        return rest
+        delete newErrors[fieldName]
       }
+
+      // For emergency contact fields, when validating one field we need to
+      // re-validate the other field as well since they have a paired requirement
+      if (
+        fieldName === "emergency_contact_name" ||
+        fieldName === "emergency_contact_phone"
+      ) {
+        const otherField =
+          fieldName === "emergency_contact_name"
+            ? "emergency_contact_phone"
+            : "emergency_contact_name"
+
+        // Get current values including the one just changed
+        const nameValue =
+          fieldName === "emergency_contact_name"
+            ? value
+            : editingData.emergency_contact_name
+        const phoneValue =
+          fieldName === "emergency_contact_phone"
+            ? value
+            : editingData.emergency_contact_phone
+
+        const hasName = typeof nameValue === "string" ? nameValue.trim() : ""
+        const hasPhone = typeof phoneValue === "string" ? phoneValue.trim() : ""
+
+        // If both are filled or both are empty, clear errors on both
+        if ((hasName && hasPhone) || (!hasName && !hasPhone)) {
+          delete newErrors["emergency_contact_name"]
+          delete newErrors["emergency_contact_phone"]
+
+          // But still check phone format if phone has a value
+          if (
+            hasPhone &&
+            !/^[\d+\-() ]{7,}$/.test(hasPhone.replace(/\s/g, ""))
+          ) {
+            newErrors["emergency_contact_phone"] =
+              "Please enter a valid phone number"
+          }
+        }
+      }
+
+      return newErrors
     })
   }
 
@@ -270,7 +320,8 @@ export default function ProfilePage() {
         setErrors((prev) => ({ ...prev, ...fieldErrors }))
         showError("Validation error: please fix the highlighted fields")
       } else {
-        const message = error instanceof Error ? error.message : "Failed to update profile"
+        const message =
+          error instanceof Error ? error.message : "Failed to update profile"
         showError(message)
       }
     } finally {
@@ -293,32 +344,38 @@ export default function ProfilePage() {
 
   if (profileError) {
     return (
-      <DashboardShell title="Profile">
+      <UserDashboardShell title="Profile">
         <Card className="border-red-200 bg-red-50 dark:border-red-900 dark:bg-red-950/30">
-           <CardContent className="py-12 text-center text-red-600">
-             <p>Error loading profile: {profileError.message}</p>
-             <Button variant="outline" className="mt-4" onClick={() => refetchProfile()}>Retry</Button>
-           </CardContent>
+          <CardContent className="py-12 text-center text-red-600">
+            <p>Error loading profile: {profileError.message}</p>
+            <Button
+              variant="outline"
+              className="mt-4"
+              onClick={() => refetchProfile()}
+            >
+              Retry
+            </Button>
+          </CardContent>
         </Card>
-      </DashboardShell>
+      </UserDashboardShell>
     )
   }
 
   if (loading) {
     return (
-      <DashboardShell title="Profile">
+      <UserDashboardShell title="Profile">
         <Card>
           <CardContent className="flex items-center justify-center py-12">
             <Loader2 className="mr-2 h-6 w-6 animate-spin" />
             <span>Loading profile...</span>
           </CardContent>
         </Card>
-      </DashboardShell>
+      </UserDashboardShell>
     )
   }
 
   return (
-    <DashboardShell title="Profile">
+    <UserDashboardShell title="Profile">
       <ChangePasswordDialog
         open={changePasswordOpen}
         onOpenChange={setChangePasswordOpen}
@@ -341,10 +398,10 @@ export default function ProfilePage() {
           <CardContent className="space-y-4">
             <div className="grid gap-4 md:grid-cols-2">
               <div>
-                 <p className="text-sm font-medium text-muted-foreground">
-                   Username
-                 </p>
-                 <p className="text-lg font-semibold">{user.username}</p>
+                <p className="text-sm font-medium text-muted-foreground">
+                  Username
+                </p>
+                <p className="text-lg font-semibold">{user.username}</p>
               </div>
               <div>
                 <p className="text-sm font-medium text-muted-foreground">
@@ -479,7 +536,9 @@ export default function ProfilePage() {
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
               <div>
                 <CardTitle>Profile Picture</CardTitle>
-                <CardDescription>Upload or change your profile picture</CardDescription>
+                <CardDescription>
+                  Upload or change your profile picture
+                </CardDescription>
               </div>
             </CardHeader>
             <CardContent>
@@ -502,7 +561,10 @@ export default function ProfilePage() {
                     <Button
                       size="sm"
                       onClick={() => handleSaveSection("personal")}
-                      disabled={Object.keys(errors).length > 0 || updateMutation.isPending}
+                      disabled={
+                        Object.keys(errors).length > 0 ||
+                        updateMutation.isPending
+                      }
                     >
                       <Save className="mr-1 h-4 w-4" />
                       Save
@@ -683,7 +745,10 @@ export default function ProfilePage() {
                     <Button
                       size="sm"
                       onClick={() => handleSaveSection("location")}
-                      disabled={Object.keys(errors).length > 0 || updateMutation.isPending}
+                      disabled={
+                        Object.keys(errors).length > 0 ||
+                        updateMutation.isPending
+                      }
                     >
                       <Save className="mr-1 h-4 w-4" />
                       Save
@@ -830,7 +895,10 @@ export default function ProfilePage() {
                     <Button
                       size="sm"
                       onClick={() => handleSaveSection("profile-details")}
-                      disabled={Object.keys(errors).length > 0 || updateMutation.isPending}
+                      disabled={
+                        Object.keys(errors).length > 0 ||
+                        updateMutation.isPending
+                      }
                     >
                       <Save className="mr-1 h-4 w-4" />
                       Save
@@ -947,7 +1015,10 @@ export default function ProfilePage() {
                     <Button
                       size="sm"
                       onClick={() => handleSaveSection("emergency")}
-                      disabled={Object.keys(errors).length > 0 || updateMutation.isPending}
+                      disabled={
+                        Object.keys(errors).length > 0 ||
+                        updateMutation.isPending
+                      }
                     >
                       <Save className="mr-1 h-4 w-4" />
                       Save
@@ -1214,6 +1285,6 @@ export default function ProfilePage() {
           </CardContent>
         </Card>
       </div>
-    </DashboardShell>
+    </UserDashboardShell>
   )
 }

@@ -1,11 +1,20 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import type { UseFormReturn } from "react-hook-form"
-import { useForm, useFieldArray } from "react-hook-form"
+import {
+  AdminPlanFormSchema,
+  AdminPlanFormValues,
+  PlanFeature,
+  SystemFeatureInput,
+} from "@/schemas/plan"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { Plus, Trash, Loader2, Settings2 } from "lucide-react"
+import { Loader2, Plus, Settings2, Trash } from "lucide-react"
+import type { UseFormReturn } from "react-hook-form"
+import { useFieldArray, useForm } from "react-hook-form"
 
+import { useSystemFeatures } from "@/hooks/useSystemFeatures"
+import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
 import {
   Dialog,
   DialogContent,
@@ -24,13 +33,9 @@ import {
   FormMessage,
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
-import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
 import { Switch } from "@/components/ui/switch"
-import { AdminPlanFormSchema, AdminPlanFormValues, PlanFeature, SystemFeatureInput } from "@/schemas/plan"
-import { useSystemFeatures } from "@/hooks/useSystemFeatures"
+import { Textarea } from "@/components/ui/textarea"
 
 interface PlanFormDialogProps {
   open: boolean
@@ -65,7 +70,8 @@ export function PlanFormDialog({
   })
 
   // Fetch available system features
-  const { data: availableSystemFeatures = [], isLoading: loadingFeatures } = useSystemFeatures(true)
+  const { data: availableSystemFeatures = [], isLoading: loadingFeatures } =
+    useSystemFeatures(true)
 
   // Reset/Populate form when opening
   useEffect(() => {
@@ -73,40 +79,42 @@ export function PlanFormDialog({
       if (initialData) {
         // Transform initialData to form values
         // Features: API returns [{id, name: {en: "Foo"}, limit, ...}], transform to form objects
-        const features: PlanFeature[] = Array.isArray((initialData as any)?.features)
+        const features: PlanFeature[] = Array.isArray(
+          (initialData as any)?.features
+        )
           ? (initialData as any).features.map((f: unknown) => {
-              if (typeof f === 'object' && f !== null) {
+              if (typeof f === "object" && f !== null) {
                 const obj = f as Record<string, unknown>
                 const name = obj.name
                 let nameStr = ""
-                if (typeof name === 'object' && name !== null) {
+                if (typeof name === "object" && name !== null) {
                   const n = name as Record<string, unknown>
-                  nameStr = typeof n.en === 'string' ? n.en : ""
-                } else if (typeof name === 'string') {
+                  nameStr = typeof n.en === "string" ? n.en : ""
+                } else if (typeof name === "string") {
                   nameStr = name
                 }
-                
+
                 // Extract limit - stored as 'value' in backend, but also check 'limit'
                 let limit: number | null = null
-                if (typeof obj.limit === 'number') {
+                if (typeof obj.limit === "number") {
                   limit = obj.limit
-                } else if (typeof obj.value === 'string') {
+                } else if (typeof obj.value === "string") {
                   const parsed = parseInt(obj.value, 10)
                   limit = isNaN(parsed) ? null : parsed
-                } else if (typeof obj.value === 'number') {
+                } else if (typeof obj.value === "number") {
                   limit = obj.value
                 }
-                
+
                 // Extract description
                 let description = ""
                 const desc = obj.description
-                if (typeof desc === 'object' && desc !== null) {
+                if (typeof desc === "object" && desc !== null) {
                   const d = desc as Record<string, unknown>
-                  description = typeof d.en === 'string' ? d.en : ""
-                } else if (typeof desc === 'string') {
+                  description = typeof d.en === "string" ? d.en : ""
+                } else if (typeof desc === "string") {
                   description = desc
                 }
-                
+
                 return { name: nameStr, limit, description }
               }
               return { name: "", limit: null, description: "" }
@@ -114,33 +122,52 @@ export function PlanFormDialog({
           : []
 
         // Handling Price: API might return number or string
-        const price = typeof (initialData as any)?.price === 'number' ? (initialData as any).price : Number((initialData as any)?.price || 0)
-        
+        const price =
+          typeof (initialData as any)?.price === "number"
+            ? (initialData as any).price
+            : Number((initialData as any)?.price || 0)
+
         const nameVal = (() => {
           const n = (initialData as any)?.name
-          if (typeof n === 'object' && n !== null) return String((n as Record<string, unknown>)?.en ?? "")
-          if (typeof n === 'string') return n
+          if (typeof n === "object" && n !== null)
+            return String((n as Record<string, unknown>)?.en ?? "")
+          if (typeof n === "string") return n
           return ""
         })()
 
         // Extract plan description
         let descriptionVal = ""
         const desc = (initialData as any)?.description
-        if (typeof desc === 'object' && desc !== null) {
+        if (typeof desc === "object" && desc !== null) {
           descriptionVal = String((desc as Record<string, unknown>)?.en ?? "")
-        } else if (typeof desc === 'string') {
+        } else if (typeof desc === "string") {
           descriptionVal = desc
         }
 
-        // Extract system_features from initialData
-        const systemFeatures: SystemFeatureInput[] = Array.isArray((initialData as any)?.system_features)
-          ? (initialData as any).system_features.map((sf: any) => ({
-              id: sf.id,
-              value: sf.value || sf.default_value || "0",
-              display_name: sf.display_name || null,
-              display_description: sf.display_description || null,
-            }))
+        // Extract system_features from initialData (backend now provides all features)
+        const systemFeatures: SystemFeatureInput[] = Array.isArray(
+          (initialData as any)?.system_features
+        )
+          ? (initialData as any).system_features
+              .filter((sf: any) => sf.is_set || sf.value !== undefined)
+              .map((sf: any) => ({
+                id: sf.id,
+                value: String(sf.value),
+                display_name: sf.display_name || null,
+                display_description: sf.display_description || null,
+              }))
           : []
+
+        // Extract display_features if present, otherwise fallback to name mapping
+        const displayFeatures = Array.isArray(
+          (initialData as any)?.display_features
+        )
+          ? (initialData as any).display_features
+          : Array.isArray((initialData as any)?.features)
+            ? (initialData as any).features.map((f: any) =>
+                typeof f === "string" ? f : f.name?.en || f.name || "Feature"
+              )
+            : []
 
         form.reset({
           name: nameVal || "",
@@ -150,6 +177,7 @@ export function PlanFormDialog({
           is_active: (initialData as any).is_active ?? true,
           features: features,
           system_features: systemFeatures,
+          display_features: displayFeatures,
           monthly_promotion: (initialData as any).monthly_promotion || null,
           yearly_promotion: (initialData as any).yearly_promotion || null,
         })
@@ -174,7 +202,6 @@ export function PlanFormDialog({
     name: "features" as const,
   })
 
-
   const addFeature = () => {
     append({ name: "", limit: null, description: "" })
   }
@@ -185,13 +212,13 @@ export function PlanFormDialog({
 
   const handleSubmit = async (values: AdminPlanFormValues) => {
     // Filter out features with empty names
-    values.features = values.features?.filter(f => f.name.trim() !== "")
+    values.features = values.features?.filter((f) => f.name.trim() !== "")
     await onSubmit(values)
   }
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{isEditing ? "Edit Plan" : "Create Plan"}</DialogTitle>
           <DialogDescription>
@@ -202,7 +229,10 @@ export function PlanFormDialog({
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+          <form
+            onSubmit={form.handleSubmit(handleSubmit)}
+            className="space-y-6"
+          >
             <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
@@ -232,7 +262,7 @@ export function PlanFormDialog({
                     </FormItem>
                   )}
                 />
-                 <FormField
+                <FormField
                   control={form.control}
                   name="currency"
                   render={({ field }) => (
@@ -263,7 +293,8 @@ export function PlanFormDialog({
                     />
                   </FormControl>
                   <FormDescription>
-                    A brief overview that appears on the membership page (max 500 characters)
+                    A brief overview that appears on the membership page (max
+                    500 characters)
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
@@ -295,22 +326,34 @@ export function PlanFormDialog({
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="text-sm font-medium">Features</h3>
-                  <p className="text-xs text-muted-foreground">Define plan features and limits (-1 = unlimited)</p>
+                  <p className="text-xs text-muted-foreground">
+                    Define plan features and limits (-1 = unlimited)
+                  </p>
                 </div>
-                <Button type="button" variant="outline" size="sm" onClick={addFeature}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={addFeature}
+                >
                   <Plus className="mr-2 h-4 w-4" /> Add Feature
                 </Button>
               </div>
               <div className="space-y-3">
                 {fields.map((field, index) => (
-                  <div key={field.id} className="rounded-md border p-3 space-y-2">
-                    <div className="flex gap-2 items-start">
+                  <div
+                    key={field.id}
+                    className="space-y-2 rounded-md border p-3"
+                  >
+                    <div className="flex items-start gap-2">
                       <FormField
                         control={form.control}
                         name={`features.${index}.name`}
                         render={({ field }) => (
                           <FormItem className="flex-1">
-                            <FormLabel className="text-xs">Feature Name</FormLabel>
+                            <FormLabel className="text-xs">
+                              Feature Name
+                            </FormLabel>
                             <FormControl>
                               <Input placeholder="e.g. Blog Posts" {...field} />
                             </FormControl>
@@ -325,14 +368,16 @@ export function PlanFormDialog({
                           <FormItem className="w-24">
                             <FormLabel className="text-xs">Limit</FormLabel>
                             <FormControl>
-                              <Input 
-                                type="number" 
-                                placeholder="-1" 
-                                {...field} 
-                                value={field.value ?? ""} 
+                              <Input
+                                type="number"
+                                placeholder="-1"
+                                {...field}
+                                value={field.value ?? ""}
                                 onChange={(e) => {
                                   const val = e.target.value
-                                  field.onChange(val === "" ? null : parseInt(val, 10))
+                                  field.onChange(
+                                    val === "" ? null : parseInt(val, 10)
+                                  )
                                 }}
                               />
                             </FormControl>
@@ -355,9 +400,14 @@ export function PlanFormDialog({
                       name={`features.${index}.description`}
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-xs">Description (optional)</FormLabel>
+                          <FormLabel className="text-xs">
+                            Description (optional)
+                          </FormLabel>
                           <FormControl>
-                            <Input placeholder="Brief feature description" {...field} />
+                            <Input
+                              placeholder="Brief feature description"
+                              {...field}
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -366,19 +416,22 @@ export function PlanFormDialog({
                   </div>
                 ))}
                 {fields.length === 0 && (
-                  <p className="text-sm text-muted-foreground italic">No features added yet.</p>
+                  <p className="text-sm italic text-muted-foreground">
+                    No features added yet.
+                  </p>
                 )}
               </div>
             </div>
 
             {/* System Features Section */}
             <div className="border-t pt-4">
-              <div className="flex items-center gap-2 mb-4">
+              <div className="mb-4 flex items-center gap-2">
                 <Settings2 className="h-4 w-4" />
                 <h3 className="text-sm font-medium">System Features</h3>
               </div>
-              <p className="text-xs text-muted-foreground mb-4">
-                Enable built-in features for this plan. These control subscriber access to platform capabilities.
+              <p className="mb-4 text-xs text-muted-foreground">
+                Enable built-in features for this plan. These control subscriber
+                access to platform capabilities.
               </p>
               {loadingFeatures ? (
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -389,25 +442,39 @@ export function PlanFormDialog({
                 <div className="space-y-4">
                   {availableSystemFeatures.map((feature) => {
                     const currentFeatures = form.watch("system_features") || []
-                    const existingIndex = currentFeatures.findIndex((sf) => sf.id === feature.id)
+                    const existingIndex = currentFeatures.findIndex(
+                      (sf) => sf.id === feature.id
+                    )
                     const isEnabled = existingIndex >= 0
-                    const currentValue = isEnabled ? currentFeatures[existingIndex]?.value : feature.default_value
+                    const currentValue = isEnabled
+                      ? currentFeatures[existingIndex]?.value
+                      : feature.default_value
 
                     const toggleFeature = (enabled: boolean) => {
                       const current = form.getValues("system_features") || []
                       if (enabled) {
                         form.setValue("system_features", [
                           ...current,
-                          { id: feature.id, value: feature.default_value, display_name: null, display_description: null }
+                          {
+                            id: feature.id,
+                            value: feature.default_value,
+                            display_name: null,
+                            display_description: null,
+                          },
                         ])
                       } else {
-                        form.setValue("system_features", current.filter((sf) => sf.id !== feature.id))
+                        form.setValue(
+                          "system_features",
+                          current.filter((sf) => sf.id !== feature.id)
+                        )
                       }
                     }
 
                     const updateValue = (value: string) => {
                       const current = form.getValues("system_features") || []
-                      const idx = current.findIndex((sf) => sf.id === feature.id)
+                      const idx = current.findIndex(
+                        (sf) => sf.id === feature.id
+                      )
                       if (idx >= 0) {
                         const updated = [...current]
                         updated[idx] = { ...updated[idx], value }
@@ -416,7 +483,10 @@ export function PlanFormDialog({
                     }
 
                     return (
-                      <div key={feature.id} className="rounded-md border p-3 space-y-2">
+                      <div
+                        key={feature.id}
+                        className="space-y-2 rounded-md border p-3"
+                      >
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-3">
                             <Switch
@@ -424,9 +494,13 @@ export function PlanFormDialog({
                               onCheckedChange={toggleFeature}
                             />
                             <div>
-                              <Label className="font-medium">{feature.name}</Label>
+                              <Label className="font-medium">
+                                {feature.name}
+                              </Label>
                               {feature.description && (
-                                <p className="text-xs text-muted-foreground">{feature.description}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  {feature.description}
+                                </p>
                               )}
                             </div>
                           </div>
@@ -436,15 +510,19 @@ export function PlanFormDialog({
                               className="w-24"
                               value={currentValue}
                               onChange={(e) => updateValue(e.target.value)}
-                              placeholder={feature.value_type === "number" ? "-1" : ""}
+                              placeholder={
+                                feature.value_type === "number" ? "-1" : ""
+                              }
                             />
                           )}
                           {isEnabled && feature.value_type === "boolean" && (
-                            <span className="text-xs text-green-600 font-medium">Enabled</span>
+                            <span className="text-xs font-medium text-green-600">
+                              Enabled
+                            </span>
                           )}
                         </div>
                         {isEnabled && feature.value_type === "number" && (
-                          <p className="text-xs text-muted-foreground pl-11">
+                          <p className="pl-11 text-xs text-muted-foreground">
                             Set to -1 for unlimited
                           </p>
                         )}
@@ -452,22 +530,31 @@ export function PlanFormDialog({
                     )
                   })}
                   {availableSystemFeatures.length === 0 && (
-                    <p className="text-sm text-muted-foreground italic">No system features available.</p>
+                    <p className="text-sm italic text-muted-foreground">
+                      No system features available.
+                    </p>
                   )}
                 </div>
               )}
             </div>
 
             <div className="border-t pt-4">
-              <h3 className="mb-4 text-sm font-medium">Promotions (Optional)</h3>
+              <h3 className="mb-4 text-sm font-medium">
+                Promotions (Optional)
+              </h3>
               <div className="grid grid-cols-2 gap-4">
-                 <MonthlyPromotionSection form={form} />
-                 <YearlyPromotionSection form={form} />
+                <MonthlyPromotionSection form={form} />
+                <YearlyPromotionSection form={form} />
               </div>
             </div>
 
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={onClose} disabled={isLoading}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={onClose}
+                disabled={isLoading}
+              >
                 Cancel
               </Button>
               <Button type="submit" disabled={isLoading}>
@@ -482,108 +569,152 @@ export function PlanFormDialog({
   )
 }
 
-function MonthlyPromotionSection({ form }: { form: UseFormReturn<AdminPlanFormValues> }) {
+function MonthlyPromotionSection({
+  form,
+}: {
+  form: UseFormReturn<AdminPlanFormValues>
+}) {
   const enabled = !!form.watch("monthly_promotion")
 
   const toggle = (checked: boolean) => {
     if (checked) {
-      form.setValue("monthly_promotion", { discount_percent: 0, expires_at: null })
+      form.setValue("monthly_promotion", {
+        discount_percent: 0,
+        expires_at: null,
+      })
     } else {
       form.setValue("monthly_promotion", null)
     }
   }
 
   return (
-    <div className="rounded-md border p-4 space-y-4">
-       <div className="flex items-center space-x-2">
-          <Checkbox checked={enabled} onCheckedChange={toggle} id="toggle-monthly" />
-          <Label htmlFor="toggle-monthly">Monthly Discount</Label>
-       </div>
-       
-       {enabled && (
-         <div className="space-y-3 pl-6">
-            <FormField
-              control={form.control}
-              name="monthly_promotion.discount_percent"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-xs">Discount %</FormLabel>
-                  <FormControl>
-                    <Input type="number" min="0" max="100" {...field} value={field.value ?? 0} onChange={e => field.onChange(Number(e.target.value))} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="monthly_promotion.expires_at"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-xs">Expires At (ISO Date)</FormLabel>
-                  <FormControl>
-                    <Input type="datetime-local" {...field} value={field.value ? String(field.value).slice(0, 16) : ""} onChange={e => field.onChange(e.target.value || null)} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-         </div>
-       )}
+    <div className="space-y-4 rounded-md border p-4">
+      <div className="flex items-center space-x-2">
+        <Checkbox
+          checked={enabled}
+          onCheckedChange={toggle}
+          id="toggle-monthly"
+        />
+        <Label htmlFor="toggle-monthly">Monthly Discount</Label>
+      </div>
+
+      {enabled && (
+        <div className="space-y-3 pl-6">
+          <FormField
+            control={form.control}
+            name="monthly_promotion.discount_percent"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-xs">Discount %</FormLabel>
+                <FormControl>
+                  <Input
+                    type="number"
+                    min="0"
+                    max="100"
+                    {...field}
+                    value={field.value ?? 0}
+                    onChange={(e) => field.onChange(Number(e.target.value))}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="monthly_promotion.expires_at"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-xs">Expires At (ISO Date)</FormLabel>
+                <FormControl>
+                  <Input
+                    type="datetime-local"
+                    {...field}
+                    value={field.value ? String(field.value).slice(0, 16) : ""}
+                    onChange={(e) => field.onChange(e.target.value || null)}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+      )}
     </div>
   )
 }
 
-function YearlyPromotionSection({ form }: { form: UseFormReturn<AdminPlanFormValues> }) {
+function YearlyPromotionSection({
+  form,
+}: {
+  form: UseFormReturn<AdminPlanFormValues>
+}) {
   const enabled = !!form.watch("yearly_promotion")
 
   const toggle = (checked: boolean) => {
     if (checked) {
-      form.setValue("yearly_promotion", { discount_percent: 0, expires_at: null })
+      form.setValue("yearly_promotion", {
+        discount_percent: 0,
+        expires_at: null,
+      })
     } else {
       form.setValue("yearly_promotion", null)
     }
   }
 
   return (
-    <div className="rounded-md border p-4 space-y-4">
-       <div className="flex items-center space-x-2">
-          <Checkbox checked={enabled} onCheckedChange={toggle} id="toggle-yearly" />
-          <Label htmlFor="toggle-yearly">Yearly Discount</Label>
-       </div>
-       
-       {enabled && (
-         <div className="space-y-3 pl-6">
-            <FormField
-              control={form.control}
-              name="yearly_promotion.discount_percent"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-xs">Discount %</FormLabel>
-                  <FormControl>
-                    <Input type="number" min="0" max="100" {...field} value={field.value ?? 0} onChange={e => field.onChange(Number(e.target.value))} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="yearly_promotion.expires_at"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-xs">Expires At (ISO Date)</FormLabel>
-                  <FormControl>
-                    <Input type="datetime-local" {...field} value={field.value ? String(field.value).slice(0, 16) : ""} onChange={e => field.onChange(e.target.value || null)} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-         </div>
-       )}
+    <div className="space-y-4 rounded-md border p-4">
+      <div className="flex items-center space-x-2">
+        <Checkbox
+          checked={enabled}
+          onCheckedChange={toggle}
+          id="toggle-yearly"
+        />
+        <Label htmlFor="toggle-yearly">Yearly Discount</Label>
+      </div>
+
+      {enabled && (
+        <div className="space-y-3 pl-6">
+          <FormField
+            control={form.control}
+            name="yearly_promotion.discount_percent"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-xs">Discount %</FormLabel>
+                <FormControl>
+                  <Input
+                    type="number"
+                    min="0"
+                    max="100"
+                    {...field}
+                    value={field.value ?? 0}
+                    onChange={(e) => field.onChange(Number(e.target.value))}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="yearly_promotion.expires_at"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-xs">Expires At (ISO Date)</FormLabel>
+                <FormControl>
+                  <Input
+                    type="datetime-local"
+                    {...field}
+                    value={field.value ? String(field.value).slice(0, 16) : ""}
+                    onChange={(e) => field.onChange(e.target.value || null)}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+      )}
     </div>
   )
 }
-
-
