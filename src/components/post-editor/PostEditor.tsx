@@ -20,6 +20,7 @@ import { Icons } from "@/components/icons"
 
 import { DevEditor } from "./DevEditor"
 import { FeaturedImageUpload } from "./FeaturedImageUpload"
+import { MediaGallerySelector } from "./MediaGallerySelector"
 import { TaxonomySelector } from "./TaxonomySelector"
 
 // Check if we should use dev editor (for local development without TinyMCE domain registration)
@@ -40,6 +41,7 @@ interface PostFormData {
   excerpt: string
   body: string
   hero_image_path: string
+  media_ids: number[]
   meta_title: string
   meta_description: string
   county_id: number | null
@@ -62,6 +64,7 @@ const defaultFormData: PostFormData = {
   excerpt: "",
   body: "",
   hero_image_path: "",
+  media_ids: [],
   meta_title: "",
   meta_description: "",
   county_id: null,
@@ -108,6 +111,7 @@ export function PostEditor({
         return authorBlogApi.categories.list()
       }
     },
+    placeholderData: (previousData) => previousData,
   })
 
   // Fetch tags
@@ -120,6 +124,7 @@ export function PostEditor({
         return authorBlogApi.tags.list()
       }
     },
+    placeholderData: (previousData) => previousData,
   })
 
   const categories = Array.isArray(categoriesData)
@@ -140,6 +145,7 @@ export function PostEditor({
         excerpt: postData.excerpt || "",
         body: postData.body || "",
         hero_image_path: postData.hero_image_path || "",
+        media_ids: postData.media?.map((m: any) => m.id) || [],
         meta_title: postData.meta_title || "",
         meta_description: postData.meta_description || "",
         county_id: postData.county_id || null,
@@ -605,6 +611,13 @@ export function PostEditor({
             onChange={(path) =>
               setFormData({ ...formData, hero_image_path: path })
             }
+          />
+
+          {/* Gallery Images */}
+          <MediaGallerySelector
+            selectedIds={formData.media_ids}
+            onChange={(ids) => setFormData({ ...formData, media_ids: ids })}
+            excludeId={undefined} // We'll extract the featured image ID if needed
           />
 
           {/* Categories */}
