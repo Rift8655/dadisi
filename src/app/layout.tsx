@@ -2,7 +2,6 @@ import "@/styles/globals.css"
 
 import type { Metadata, Viewport } from "next"
 import { Inter } from "next/font/google"
-import { SessionRefresher } from "@/providers/session-refresher"
 
 import { siteConfig } from "@/config/site"
 import { cn } from "@/lib/utils"
@@ -88,7 +87,6 @@ export default function RootLayout({ children }: RootLayoutProps) {
           disableTransitionOnChange
         >
           <QueryProvider>
-            <SessionRefresher />
             <Navbar />
             <main className="min-h-[calc(100vh-7rem)]">{children}</main>
             <Footer />

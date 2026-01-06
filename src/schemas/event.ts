@@ -19,6 +19,16 @@ export const EventTagSchema = z.object({
   slug: z.string(),
 })
 
+export const EventMediaSchema = z.object({
+  id: z.number(),
+  file_name: z.string().optional(),
+  file_path: z.string(),
+  url: z.string().optional(),
+  original_url: z.string().optional(),
+  mime_type: z.string().optional(),
+  size: z.number().optional(),
+})
+
 export const TicketSchema = z.object({
   id: z.number(),
   event_id: z.number(),
@@ -61,7 +71,12 @@ export const EventSchema = z.object({
   capacity: z.number().nullable(),
   waitlist_enabled: z.boolean(),
   waitlist_capacity: z.number().nullable(),
+  image_path: z.string().nullable().optional(),
   image_url: z.string().nullable(),
+  featured_media_id: z.number().nullable().optional(),
+  gallery_media_ids: z.array(z.number()).optional(),
+  media: z.array(EventMediaSchema).optional(),
+  featured_media: EventMediaSchema.nullable().optional(),
   price: z.number(),
   currency: z.string(),
   status: z.enum(["draft", "published", "suspended"]),
@@ -73,6 +88,8 @@ export const EventSchema = z.object({
   tickets: z.array(TicketSchema).optional(),
   speakers: z.array(SpeakerSchema).optional(),
   tags: z.array(EventTagSchema).optional(),
+  creator: z.object({ id: z.number(), name: z.string() }).nullable().optional(),
+  registrations_count: z.number().optional(),
   is_attending: z.boolean().optional(),
   created_at: z.string(),
   updated_at: z.string(),

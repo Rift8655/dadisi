@@ -1,5 +1,7 @@
 import { z } from "zod"
 
+import { MediaSchema } from "./common"
+
 export interface Category {
   id: number
   name: string
@@ -37,7 +39,10 @@ export interface Post {
   status?: "draft" | "published" | "archived"
   is_featured?: boolean
   views_count?: number
+  likes_count?: number
+  dislikes_count?: number
   comments_count?: number
+  allow_comments?: boolean
   meta_title?: string | null
   meta_description?: string | null
   author?: {
@@ -54,6 +59,8 @@ export interface Post {
   tags?: Tag[]
   county?: { id: number; name: string } | null
   related_posts?: Post[]
+  media?: z.infer<typeof MediaSchema>[]
+  gallery_images?: z.infer<typeof MediaSchema>[]
 }
 
 export const PostSchema: z.ZodType<Post> = z.lazy(() =>
@@ -70,7 +77,10 @@ export const PostSchema: z.ZodType<Post> = z.lazy(() =>
     status: z.enum(["draft", "published", "archived"]).optional(),
     is_featured: z.boolean().optional().default(false),
     views_count: z.coerce.number().optional().default(0),
+    likes_count: z.coerce.number().optional().default(0),
+    dislikes_count: z.coerce.number().optional().default(0),
     comments_count: z.coerce.number().optional().default(0),
+    allow_comments: z.boolean().optional().default(true),
     meta_title: z.string().nullable().optional(),
     meta_description: z.string().nullable().optional(),
     author: z
@@ -93,6 +103,8 @@ export const PostSchema: z.ZodType<Post> = z.lazy(() =>
       .optional()
       .nullable(),
     related_posts: z.array(z.lazy(() => PostSchema)).optional(),
+    media: z.array(MediaSchema).optional(),
+    gallery_images: z.array(MediaSchema).optional(),
   })
 )
 

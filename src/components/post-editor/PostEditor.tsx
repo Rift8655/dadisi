@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 import { Textarea } from "@/components/ui/textarea"
+import { RichTextEditor } from "@/components/ui/rich-text-editor"
 import { Icons } from "@/components/icons"
 
 import { DevEditor } from "./DevEditor"
@@ -49,6 +50,7 @@ interface PostFormData {
   tag_ids: number[]
   status: "draft" | "published"
   is_featured: boolean
+  allow_comments: boolean
 }
 
 interface PostEditorProps {
@@ -72,6 +74,7 @@ const defaultFormData: PostFormData = {
   tag_ids: [],
   status: "draft",
   is_featured: false,
+  allow_comments: true,
 }
 
 export function PostEditor({
@@ -85,6 +88,7 @@ export function PostEditor({
   const [formData, setFormData] = useState<PostFormData>(defaultFormData)
   const [currentSlug, setCurrentSlug] = useState<string | undefined>(postSlug)
   const [saving, setSaving] = useState(false)
+  const [featuredMediaUrl, setFeaturedMediaUrl] = useState<string>("")
   const editorRef = useRef<any>(null)
 
   // Fetch post data if editing by slug
@@ -153,7 +157,13 @@ export function PostEditor({
         tag_ids: postData.tags?.map((t: any) => t.id) || [],
         status: postData.status || "draft",
         is_featured: postData.is_featured || false,
+        allow_comments: postData.allow_comments ?? true,
       })
+      // Load featured media URL if available
+      const featuredUrl = postData.featured_media?.url || postData.featured_image || postData.hero_image_path
+      if (featuredUrl) {
+        setFeaturedMediaUrl(featuredUrl)
+      }
     }
   }, [postData, mode])
 
@@ -497,57 +507,13 @@ export function PostEditor({
               <CardTitle>Content</CardTitle>
             </CardHeader>
             <CardContent>
-              {USE_DEV_EDITOR ? (
-                <DevEditor
-                  value={formData.body}
-                  onChange={(content) =>
-                    setFormData({ ...formData, body: content })
-                  }
-                  height={500}
-                />
-              ) : (
-                <TinyMCEEditor
-                  apiKey={
-                    process.env.NEXT_PUBLIC_TINYMCE_API_KEY || "no-api-key"
-                  }
-                  onInit={(evt: any, editor: any) =>
-                    (editorRef.current = editor)
-                  }
-                  value={formData.body}
-                  onEditorChange={(content: string) =>
-                    setFormData({ ...formData, body: content })
-                  }
-                  init={{
-                    height: 500,
-                    menubar: true,
-                    plugins: [
-                      "advlist",
-                      "autolink",
-                      "lists",
-                      "link",
-                      "image",
-                      "charmap",
-                      "preview",
-                      "anchor",
-                      "searchreplace",
-                      "visualblocks",
-                      "code",
-                      "fullscreen",
-                      "insertdatetime",
-                      "media",
-                      "table",
-                      "help",
-                      "wordcount",
-                    ],
-                    toolbar:
-                      "undo redo | blocks | bold italic forecolor | alignleft aligncenter " +
-                      "alignright alignjustify | bullist numlist outdent indent | " +
-                      "removeformat | link image | help",
-                    content_style:
-                      "body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 16px; }",
-                  }}
-                />
-              )}
+              <RichTextEditor
+                value={formData.body}
+                onChange={(content) =>
+                  setFormData({ ...formData, body: content })
+                }
+                height={500}
+              />
             </CardContent>
           </Card>
 
@@ -607,7 +573,7 @@ export function PostEditor({
 
           {/* Featured Image */}
           <FeaturedImageUpload
-            value={formData.hero_image_path}
+            value={featuredMediaUrl || formData.hero_image_path}
             onChange={(path) =>
               setFormData({ ...formData, hero_image_path: path })
             }
@@ -658,13 +624,28 @@ export function PostEditor({
             </CardContent>
           </Card>
 
-          {/* Featured - Only for Admin/Staff */}
-          {dashboardType === "admin" && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Options</CardTitle>
-              </CardHeader>
-              <CardContent>
+          {/* Options */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Options</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <label className="flex cursor-pointer items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={formData.allow_comments}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      allow_comments: e.target.checked,
+                    })
+                  }
+                  className="rounded border-gray-300"
+                />
+                <span className="text-sm">Allow comments</span>
+              </label>
+
+              {dashboardType === "admin" && (
                 <label className="flex cursor-pointer items-center gap-2">
                   <input
                     type="checkbox"
@@ -679,9 +660,9 @@ export function PostEditor({
                   />
                   <span className="text-sm">Featured post</span>
                 </label>
-              </CardContent>
-            </Card>
-          )}
+              )}
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>

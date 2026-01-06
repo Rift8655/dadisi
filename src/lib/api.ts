@@ -67,6 +67,17 @@ const baseURL =
   process.env.NEXT_PUBLIC_API_BASE_URL ||
   "http://localhost:8000"
 
+// Module-level flag to prevent 401 redirects during token refresh
+let isRefreshingToken = false
+
+/**
+ * Set the refreshing token flag. Used by useTokenRefresh to prevent
+ * race conditions where a 401 triggers logout before refresh completes.
+ */
+export function setRefreshingToken(value: boolean) {
+  isRefreshingToken = value
+}
+
 export interface ApiResponse<T> {
   success?: boolean
   data?: T
@@ -171,13 +182,14 @@ async function apiRequest<T = unknown>(
 
     if (response.status === 401) {
       errorMessage = "Your session has expired. Please log in again."
-      // Automatically logout on 401 and redirect to login
-      if (typeof window !== "undefined") {
+      // Don't auto-redirect if a token refresh is in progress
+      if (!isRefreshingToken && typeof window !== "undefined") {
         import("@/store/auth")
           .then((mod) => mod.useAuth.getState().logout())
           .then(() => {
             // Only redirect if not already on auth pages
-            if (!window.location.pathname.startsWith("/auth")) {
+            const path = window.location.pathname
+            if (!path.startsWith("/auth") && !path.startsWith("/login")) {
               const returnUrl = encodeURIComponent(
                 window.location.pathname + window.location.search
               )
@@ -681,6 +693,94 @@ export const postsApi = {
       "/api/blog/tags",
       PublicTagsResponseSchema
     )
+    return res.data
+  },
+
+  // Comments API
+  getComments: async (slug: string, page = 1) => {
+    const res = await api.get<{
+      success: boolean
+      data: {
+        data: Array<{
+          id: number
+          body: string
+          user: { id: number; username: string; profile_picture_path?: string }
+          created_at: string
+          replies?: Array<{
+            id: number
+            body: string
+            user: {
+              id: number
+              username: string
+              profile_picture_path?: string
+            }
+            created_at: string
+          }>
+        }>
+        current_page: number
+        last_page: number
+        total: number
+      }
+    }>(`/api/blog/posts/${slug}/comments`, { params: { page } })
+    return res.data
+  },
+
+  createComment: async (slug: string, body: string, parentId?: number) => {
+    const res = await api.post<{
+      success: boolean
+      message: string
+      data: {
+        id: number
+        body: string
+        user: { id: number; username: string; profile_picture_path?: string }
+        created_at: string
+      }
+    }>(`/api/blog/posts/${slug}/comments`, { body, parent_id: parentId })
+    return res
+  },
+
+  deleteComment: async (commentId: number) => {
+    const res = await api.delete<{ success: boolean; message: string }>(
+      `/api/blog/comments/${commentId}`
+    )
+    return res
+  },
+
+  // Likes API
+  toggleLike: async (slug: string, type: "like" | "dislike") => {
+    const res = await api.post<{
+      success: boolean
+      action: "added" | "removed" | "switched"
+      message: string
+      likes_count: number
+      dislikes_count: number
+    }>(`/api/blog/posts/${slug}/like`, { type })
+    return res
+  },
+
+  getLikeStatus: async (slug: string) => {
+    const res = await api.get<{
+      success: boolean
+      data: {
+        user_vote: "like" | "dislike" | null
+        likes_count: number
+        dislikes_count: number
+      }
+    }>(`/api/blog/posts/${slug}/like-status`)
+    return res.data
+  },
+
+  getLikers: async (slug: string) => {
+    const res = await api.get<{
+      success: boolean
+      data: Array<{
+        id: number
+        user_id: number
+        type: "like" | "dislike"
+        user: { id: number; username: string; profile_picture_path?: string }
+        created_at: string
+      }>
+    }>(`/api/blog/posts/${slug}/likers`)
     return res.data
   },
 }

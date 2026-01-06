@@ -2,11 +2,10 @@
 
 import { useState } from "react"
 import Image from "next/image"
-import { useQuery } from "@tanstack/react-query"
-import { Check, Image as ImageIcon, Upload, X } from "lucide-react"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
+import { Upload, X } from "lucide-react"
 
-import { api } from "@/lib/api"
-import { cn } from "@/lib/utils"
+import { api, mediaApi } from "@/lib/api"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -16,7 +15,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { ScrollArea } from "@/components/ui/scroll-area"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import MediaLibraryGrid from "@/components/media/MediaLibrary"
+
+import { FeaturedImageUpload } from "./FeaturedImageUpload"
 
 interface Media {
   id: number
@@ -38,16 +40,20 @@ export function MediaGallerySelector({
   onChange,
   excludeId,
 }: MediaGallerySelectorProps) {
+  const [activeTab, setActiveTab] = useState<"select" | "upload">("select")
   const [isOpen, setIsOpen] = useState(false)
+  const queryClient = useQueryClient()
 
-  const { data: mediaData, isLoading } = useQuery({
+  const { data: media, isLoading } = useQuery({
     queryKey: ["media"],
-    queryFn: () => api.get<{ data: Media[] }>("/api/media"),
+    queryFn: () => mediaApi.list(),
   })
 
-  const media = mediaData?.data || []
-  const availableMedia = media.filter(
-    (m) => m.mime_type?.startsWith("image/") && m.id !== excludeId
+  // Ensure media is an array
+  const mediaList = Array.isArray(media) ? media : []
+
+  const availableMedia = mediaList.filter(
+    (m: any) => m.mime_type?.startsWith("image/") && m.id !== excludeId
   )
 
   const toggleMedia = (mediaId: number) => {
@@ -58,7 +64,13 @@ export function MediaGallerySelector({
     }
   }
 
-  const selectedMedia = media.filter((m) => selectedIds.includes(m.id))
+  const selectedMedia = mediaList.filter((m: any) => selectedIds.includes(m.id))
+
+  const handleUploadSuccess = (mediaId: number) => {
+    queryClient.invalidateQueries({ queryKey: ["media"] })
+    onChange([...selectedIds, mediaId])
+    setActiveTab("select")
+  }
 
   return (
     <Card>
@@ -108,64 +120,57 @@ export function MediaGallerySelector({
 
         {/* Media Selection Dialog */}
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
-          <DialogContent className="max-h-[80vh] max-w-4xl">
+          <DialogContent className="flex max-h-[80vh] max-w-4xl flex-col">
             <DialogHeader>
               <DialogTitle>Select Gallery Images</DialogTitle>
             </DialogHeader>
-            <ScrollArea className="h-[60vh] pr-4">
-              {isLoading ? (
-                <div className="flex items-center justify-center py-12">
-                  <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-primary" />
+
+            <Tabs
+              value={activeTab}
+              onValueChange={(v) => setActiveTab(v as any)}
+              className="flex flex-1 flex-col"
+            >
+              <div className="flex items-center justify-between border-b pb-2">
+                <TabsList>
+                  <TabsTrigger value="select">Select from Library</TabsTrigger>
+                  <TabsTrigger value="upload">Upload New</TabsTrigger>
+                </TabsList>
+              </div>
+
+              <TabsContent value="select" className="mt-4 min-h-0 flex-1">
+                {isLoading ? (
+                  <div className="flex items-center justify-center py-12">
+                    <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-primary" />
+                  </div>
+                ) : (
+                  <MediaLibraryGrid
+                    media={availableMedia}
+                    selectedIds={selectedIds}
+                    onToggle={toggleMedia}
+                    excludeId={excludeId}
+                  />
+                )}
+              </TabsContent>
+
+              <TabsContent value="upload" className="mt-4 flex-1">
+                <div className="flex min-h-[40vh] items-center justify-center rounded-lg border-2 border-dashed p-4">
+                  <div className="w-full max-w-md">
+                    <FeaturedImageUpload
+                      value=""
+                      onChange={(_, id) => {
+                        if (id && id > 0) {
+                          handleUploadSuccess(id)
+                        }
+                      }}
+                      noCard={true}
+                      showLibraryButton={false}
+                    />
+                  </div>
                 </div>
-              ) : availableMedia.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-                  <ImageIcon className="mb-4 h-12 w-12 opacity-20" />
-                  <p>No images available</p>
-                  <p className="text-sm">
-                    Upload images to your media library first
-                  </p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-3 gap-4">
-                  {availableMedia.map((item) => {
-                    const isSelected = selectedIds.includes(item.id)
-                    return (
-                      <div
-                        key={item.id}
-                        className={cn(
-                          "group relative aspect-video cursor-pointer overflow-hidden rounded-lg border-2 transition-all",
-                          isSelected
-                            ? "border-primary ring-2 ring-primary/20"
-                            : "border-transparent hover:border-primary/50"
-                        )}
-                        onClick={() => toggleMedia(item.id)}
-                      >
-                        <Image
-                          src={item.original_url || item.url}
-                          alt={item.file_name || "Media"}
-                          fill
-                          className="object-cover"
-                          unoptimized
-                        />
-                        {isSelected && (
-                          <div className="absolute inset-0 flex items-center justify-center bg-primary/20">
-                            <div className="rounded-full bg-primary p-2">
-                              <Check className="h-5 w-5 text-primary-foreground" />
-                            </div>
-                          </div>
-                        )}
-                        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-2">
-                          <p className="truncate text-xs text-white">
-                            {item.file_name || "Untitled"}
-                          </p>
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
-            </ScrollArea>
-            <div className="flex justify-between border-t pt-4">
+              </TabsContent>
+            </Tabs>
+
+            <div className="mt-auto flex justify-between border-t pt-4">
               <p className="text-sm text-muted-foreground">
                 {selectedIds.length} image{selectedIds.length !== 1 ? "s" : ""}{" "}
                 selected

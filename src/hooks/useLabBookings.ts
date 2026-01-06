@@ -1,15 +1,16 @@
 "use client"
 
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { labSpacesApi, labBookingsApi } from "@/lib/api"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { toast } from "sonner"
+
 import type {
-  LabSpace,
+  CreateLabBookingRequest,
+  LabAvailabilityResponse,
   LabBooking,
   LabQuotaStatus,
-  LabAvailabilityResponse,
-  CreateLabBookingRequest,
+  LabSpace,
 } from "@/types/lab"
-import { toast } from "sonner"
+import { labBookingsApi, labSpacesApi } from "@/lib/api"
 
 // ============================================
 // Lab Spaces Hooks (Public)
@@ -18,7 +19,11 @@ import { toast } from "sonner"
 /**
  * Fetch all active lab spaces
  */
-export function useLabSpaces(params?: { type?: string; search?: string }) {
+export function useLabSpaces(params?: {
+  type?: string
+  search?: string
+  county?: string
+}) {
   return useQuery({
     queryKey: ["lab-spaces", params],
     queryFn: async () => {
@@ -72,7 +77,7 @@ export function useLabSpaceAvailability(
  */
 export function useLabQuota(options?: { enabled?: boolean }) {
   const enabled = options?.enabled ?? true
-  
+
   return useQuery({
     queryKey: ["lab-quota"],
     queryFn: async () => {
@@ -91,7 +96,10 @@ export function useLabQuota(options?: { enabled?: boolean }) {
 /**
  * Fetch user's lab bookings
  */
-export function useLabBookings(params?: { status?: string; upcoming?: boolean }) {
+export function useLabBookings(params?: {
+  status?: string
+  upcoming?: boolean
+}) {
   return useQuery({
     queryKey: ["lab-bookings", params],
     queryFn: async () => {
@@ -179,6 +187,10 @@ export const LAB_SPACE_TYPES: LabSpaceTypeOption[] = [
   { value: "dry_lab", label: "Dry Lab", icon: "💻" },
   { value: "greenhouse", label: "Greenhouse", icon: "🌱" },
   { value: "mobile_lab", label: "Mobile Lab", icon: "🚐" },
+  { value: "makerspace", label: "Makerspace", icon: "🛠️" },
+  { value: "workshop", label: "Workshop", icon: "⚒️" },
+  { value: "studio", label: "Studio", icon: "🎨" },
+  { value: "other", label: "Other", icon: "🏢" },
 ]
 
 export const BOOKING_STATUS_COLORS: Record<string, string> = {
@@ -190,7 +202,10 @@ export const BOOKING_STATUS_COLORS: Record<string, string> = {
   no_show: "bg-orange-500/20 text-orange-700 border-orange-500/30",
 }
 
-export const SLOT_TYPE_DURATIONS: Record<string, { hours: number; label: string }> = {
+export const SLOT_TYPE_DURATIONS: Record<
+  string,
+  { hours: number; label: string }
+> = {
   hourly: { hours: 1, label: "Hourly" },
   half_day: { hours: 4, label: "Half Day (4 hours)" },
   full_day: { hours: 8, label: "Full Day (8 hours)" },
@@ -212,7 +227,10 @@ export function formatQuotaStatus(quota: LabQuotaStatus): string {
 /**
  * Check if user can book based on quota
  */
-export function canBookWithQuota(quota: LabQuotaStatus, requestedHours: number): boolean {
+export function canBookWithQuota(
+  quota: LabQuotaStatus,
+  requestedHours: number
+): boolean {
   if (!quota.has_access) return false
   if (quota.unlimited) return true
   return (quota.remaining || 0) >= requestedHours

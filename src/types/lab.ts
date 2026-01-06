@@ -1,3 +1,5 @@
+import type { Media } from "./index"
+
 /**
  * Lab Space Booking Types
  */
@@ -29,6 +31,11 @@ export interface LabSpace {
   location: string | null
   county: string | null
   is_active: boolean
+  featured_media_id?: number | null
+  gallery_media_ids?: number[]
+  featured_media?: Media | null
+  gallery_media?: Media[]
+  media?: Media[]
   created_at?: string
   updated_at?: string
 }

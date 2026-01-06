@@ -34,13 +34,22 @@ export const MediaSchema = z.object({
   original_url: z.string().optional(),
   file_name: z.string().optional(),
   mime_type: z.string().optional(),
-  size: z.number(),
+  file_size: z.coerce.number().optional(),
+  size: z.coerce.number().optional(),
   type: z.string().optional(),
   visibility: z.enum(["public", "private", "shared"]).optional(),
   share_token: z.string().optional().nullable(),
   allow_download: z.boolean().optional(),
-  created_at: z.string(),
-  updated_at: z.string(),
+  updated_at: z.string().optional(),
+  file_path: z.string().optional(),
+  pivot: z
+    .object({
+      role: z.string().optional(),
+      attachable_type: z.string().optional(),
+      attachable_id: z.coerce.number().optional(),
+      media_id: z.coerce.number().optional(),
+    })
+    .optional(),
 })
 export const MediaListSchema = z.object({ data: z.array(MediaSchema) })
 

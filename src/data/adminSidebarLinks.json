@@ -1,8 +1,16 @@
 [
   { "title": "Overview", "href": "/admin", "icon": "dashboard", "badge": null },
-  { "title": "Analytics", "href": "/admin/analytics", "icon": "dashboard", "badge": null },
   { "title": "Users", "href": "/admin/users", "icon": "users", "badge": null },
   { "title": "Roles", "href": "/admin/roles", "icon": "shield", "badge": null },
+  {
+    "title": "Finance",
+    "icon": "dollar-sign",
+    "children": [
+      { "title": "Analytics", "href": "/admin/finance/analytics", "icon": "dashboard" },
+      { "title": "Payments", "href": "/admin/finance/payments", "icon": " creditcard" },
+      { "title": "Reconciliation", "href": "/admin/reconciliation", "icon": "creditcard" }
+    ]
+  },
   {
     "title": "Events",
     "icon": "calendar",
@@ -54,9 +62,8 @@
     "title": "Membership",
     "icon": "dollar-sign",
     "children": [
-      { "title": "Subscriptions", "href": "/admin/subscriptions/renewals", "icon": "dollar-sign" },
+      { "title": "Subscribers", "href": "/admin/subscriptions", "icon": "users" },
       { "title": "Approvals", "href": "/admin/membership/approvals", "icon": "shield" },
-      { "title": "Reconciliation", "href": "/admin/reconciliation", "icon": "creditcard" },
       { "title": "Plans", "href": "/admin/plans", "icon": "dollar-sign" }
     ]
   },
@@ -74,4 +81,3 @@
   { "title": "Audit Logs", "href": "/admin/audit-logs", "icon": "shield" },
   { "title": "Counties", "href": "/admin/counties", "icon": "map-pin" }
 ]
-

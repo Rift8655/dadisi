@@ -102,6 +102,10 @@ export default function LabSpaceDetailPage({
   const [slotType, setSlotType] = useState<LabSlotType>("hourly")
   const [purpose, setPurpose] = useState("")
   const [title, setTitle] = useState("")
+  const [activeMedia, setActiveMedia] = useState<{
+    url: string
+    file_name?: string
+  } | null>(null)
 
   // Fetch lab space details
   const { data: space, isLoading, error } = useLabSpace(slug)
@@ -204,7 +208,7 @@ export default function LabSpaceDetailPage({
             alt={space.name}
             fill
             unoptimized={isLocal}
-            className="object-cover opacity-20"
+            className="object-cover opacity-50"
           />
         )}
         <div className="container relative mx-auto px-4">
@@ -247,8 +251,9 @@ export default function LabSpaceDetailPage({
           {/* Left Column - Details */}
           <div className="space-y-6 lg:col-span-2">
             <Tabs defaultValue="details">
-              <TabsList className="grid w-full grid-cols-3">
+              <TabsList className="grid w-full grid-cols-4">
                 <TabsTrigger value="details">Details</TabsTrigger>
+                <TabsTrigger value="gallery">Gallery</TabsTrigger>
                 <TabsTrigger value="amenities">Amenities</TabsTrigger>
                 <TabsTrigger value="safety">Safety</TabsTrigger>
               </TabsList>
@@ -277,11 +282,57 @@ export default function LabSpaceDetailPage({
                             Location
                           </p>
                           <p className="font-medium">
-                            {space.location || space.county || "Location TBD"}
+                            {space.county && <span>{space.county}</span>}
+                            {space.county && space.location && <span>, </span>}
+                            {space.location && <span>{space.location}</span>}
+                            {!space.county && !space.location && "Location TBD"}
                           </p>
                         </div>
                       </div>
                     </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="gallery" className="mt-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Gallery</CardTitle>
+                    <CardDescription>
+                      Visuals of the lab space and its facilities
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {normalizeArrayField(space.gallery_media).length > 0 ? (
+                      <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
+                        {normalizeArrayField(space.gallery_media).map(
+                          (media, i) => (
+                            <div
+                              key={media.id || i}
+                              className="group relative aspect-square cursor-pointer overflow-hidden rounded-lg border bg-muted"
+                              onClick={() => setActiveMedia(media)}
+                            >
+                              <Image
+                                src={media.url}
+                                alt={
+                                  media.file_name || `Gallery image ${i + 1}`
+                                }
+                                fill
+                                unoptimized={isLocal}
+                                className="object-cover transition-transform duration-300 group-hover:scale-105"
+                              />
+                            </div>
+                          )
+                        )}
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center py-12 text-center">
+                        <Monitor className="mb-4 h-12 w-12 text-muted-foreground opacity-20" />
+                        <p className="text-muted-foreground">
+                          No gallery images available for this space.
+                        </p>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               </TabsContent>
@@ -589,6 +640,32 @@ export default function LabSpaceDetailPage({
           </div>
         </div>
       </section>
+
+      {/* Gallery Lightbox */}
+      <Dialog
+        open={!!activeMedia}
+        onOpenChange={(open) => !open && setActiveMedia(null)}
+      >
+        <DialogContent className="max-w-4xl border-none bg-transparent p-0 shadow-none sm:max-w-5xl">
+          <DialogTitle className="sr-only">Gallery Image View</DialogTitle>
+          <div className="relative aspect-video w-full overflow-hidden rounded-lg">
+            {activeMedia && (
+              <Image
+                src={activeMedia.url}
+                alt={activeMedia.file_name || "Gallery image"}
+                fill
+                unoptimized={isLocal}
+                className="object-contain"
+              />
+            )}
+          </div>
+          {activeMedia?.file_name && (
+            <div className="mt-2 text-center text-sm text-white/70">
+              {activeMedia.file_name}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

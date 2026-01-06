@@ -1,17 +1,30 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { useForm } from "react-hook-form"
+import {
+  CreateCampaignSchema,
+  type CreateCampaignInput,
+} from "@/schemas/campaign"
 import { zodResolver } from "@hookform/resolvers/zod"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { ArrowLeft, Loader2, Save } from "lucide-react"
+import { useForm } from "react-hook-form"
+import Swal from "sweetalert2"
+
 import { campaignAdminApi } from "@/lib/api-admin"
-import { CreateCampaignSchema, type CreateCampaignInput } from "@/schemas/campaign"
+import { mediaApi } from "@/lib/api"
 import { Button } from "@/components/ui/button"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import {
   Select,
   SelectContent,
@@ -19,9 +32,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Loader2, Save, ArrowLeft } from "lucide-react"
-import Link from "next/link"
-import Swal from "sweetalert2"
+import { Textarea } from "@/components/ui/textarea"
+import { RichTextEditor } from "@/components/ui/rich-text-editor"
+import { FeaturedImageUpload } from "@/components/post-editor/FeaturedImageUpload"
+import { MediaGallerySelector } from "@/components/post-editor/MediaGallerySelector"
 
 interface County {
   id: number
@@ -29,13 +43,20 @@ interface County {
 }
 
 interface CampaignFormProps {
-  initialData?: Partial<CreateCampaignInput> & { slug?: string }
+  initialData?: Partial<CreateCampaignInput> & { 
+    slug?: string
+    featured_media_url?: string // Pass featured media URL from parent
+  }
   isEdit?: boolean
 }
 
-export function CampaignForm({ initialData, isEdit = false }: CampaignFormProps) {
+export function CampaignForm({
+  initialData,
+  isEdit = false,
+}: CampaignFormProps) {
   const router = useRouter()
   const queryClient = useQueryClient()
+  const [featuredMediaUrl, setFeaturedMediaUrl] = useState<string>(initialData?.featured_media_url || "")
 
   const {
     register,
@@ -56,8 +77,25 @@ export function CampaignForm({ initialData, isEdit = false }: CampaignFormProps)
       starts_at: initialData?.starts_at || "",
       ends_at: initialData?.ends_at || "",
       status: initialData?.status || "draft",
+      featured_media_id: initialData?.featured_media_id || undefined,
+      gallery_media_ids: initialData?.gallery_media_ids || [],
     },
   })
+
+  // Load featured media URL if featured_media_id is set and URL not already provided
+  useEffect(() => {
+    const featuredId = initialData?.featured_media_id
+    // If URL is already provided in initialData, use it; otherwise fetch it
+    if (initialData?.featured_media_url) {
+      setFeaturedMediaUrl(initialData.featured_media_url)
+    } else if (featuredId) {
+      mediaApi.get(featuredId).then((media: any) => {
+        setFeaturedMediaUrl(media.data?.url || media.url || "")
+      }).catch((err) => {
+        console.error("Failed to load featured media:", err)
+      })
+    }
+  }, [initialData?.featured_media_id, initialData?.featured_media_url])
 
   const { data: counties = [], isLoading: loadingMetadata } = useQuery({
     queryKey: ["campaign-metadata"],
@@ -80,7 +118,12 @@ export function CampaignForm({ initialData, isEdit = false }: CampaignFormProps)
       Swal.fire({
         icon: "success",
         title: isEdit ? "Campaign Updated!" : "Campaign Created!",
-        text: !isEdit && variables.status === "active" ? "Your campaign is now live!" : (!isEdit ? "Campaign saved as draft." : undefined),
+        text:
+          !isEdit && variables.status === "active"
+            ? "Your campaign is now live!"
+            : !isEdit
+              ? "Campaign saved as draft."
+              : undefined,
         timer: 1500,
         showConfirmButton: false,
       })
@@ -89,7 +132,7 @@ export function CampaignForm({ initialData, isEdit = false }: CampaignFormProps)
     onError: (error: any) => {
       console.error("Campaign save failed:", error)
       Swal.fire("Error", error.message || "Failed to save campaign", "error")
-    }
+    },
   })
 
   const watchedCurrency = watch("currency")
@@ -137,20 +180,24 @@ export function CampaignForm({ initialData, isEdit = false }: CampaignFormProps)
               rows={2}
             />
             {errors.short_description && (
-              <p className="text-sm text-destructive">{errors.short_description.message}</p>
+              <p className="text-sm text-destructive">
+                {errors.short_description.message}
+              </p>
             )}
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="description">Full Description *</Label>
-            <Textarea
-              id="description"
-              {...register("description")}
-              placeholder="Detailed campaign description. You can use HTML for formatting."
-              rows={8}
+            <RichTextEditor
+              value={watch("description") || ""}
+              onChange={(content) => setValue("description", content)}
+              placeholder="Detailed campaign description with formatting support"
+              height={400}
             />
             {errors.description && (
-              <p className="text-sm text-destructive">{errors.description.message}</p>
+              <p className="text-sm text-destructive">
+                {errors.description.message}
+              </p>
             )}
           </div>
         </CardContent>
@@ -165,12 +212,14 @@ export function CampaignForm({ initialData, isEdit = false }: CampaignFormProps)
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
             <div className="space-y-2">
               <Label htmlFor="currency">Currency</Label>
               <Select
                 value={watchedCurrency}
-                onValueChange={(value) => setValue("currency", value as "KES" | "USD")}
+                onValueChange={(value) =>
+                  setValue("currency", value as "KES" | "USD")
+                }
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select currency" />
@@ -191,11 +240,15 @@ export function CampaignForm({ initialData, isEdit = false }: CampaignFormProps)
                 placeholder="e.g., 100000"
                 min={0}
               />
-              <p className="text-xs text-muted-foreground">Leave empty for unlimited goal</p>
+              <p className="text-xs text-muted-foreground">
+                Leave empty for unlimited goal
+              </p>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="minimum_amount">Minimum Donation (optional)</Label>
+              <Label htmlFor="minimum_amount">
+                Minimum Donation (optional)
+              </Label>
               <Input
                 id="minimum_amount"
                 type="number"
@@ -203,7 +256,9 @@ export function CampaignForm({ initialData, isEdit = false }: CampaignFormProps)
                 placeholder="e.g., 100"
                 min={0}
               />
-              <p className="text-xs text-muted-foreground">Bypassed in dev/staging</p>
+              <p className="text-xs text-muted-foreground">
+                Bypassed in dev/staging
+              </p>
             </div>
           </div>
         </CardContent>
@@ -218,7 +273,7 @@ export function CampaignForm({ initialData, isEdit = false }: CampaignFormProps)
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
             <div className="space-y-2">
               <Label htmlFor="starts_at">Start Date (optional)</Label>
               <Input
@@ -243,7 +298,9 @@ export function CampaignForm({ initialData, isEdit = false }: CampaignFormProps)
               <Label htmlFor="county_id">County (optional)</Label>
               <Select
                 value={watch("county_id")?.toString() || ""}
-                onValueChange={(value) => setValue("county_id", value ? parseInt(value) : undefined)}
+                onValueChange={(value) =>
+                  setValue("county_id", value ? parseInt(value) : undefined)
+                }
                 disabled={loadingMetadata}
               >
                 <SelectTrigger>
@@ -262,6 +319,40 @@ export function CampaignForm({ initialData, isEdit = false }: CampaignFormProps)
         </CardContent>
       </Card>
 
+      {/* Media */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Media</CardTitle>
+          <CardDescription>
+            Add a featured image and gallery photos for your campaign.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="space-y-2">
+            <Label>Featured Image</Label>
+            <FeaturedImageUpload
+              value={featuredMediaUrl}
+              onChange={(_, id) => {
+                setValue("featured_media_id", id)
+                // Optionally update the displayed URL if needed
+              }}
+            />
+            <p className="text-xs text-muted-foreground">
+              This image will be displayed on the campaign card and header.
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Gallery Images</Label>
+            <MediaGallerySelector
+              selectedIds={watch("gallery_media_ids") || []}
+              onChange={(ids) => setValue("gallery_media_ids", ids)}
+              excludeId={watch("featured_media_id") || undefined}
+            />
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Status & Actions */}
       <Card>
         <CardHeader>
@@ -272,14 +363,18 @@ export function CampaignForm({ initialData, isEdit = false }: CampaignFormProps)
             <Label>Status</Label>
             <Select
               value={watchedStatus}
-              onValueChange={(value) => setValue("status", value as "draft" | "active")}
+              onValueChange={(value) =>
+                setValue("status", value as "draft" | "active")
+              }
             >
               <SelectTrigger className="w-[200px]">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="draft">Draft (not visible)</SelectItem>
-                <SelectItem value="active">Active (visible to public)</SelectItem>
+                <SelectItem value="active">
+                  Active (visible to public)
+                </SelectItem>
               </SelectContent>
             </Select>
           </div>

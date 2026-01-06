@@ -1,28 +1,35 @@
 "use client"
 
 import { use, useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
 import Image from "next/image"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
+import { useAuth } from "@/store/auth"
+import type { Event, Speaker, Ticket as TicketType } from "@/types"
+import { useMutation, useQuery } from "@tanstack/react-query"
 import { format } from "date-fns"
-import { useQuery, useMutation } from "@tanstack/react-query"
 import {
-  Calendar,
-  MapPin,
-  Users,
-  Globe,
-  Clock,
-  Share2,
   ArrowLeft,
-  Ticket,
+  Calendar,
   CheckCircle2,
-  User,
+  Clock,
+  Globe,
   Loader2,
+  MapPin,
+  Share2,
+  Ticket,
+  User,
+  Users,
 } from "lucide-react"
+import Swal from "sweetalert2"
+
+import { cn } from "@/lib/utils"
+import { useEvent, useRsvp, useValidatePromo } from "@/hooks/useEvents"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Separator } from "@/components/ui/separator"
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
 import {
   Select,
   SelectContent,
@@ -30,28 +37,31 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Input } from "@/components/ui/input"
-import { useAuth } from "@/store/auth"
-import { useEvent, useRsvp, useValidatePromo } from "@/hooks/useEvents"
-import type { Event, Ticket as TicketType, Speaker } from "@/types"
-import { cn } from "@/lib/utils"
-import Swal from "sweetalert2"
+import { Separator } from "@/components/ui/separator"
 
 interface EventDetailPageProps {
   params: Promise<{ slug: string }>
 }
 
 export default function EventDetailPage({ params }: EventDetailPageProps) {
-  const isLocal = process.env.NEXT_PUBLIC_BACKEND_APP_URL?.includes("localhost") || 
-                  process.env.NEXT_PUBLIC_BACKEND_APP_URL?.includes("127.0.0.1")
+  const isLocal =
+    process.env.NEXT_PUBLIC_BACKEND_APP_URL?.includes("localhost") ||
+    process.env.NEXT_PUBLIC_BACKEND_APP_URL?.includes("127.0.0.1")
   const { slug } = use(params)
   const router = useRouter()
   const { isAuthenticated } = useAuth()
-  
+
   const [selectedTicket, setSelectedTicket] = useState<string>("")
   const [promoCode, setPromoCode] = useState("")
-  const [promoDiscount, setPromoDiscount] = useState<{ type: string; value: number } | null>(null)
+  const [promoDiscount, setPromoDiscount] = useState<{
+    type: string
+    value: number
+  } | null>(null)
   const [mounted, setMounted] = useState(false)
+  const [activeGalleryImage, setActiveGalleryImage] = useState<{
+    url: string
+    alt?: string
+  } | null>(null)
 
   const { data: event, isLoading, error } = useEvent(slug)
 
@@ -62,13 +72,12 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
   const validatePromoMutation = useValidatePromo()
   const rsvpMutation = useRsvp()
 
-
   const handleValidatePromo = () => {
     if (!event || !promoCode.trim() || !selectedTicket) return
-    validatePromoMutation.mutate({ 
-      eventId: event.id, 
-      code: promoCode, 
-      ticketId: parseInt(selectedTicket) 
+    validatePromoMutation.mutate({
+      eventId: event.id,
+      code: promoCode,
+      ticketId: parseInt(selectedTicket),
     })
   }
 
@@ -95,7 +104,8 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
       return
     }
 
-    rsvpMutation.mutateAsync({ eventId: event.id, ticketId: parseInt(selectedTicket) })
+    rsvpMutation
+      .mutateAsync({ eventId: event.id, ticketId: parseInt(selectedTicket) })
       .then((rsvp) => {
         Swal.fire({
           icon: "success",
@@ -125,11 +135,13 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
     return Math.max(0, ticketPrice - promoDiscount.value)
   }
 
-  const selectedTicketData = event?.tickets?.find(t => t.id.toString() === selectedTicket)
+  const selectedTicketData = event?.tickets?.find(
+    (t) => t.id.toString() === selectedTicket
+  )
 
   if (!mounted || isLoading || !event) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="flex min-h-screen items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     )
@@ -137,8 +149,10 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
 
   if (error) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center">
-        <p className="text-destructive mb-4">{(error as any).message || "Failed to load event"}</p>
+      <div className="flex min-h-screen flex-col items-center justify-center">
+        <p className="mb-4 text-destructive">
+          {(error as any).message || "Failed to load event"}
+        </p>
         <Button onClick={() => router.push("/events")}>Back to Events</Button>
       </div>
     )
@@ -151,19 +165,19 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/20">
       {/* Back Button */}
-      <div className="container max-w-6xl mx-auto px-4 py-4">
+      <div className="container mx-auto max-w-6xl px-4 py-4">
         <Button variant="ghost" onClick={() => router.back()} className="gap-2">
           <ArrowLeft className="h-4 w-4" />
           Back to Events
         </Button>
       </div>
 
-      <div className="container max-w-6xl mx-auto px-4 pb-16">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="container mx-auto max-w-6xl px-4 pb-16">
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
           {/* Main Content */}
-          <div className="lg:col-span-2 space-y-8">
+          <div className="space-y-8 lg:col-span-2">
             {/* Hero Image */}
-            <div className="relative aspect-video rounded-xl overflow-hidden bg-muted shadow-lg">
+            <div className="relative aspect-video overflow-hidden rounded-xl bg-muted shadow-lg">
               {event.image_url ? (
                 <Image
                   src={event.image_url}
@@ -174,35 +188,41 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                   priority
                 />
               ) : (
-                <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary/20 to-primary/40">
+                <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-primary/20 to-primary/40">
                   <Calendar className="h-20 w-20 text-primary/60" />
                 </div>
               )}
-              
+
               {/* Status Badges */}
-              <div className="absolute top-4 left-4 flex gap-2">
+              <div className="absolute left-4 top-4 flex gap-2">
                 {event.featured && (
-                  <Badge className="bg-yellow-500 text-yellow-950">Featured</Badge>
+                  <Badge className="bg-yellow-500 text-yellow-950">
+                    Featured
+                  </Badge>
                 )}
-                {isPastEvent && (
-                  <Badge variant="secondary">Past Event</Badge>
-                )}
+                {isPastEvent && <Badge variant="secondary">Past Event</Badge>}
               </div>
             </div>
 
             {/* Title & Category */}
             <div>
               {event.category && (
-                <Badge variant="outline" className="mb-2">{event.category.name}</Badge>
+                <Badge variant="outline" className="mb-2">
+                  {event.category.name}
+                </Badge>
               )}
-              <h1 className="text-3xl md:text-4xl font-bold mb-4">{event.title}</h1>
-              
+              <h1 className="mb-4 text-3xl font-bold md:text-4xl">
+                {event.title}
+              </h1>
+
               <div className="flex flex-wrap gap-4 text-muted-foreground">
                 <div className="flex items-center gap-2">
                   <Clock className="h-5 w-5" />
-                  <span>{format(eventDate, "EEEE, MMMM d, yyyy • h:mm a")}</span>
+                  <span>
+                    {format(eventDate, "EEEE, MMMM d, yyyy • h:mm a")}
+                  </span>
                 </div>
-                
+
                 {event.is_online ? (
                   <div className="flex items-center gap-2 text-blue-600">
                     <Globe className="h-5 w-5" />
@@ -211,7 +231,9 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                 ) : (
                   <div className="flex items-center gap-2">
                     <MapPin className="h-5 w-5" />
-                    <span>{event.venue || event.county?.name || "Location TBA"}</span>
+                    <span>
+                      {event.venue || event.county?.name || "Location TBA"}
+                    </span>
                   </div>
                 )}
 
@@ -228,20 +250,25 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
 
             {/* Description */}
             <div>
-              <h2 className="text-xl font-semibold mb-4">About This Event</h2>
+              <h2 className="mb-4 text-xl font-semibold">About This Event</h2>
               <div className="prose dark:prose-invert max-w-none">
-                <p className="text-muted-foreground whitespace-pre-wrap">{event.description}</p>
+                <p className="whitespace-pre-wrap text-muted-foreground">
+                  {event.description}
+                </p>
               </div>
             </div>
 
             {/* Speakers */}
             {event.speakers && event.speakers.length > 0 && (
               <div>
-                <h2 className="text-xl font-semibold mb-4">Speakers</h2>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <h2 className="mb-4 text-xl font-semibold">Speakers</h2>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   {event.speakers.map((speaker: Speaker) => (
-                    <Card key={speaker.id} className="flex items-center p-4 gap-4">
-                      <div className="w-16 h-16 rounded-full overflow-hidden bg-muted flex-shrink-0">
+                    <Card
+                      key={speaker.id}
+                      className="flex items-center gap-4 p-4"
+                    >
+                      <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded-full bg-muted">
                         {speaker.photo_url ? (
                           <Image
                             src={speaker.photo_url}
@@ -249,10 +276,10 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                             width={64}
                             height={64}
                             unoptimized={isLocal}
-                            className="object-cover w-full h-full"
+                            className="h-full w-full object-cover"
                           />
                         ) : (
-                          <div className="w-full h-full flex items-center justify-center">
+                          <div className="flex h-full w-full items-center justify-center">
                             <User className="h-8 w-8 text-muted-foreground" />
                           </div>
                         )}
@@ -260,10 +287,14 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                       <div>
                         <h3 className="font-medium">{speaker.name}</h3>
                         {speaker.designation && (
-                          <p className="text-sm text-muted-foreground">{speaker.designation}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {speaker.designation}
+                          </p>
                         )}
                         {speaker.company && (
-                          <p className="text-sm text-muted-foreground">{speaker.company}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {speaker.company}
+                          </p>
                         )}
                       </div>
                     </Card>
@@ -276,8 +307,39 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
             {event.tags && event.tags.length > 0 && (
               <div className="flex flex-wrap gap-2">
                 {event.tags.map((tag) => (
-                  <Badge key={tag.id} variant="secondary">{tag.name}</Badge>
+                  <Badge key={tag.id} variant="secondary">
+                    {tag.name}
+                  </Badge>
                 ))}
+              </div>
+            )}
+
+            {/* Gallery */}
+            {event.gallery_media && event.gallery_media.length > 0 && (
+              <div>
+                <h2 className="mb-4 text-xl font-semibold">Gallery</h2>
+                <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
+                  {event.gallery_media.map((media: any, i: number) => (
+                    <div
+                      key={media.id || i}
+                      className="group relative aspect-square cursor-pointer overflow-hidden rounded-lg bg-muted"
+                      onClick={() =>
+                        setActiveGalleryImage({
+                          url: media.url,
+                          alt: media.file_name,
+                        })
+                      }
+                    >
+                      <Image
+                        src={media.url}
+                        alt={media.file_name || `Gallery image ${i + 1}`}
+                        fill
+                        unoptimized={isLocal}
+                        className="object-cover transition-transform duration-300 group-hover:scale-105"
+                      />
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </div>
@@ -293,37 +355,64 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                       <Badge className="bg-green-500 text-white">Free</Badge>
                     ) : (
                       <span className="text-2xl font-bold text-primary">
-                        {event.currency} {selectedTicketData ? calculatePrice(selectedTicketData.price).toLocaleString() : event.price.toLocaleString()}
+                        {event.currency}{" "}
+                        {selectedTicketData
+                          ? calculatePrice(
+                              selectedTicketData.price
+                            ).toLocaleString()
+                          : event.price.toLocaleString()}
                       </span>
                     )}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {isPastEvent ? (
-                    <div className="text-center py-4">
-                      <Badge variant="secondary" className="mb-2">Event Ended</Badge>
-                      <p className="text-sm text-muted-foreground">This event has already taken place.</p>
+                    <div className="py-4 text-center">
+                      <Badge variant="secondary" className="mb-2">
+                        Event Ended
+                      </Badge>
+                      <p className="text-sm text-muted-foreground">
+                        This event has already taken place.
+                      </p>
                     </div>
                   ) : (
                     <>
                       {/* Ticket Selection */}
                       {event.tickets && event.tickets.length > 0 && (
                         <div>
-                          <label className="text-sm font-medium mb-2 block">Select Ticket</label>
-                          <Select value={selectedTicket} onValueChange={setSelectedTicket}>
+                          <label className="mb-2 block text-sm font-medium">
+                            Select Ticket
+                          </label>
+                          <Select
+                            value={selectedTicket}
+                            onValueChange={setSelectedTicket}
+                          >
                             <SelectTrigger>
                               <SelectValue placeholder="Choose a ticket type" />
                             </SelectTrigger>
                             <SelectContent>
                               {event.tickets.map((ticket: TicketType) => (
-                                <SelectItem key={ticket.id} value={ticket.id.toString()} disabled={ticket.is_sold_out}>
-                                  <div className="flex justify-between w-full gap-4">
+                                <SelectItem
+                                  key={ticket.id}
+                                  value={ticket.id.toString()}
+                                  disabled={ticket.is_sold_out}
+                                >
+                                  <div className="flex w-full justify-between gap-4">
                                     <span>{ticket.name}</span>
                                     <span className="text-muted-foreground">
-                                      {ticket.price === 0 ? "Free" : `${event.currency} ${ticket.price.toLocaleString()}`}
+                                      {ticket.price === 0
+                                        ? "Free"
+                                        : `${event.currency} ${ticket.price.toLocaleString()}`}
                                     </span>
                                   </div>
-                                  {ticket.is_sold_out && <Badge variant="destructive" className="ml-2">Sold Out</Badge>}
+                                  {ticket.is_sold_out && (
+                                    <Badge
+                                      variant="destructive"
+                                      className="ml-2"
+                                    >
+                                      Sold Out
+                                    </Badge>
+                                  )}
                                 </SelectItem>
                               ))}
                             </SelectContent>
@@ -333,26 +422,41 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
 
                       {/* Promo Code */}
                       <div>
-                        <label className="text-sm font-medium mb-2 block">Promo Code</label>
+                        <label className="mb-2 block text-sm font-medium">
+                          Promo Code
+                        </label>
                         <div className="flex gap-2">
                           <Input
                             placeholder="Enter code"
                             value={promoCode}
-                            onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
+                            onChange={(e) =>
+                              setPromoCode(e.target.value.toUpperCase())
+                            }
                             disabled={!selectedTicket}
                           />
                           <Button
                             variant="outline"
                             onClick={handleValidatePromo}
-                            disabled={!promoCode.trim() || !selectedTicket || validatePromoMutation.isPending}
+                            disabled={
+                              !promoCode.trim() ||
+                              !selectedTicket ||
+                              validatePromoMutation.isPending
+                            }
                           >
-                            {validatePromoMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Apply"}
+                            {validatePromoMutation.isPending ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              "Apply"
+                            )}
                           </Button>
                         </div>
                         {promoDiscount && (
-                          <p className="text-sm text-green-600 mt-1 flex items-center gap-1">
+                          <p className="mt-1 flex items-center gap-1 text-sm text-green-600">
                             <CheckCircle2 className="h-4 w-4" />
-                            {promoDiscount.type === "percentage" ? `${promoDiscount.value}%` : `${promoDiscount.value}`} discount applied
+                            {promoDiscount.type === "percentage"
+                              ? `${promoDiscount.value}%`
+                              : `${promoDiscount.value}`}{" "}
+                            discount applied
                           </p>
                         )}
                       </div>
@@ -362,22 +466,25 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                         className="w-full"
                         size="lg"
                         onClick={handleRsvp}
-                        disabled={rsvpMutation.isPending || (!isFreeEvent && !selectedTicket)}
+                        disabled={
+                          rsvpMutation.isPending ||
+                          (!isFreeEvent && !selectedTicket)
+                        }
                       >
                         {rsvpMutation.isPending ? (
-                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                         ) : (
-                          <Ticket className="h-4 w-4 mr-2" />
+                          <Ticket className="mr-2 h-4 w-4" />
                         )}
                         {!isAuthenticated
                           ? "Login to Register"
                           : isFreeEvent
-                          ? "Confirm RSVP"
-                          : "Buy Tickets"}
+                            ? "Confirm RSVP"
+                            : "Buy Tickets"}
                       </Button>
 
                       {event.waitlist_enabled && (
-                        <p className="text-xs text-center text-muted-foreground">
+                        <p className="text-center text-xs text-muted-foreground">
                           If sold out, you'll be added to the waitlist
                         </p>
                       )}
@@ -387,16 +494,27 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                   <Separator />
 
                   {/* Share */}
-                  <Button variant="outline" className="w-full" onClick={() => {
-                    navigator.share?.({
-                      title: event.title,
-                      url: window.location.href,
-                    }).catch(() => {
-                      navigator.clipboard.writeText(window.location.href)
-                      Swal.fire({ icon: "success", title: "Link copied!", timer: 1500, showConfirmButton: false })
-                    })
-                  }}>
-                    <Share2 className="h-4 w-4 mr-2" />
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => {
+                      navigator
+                        .share?.({
+                          title: event.title,
+                          url: window.location.href,
+                        })
+                        .catch(() => {
+                          navigator.clipboard.writeText(window.location.href)
+                          Swal.fire({
+                            icon: "success",
+                            title: "Link copied!",
+                            timer: 1500,
+                            showConfirmButton: false,
+                          })
+                        })
+                    }}
+                  >
+                    <Share2 className="mr-2 h-4 w-4" />
                     Share Event
                   </Button>
                 </CardContent>
@@ -405,6 +523,27 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
           </div>
         </div>
       </div>
+
+      {/* Gallery Lightbox */}
+      <Dialog
+        open={!!activeGalleryImage}
+        onOpenChange={(open) => !open && setActiveGalleryImage(null)}
+      >
+        <DialogContent className="max-w-4xl border-none bg-transparent p-0 shadow-none sm:max-w-5xl">
+          <DialogTitle className="sr-only">Gallery Image View</DialogTitle>
+          <div className="relative aspect-video w-full overflow-hidden rounded-lg">
+            {activeGalleryImage && (
+              <Image
+                src={activeGalleryImage.url}
+                alt={activeGalleryImage.alt || "Gallery image"}
+                fill
+                unoptimized={isLocal}
+                className="object-contain"
+              />
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

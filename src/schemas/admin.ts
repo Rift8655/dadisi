@@ -224,6 +224,17 @@ export const AdminTagSchema = z.object({
   created_by: z.number().nullable().optional(),
 })
 
+const AdminMediaSchema = z.object({
+  id: z.number(),
+  file_name: z.string(),
+  file_path: z.string(),
+  type: z.string().optional(),
+  mime_type: z.string().optional(),
+  file_size: z.number().optional(),
+  is_featured: z.boolean().optional(),
+  url: z.string().optional(),
+})
+
 export const AdminPostSchema = z.object({
   id: z.number(),
   user_id: z.number(),
@@ -232,13 +243,32 @@ export const AdminPostSchema = z.object({
   slug: z.string(),
   excerpt: z.string().nullable().optional(),
   body: z.string(),
+  content: z.string().optional(), // Alias for body
   status: z.enum(["draft", "published"]),
   published_at: z.string().nullable(),
   hero_image_path: z.string().nullable().optional(),
+  featured_image: z.string().nullable().optional(),
   meta_title: z.string().nullable().optional(),
   meta_description: z.string().nullable().optional(),
   is_featured: z.boolean(),
   views_count: z.number(),
+  likes_count: z.coerce.number().optional().default(0),
+  dislikes_count: z.coerce.number().optional().default(0),
+  comments_count: z.coerce.number().optional().default(0),
+  allow_comments: z.boolean().optional().default(true),
+  media: z.array(AdminMediaSchema).optional(),
+  gallery_images: z.array(AdminMediaSchema).optional(),
+  featured_media: z
+    .object({
+      id: z.number(),
+      file_name: z.string(),
+      file_path: z.string(),
+      url: z.string().optional(),
+      mime_type: z.string().optional(),
+      file_size: z.number().optional(),
+    })
+    .nullable()
+    .optional(),
   created_at: z.string(),
   updated_at: z.string(),
   deleted_at: z.string().nullable().optional(),
@@ -247,6 +277,8 @@ export const AdminPostSchema = z.object({
       id: z.number(),
       username: z.string(),
       display_name: z.string().optional(),
+      name: z.string().optional(),
+      email: z.string().optional(),
     })
     .optional(),
   categories: z.array(AdminCategorySchema).optional(),

@@ -44,6 +44,16 @@ export const LabSpaceSchema = z.object({
   county: z.string().nullable(),
   is_active: z.boolean().default(true),
   is_available: z.boolean().optional(),
+  featured_media_id: z.number().nullable().optional(),
+  gallery_media_ids: z.array(z.number()).optional(),
+  featured_media: z
+    .object({
+      id: z.number(),
+      url: z.string(),
+      file_name: z.string().optional(),
+    })
+    .nullable()
+    .optional(),
   available_from: z.string().nullable().optional(),
   available_until: z.string().nullable().optional(),
   created_at: z.string().optional(),

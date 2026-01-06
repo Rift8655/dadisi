@@ -220,25 +220,11 @@ export const reconciliationApi = {
     }),
 }
 
-// Admin - Auto Renewal Jobs
-// Admin - Auto Renewal Jobs
-export const renewalsApi = {
-  list: async (params?: Record<string, unknown>): Promise<any> => {
-    const res = await api.get<ApiResponse<unknown>>(
-      "/api/admin/auto-renewal-jobs",
-      { params: params as Record<string, string | number | boolean> }
-    )
-
-    return PaginatedSchema(AdminRenewalJobSchema)
-      .or(z.array(AdminRenewalJobSchema))
-      .parse(res.data)
-  },
-  retry: (id: number) =>
-    api.post<unknown>(`/api/admin/subscriptions/renewals/${id}/retry`),
-  cancel: (id: number) =>
-    api.post<unknown>(`/api/admin/subscriptions/renewals/${id}/cancel`),
-  extendGracePeriod: (id: number, data: { days: number; note?: string }) =>
-    api.post<unknown>(`/api/subscriptions/${id}/extend-grace-period`, data),
+// Admin - Subscription Management
+export const subscriptionsApi = {
+  list: (params?: Record<string, unknown>) =>
+    api.get<any>("/api/admin/subscriptions", { params }),
+  get: (id: number) => api.get<any>(`/api/admin/subscriptions/${id}`),
 }
 
 // Admin - Webhooks
@@ -891,7 +877,6 @@ export const adminApi = {
   auditLogs: auditLogApi,
   retention: retentionApi,
   reconciliation: reconciliationApi,
-  renewals: renewalsApi,
   webhooks: webhooksApi,
   exchangeRates: exchangeRatesApi,
   blog: blogApi,
@@ -908,4 +893,20 @@ export const adminApi = {
   groups: groupsApi,
   forum: forumAdminApi,
   studentApprovals: studentApprovalsAdminApi,
+  subscriptions: subscriptionsApi,
+}
+
+// Admin - Finance Management
+export const financeApi = {
+  payments: {
+    list: (params?: Record<string, unknown>) =>
+      api.get<any>("/api/admin/finance/payments", { params }),
+    get: (id: number) => api.get<any>(`/api/admin/finance/payments/${id}`),
+    refund: (id: number, reason: string) =>
+      api.post<any>(`/api/admin/finance/payments/${id}/refund`, { reason }),
+  },
+  analytics: {
+    get: (period: string = "month") =>
+      api.get<any>("/api/admin/finance/analytics", { params: { period } }),
+  },
 }

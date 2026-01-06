@@ -6,6 +6,17 @@ const CountySchema = z.object({
   name: z.string(),
 })
 
+// Media schema
+const MediaSchema = z.object({
+  id: z.number(),
+  file_name: z.string().optional(),
+  file_path: z.string(),
+  url: z.string().optional(),
+  original_url: z.string().optional(),
+  mime_type: z.string().optional(),
+  size: z.number().optional(),
+})
+
 // Donation Campaign Schema
 export const DonationCampaignSchema = z.object({
   id: z.number(),
@@ -22,6 +33,8 @@ export const DonationCampaignSchema = z.object({
   is_goal_reached: z.boolean(),
   currency: z.string(),
   hero_image_url: z.string().nullable(),
+  featured_media_id: z.number().nullable().optional(),
+  gallery_media_ids: z.array(z.number()).optional(),
   status: z.enum(["draft", "active", "completed", "cancelled"]),
   county: CountySchema.nullable().optional(),
   creator: z.object({ id: z.number(), name: z.string() }).nullable().optional(),
@@ -30,6 +43,8 @@ export const DonationCampaignSchema = z.object({
   published_at: z.string().nullable(),
   created_at: z.string(),
   updated_at: z.string(),
+  media: z.array(MediaSchema).optional(),
+  featured_media: MediaSchema.nullable().optional(),
 })
 
 export const DonationCampaignsArraySchema = z.array(DonationCampaignSchema)
@@ -61,6 +76,8 @@ export const CreateCampaignSchema = z.object({
   minimum_amount: z.number().min(0).optional().nullable(),
   currency: z.enum(["KES", "USD"]).default("KES"),
   county_id: z.number().optional().nullable(),
+  featured_media_id: z.number().optional().nullable(),
+  gallery_media_ids: z.array(z.number()).optional().nullable(),
   starts_at: z.string().optional().nullable(),
   ends_at: z.string().optional().nullable(),
   status: z.enum(["draft", "active"]).default("draft"),

@@ -265,6 +265,10 @@ export interface AdminPost {
   meta_description?: string | null
   is_featured: boolean
   views_count: number
+  likes_count?: number
+  dislikes_count?: number
+  comments_count?: number
+  allow_comments?: boolean
   created_at: string
   updated_at: string
   deleted_at?: string | null
@@ -279,6 +283,20 @@ export interface AdminPost {
     id: number
     name: string
   } | null
+  media?: AdminMedia[]
+  gallery_images?: AdminMedia[]
+  featured_media?: AdminMedia | null
+}
+
+export interface AdminMedia {
+  id: number
+  file_name: string
+  file_path: string
+  url?: string
+  mime_type?: string
+  file_size?: number
+  type?: string
+  is_featured?: boolean
 }
 
 export interface AdminPlan {

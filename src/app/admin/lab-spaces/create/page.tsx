@@ -5,11 +5,12 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/store/auth"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
-import { ArrowLeft, FlaskConical, Loader2 } from "lucide-react"
+import { ArrowLeft, Loader2 } from "lucide-react"
 import { toast } from "sonner"
 
 import type { LabSpace, LabSpaceType } from "@/types/lab"
 import { labSpacesAdminApi } from "@/lib/api-admin"
+import { useCountiesQuery } from "@/hooks/useMemberProfileQuery"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -30,6 +31,8 @@ import {
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
 import { AdminDashboardShell } from "@/components/admin-dashboard-shell"
+import { FeaturedImageUpload } from "@/components/post-editor/FeaturedImageUpload"
+import { MediaGallerySelector } from "@/components/post-editor/MediaGallerySelector"
 import { Unauthorized } from "@/components/unauthorized"
 
 const SPACE_TYPES = [
@@ -37,12 +40,17 @@ const SPACE_TYPES = [
   { value: "dry_lab", label: "Dry Lab" },
   { value: "greenhouse", label: "Greenhouse" },
   { value: "mobile_lab", label: "Mobile Lab" },
+  { value: "makerspace", label: "Makerspace" },
+  { value: "workshop", label: "Workshop" },
+  { value: "studio", label: "Studio" },
+  { value: "other", label: "Other" },
 ]
 
 export default function CreateLabSpacePage() {
   const router = useRouter()
   const { user, isLoading: authLoading } = useAuth()
   const queryClient = useQueryClient()
+  const { data: counties, isLoading: countiesLoading } = useCountiesQuery()
 
   const [formData, setFormData] = useState<Partial<LabSpace>>({
     name: "",
@@ -57,6 +65,8 @@ export default function CreateLabSpacePage() {
   })
   const [amenitiesText, setAmenitiesText] = useState("")
   const [safetyText, setSafetyText] = useState("")
+  const [featuredMediaId, setFeaturedMediaId] = useState<number | null>(null)
+  const [galleryMediaIds, setGalleryMediaIds] = useState<number[]>([])
 
   // Create mutation
   const createMutation = useMutation({
@@ -84,6 +94,8 @@ export default function CreateLabSpacePage() {
         .split("\n")
         .map((s) => s.trim())
         .filter(Boolean),
+      featured_media_id: featuredMediaId,
+      gallery_media_ids: galleryMediaIds,
     }
 
     createMutation.mutate(data)
@@ -249,14 +261,24 @@ export default function CreateLabSpacePage() {
                   {/* County */}
                   <div className="space-y-2">
                     <Label htmlFor="county">County</Label>
-                    <Input
-                      id="county"
+                    <Select
                       value={formData.county || ""}
-                      onChange={(e) =>
-                        setFormData({ ...formData, county: e.target.value })
+                      onValueChange={(v) =>
+                        setFormData({ ...formData, county: v })
                       }
-                      placeholder="e.g., Nairobi"
-                    />
+                      disabled={countiesLoading}
+                    >
+                      <SelectTrigger id="county">
+                        <SelectValue placeholder="Select a county" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {counties?.map((county) => (
+                          <SelectItem key={county.id} value={county.name}>
+                            {county.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
 
                   {/* Location */}
@@ -286,6 +308,36 @@ export default function CreateLabSpacePage() {
                       onCheckedChange={(checked) =>
                         setFormData({ ...formData, is_active: checked })
                       }
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Media</CardTitle>
+                  <CardDescription>
+                    Upload images for this lab space
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>Featured Image</Label>
+                    <FeaturedImageUpload
+                      value=""
+                      onChange={(_, id) => setFeaturedMediaId(id || null)}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      This image will be displayed on the lab space card
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Gallery Images</Label>
+                    <MediaGallerySelector
+                      selectedIds={galleryMediaIds}
+                      onChange={setGalleryMediaIds}
+                      excludeId={featuredMediaId || undefined}
                     />
                   </div>
                 </CardContent>

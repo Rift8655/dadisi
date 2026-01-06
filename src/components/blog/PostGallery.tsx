@@ -49,16 +49,28 @@ export function PostGallery({ images, className }: PostGalleryProps) {
 
   return (
     <>
-      <div className={cn("space-y-4", className)}>
-        <h3 className="text-lg font-semibold">Gallery</h3>
+      <div
+        className={cn(
+          "space-y-4 rounded-xl border bg-card p-6 shadow-sm",
+          className
+        )}
+      >
+        <div className="flex items-center justify-between">
+          <h3 className="text-xl font-semibold tracking-tight">Gallery</h3>
+          {images.length > 0 && (
+            <p className="text-sm text-muted-foreground">
+              {images.length} {images.length === 1 ? "image" : "images"}
+            </p>
+          )}
+        </div>
 
         {/* Gallery Grid */}
         <div
           className={cn(
-            "grid gap-4",
+            "grid gap-3",
             images.length === 1 && "grid-cols-1",
             images.length === 2 && "grid-cols-2",
-            images.length >= 3 && "grid-cols-2 md:grid-cols-3"
+            images.length >= 3 && "grid-cols-3 md:grid-cols-4 lg:grid-cols-5"
           )}
         >
           {images.map((image, index) => (

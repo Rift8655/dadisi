@@ -264,6 +264,10 @@ export interface Post {
   created_at: string
   updated_at: string
   tags?: string[]
+  likes_count?: number
+  dislikes_count?: number
+  comments_count?: number
+  allow_comments?: boolean
 }
 
 export interface Donation {

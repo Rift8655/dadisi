@@ -22,6 +22,7 @@ import {
   useLabQuota,
   useLabSpaces,
 } from "@/hooks/useLabBookings"
+import { useCountiesQuery } from "@/hooks/useMemberProfileQuery"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -58,6 +59,7 @@ const SPACE_COLORS: Record<LabSpaceType, string> = {
 export default function LabSpacesPage() {
   const [search, setSearch] = useState("")
   const [typeFilter, setTypeFilter] = useState<string>("all")
+  const [countyFilter, setCountyFilter] = useState<string>("all")
   const { isAuthenticated } = useAuth()
 
   // Fetch lab spaces
@@ -68,7 +70,11 @@ export default function LabSpacesPage() {
   } = useLabSpaces({
     type: typeFilter !== "all" ? typeFilter : undefined,
     search: search || undefined,
+    county: countyFilter !== "all" ? countyFilter : undefined,
   })
+
+  // Fetch counties for filter
+  const { data: counties, isLoading: countiesLoading } = useCountiesQuery()
 
   // Fetch quota (only if authenticated)
   const { data: quota } = useLabQuota({ enabled: isAuthenticated })
@@ -139,14 +145,29 @@ export default function LabSpacesPage() {
 
                 {/* Type Filter */}
                 <Select value={typeFilter} onValueChange={setTypeFilter}>
-                  <SelectTrigger className="w-full sm:w-[180px]">
-                    <SelectValue placeholder="Filter by type" />
+                  <SelectTrigger className="w-full sm:w-[160px]">
+                    <SelectValue placeholder="All Types" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Types</SelectItem>
                     {LAB_SPACE_TYPES.map((type) => (
                       <SelectItem key={type.value} value={type.value}>
                         {type.icon} {type.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                {/* County Filter */}
+                <Select value={countyFilter} onValueChange={setCountyFilter}>
+                  <SelectTrigger className="w-full sm:w-[160px]">
+                    <SelectValue placeholder="All Counties" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Counties</SelectItem>
+                    {counties?.map((county) => (
+                      <SelectItem key={county.id} value={county.name}>
+                        {county.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -277,7 +298,9 @@ function LabSpaceCard({ space }: { space: LabSpace }) {
           <div className="flex items-center gap-1 text-sm text-muted-foreground">
             <MapPin className="h-4 w-4" />
             <span className="line-clamp-1">
-              {space.location || space.county || "Location TBD"}
+              {space.county
+                ? `${space.county}${space.location ? `, ${space.location}` : ""}`
+                : space.location || "Location TBD"}
             </span>
           </div>
           <Button asChild>

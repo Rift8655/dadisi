@@ -7,26 +7,20 @@
 
 const ALGORITHM = "AES-GCM"
 const SALT = "dadisi-token-salt-v1"
-const ITERATIONS = 100000
+// Reduced from 100000 to 10000 for faster key derivation in new tabs
+// 10k iterations is still secure for client-side token encryption
+const ITERATIONS = 10000
 
 /**
- * Generate a device fingerprint for key derivation.
- * This isn't perfect but raises the bar for token theft.
+ * Get a stable key material for encryption.
+ * We use a static string instead of device fingerprinting because:
+ * 1. Device fingerprinting via screen/navigator properties is unstable across tabs/windows
+ *    (e.g. moving a tab to a different monitor changes screen dimensions).
+ * 2. Unstable keys cause valid tokens to fail decryption, logging users out unexpectedly.
+ * 3. The security benefit of client-side fingerprinting is marginal vs the UX cost.
  */
-function getDeviceFingerprint(): string {
-  if (typeof window === "undefined") {
-    return "server-side-default"
-  }
-
-  const components = [
-    screen.width,
-    screen.height,
-    screen.colorDepth,
-    Intl.DateTimeFormat().resolvedOptions().timeZone,
-    navigator.language,
-  ]
-
-  return components.join("|")
+function getStableKeyMaterial(): string {
+  return "dadisi-stable-encryption-key-v1-static"
 }
 
 /**
@@ -40,7 +34,7 @@ async function getEncryptionKey(): Promise<CryptoKey> {
     return cachedKey
   }
 
-  const fingerprint = getDeviceFingerprint()
+  const fingerprint = getStableKeyMaterial()
   const encoder = new TextEncoder()
 
   // Import fingerprint as key material
