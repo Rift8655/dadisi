@@ -24,6 +24,10 @@ export default function BlogPostPage({
   if (error || !post)
     return <div className="container py-10">Post not found.</div>
 
+  const galleryImages = post.gallery_images?.length
+    ? post.gallery_images
+    : post.media?.filter((m) => m.pivot?.role === "gallery") || []
+
   return (
     <div className="container py-10">
       <h1 className="mb-2 text-3xl font-bold">{post.title}</h1>
@@ -46,16 +50,10 @@ export default function BlogPostPage({
         </div>
       )}
 
-      {/* Gallery Images - Moved up */}
-      <PostGallery
-        images={
-          post.gallery_images?.length
-            ? post.gallery_images
-            : (post.media?.filter((m) => m.pivot?.role === "gallery") as any) ||
-              []
-        }
-        className="mb-8"
-      />
+      {/* Gallery Images - Robust conditional rendering */}
+      {galleryImages.length > 0 && (
+        <PostGallery images={galleryImages as any} className="mb-8" />
+      )}
       <div
         className="prose prose-lg dark:prose-invert mb-10 max-w-none"
         dangerouslySetInnerHTML={{ __html: post.body || post.content || "" }}

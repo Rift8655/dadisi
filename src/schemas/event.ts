@@ -23,10 +23,12 @@ export const EventMediaSchema = z.object({
   id: z.number(),
   file_name: z.string().optional(),
   file_path: z.string(),
-  url: z.string().optional(),
-  original_url: z.string().optional(),
+  url: z.string(),
+  original_url: z.string(),
   mime_type: z.string().optional(),
   size: z.number().optional(),
+  created_at: z.string().optional(),
+  updated_at: z.string().optional(),
 })
 
 export const TicketSchema = z.object({
@@ -53,6 +55,7 @@ export const SpeakerSchema = z.object({
   website_url: z.string().nullable().optional(),
   linkedin_url: z.string().nullable().optional(),
   is_featured: z.boolean(),
+  photo_media: EventMediaSchema.nullable().optional(),
 })
 
 export const EventSchema = z.object({
@@ -61,10 +64,13 @@ export const EventSchema = z.object({
   slug: z.string(),
   description: z.string(),
   category: EventCategorySchema.nullable().optional(),
-  county: z.object({
-    id: z.number(),
-    name: z.string()
-  }).nullable().optional(),
+  county: z
+    .object({
+      id: z.number(),
+      name: z.string(),
+    })
+    .nullable()
+    .optional(),
   venue: z.string().nullable(),
   is_online: z.boolean(),
   online_link: z.string().nullable(),
@@ -77,6 +83,7 @@ export const EventSchema = z.object({
   gallery_media_ids: z.array(z.number()).optional(),
   media: z.array(EventMediaSchema).optional(),
   featured_media: EventMediaSchema.nullable().optional(),
+  gallery_media: z.array(EventMediaSchema).optional(),
   price: z.number(),
   currency: z.string(),
   status: z.enum(["draft", "published", "suspended"]),
@@ -101,7 +108,13 @@ export const RegistrationSchema = z.object({
   user_id: z.number(),
   ticket_id: z.number(),
   confirmation_code: z.string(),
-  status: z.enum(["pending", "confirmed", "attended", "cancelled", "waitlisted"]),
+  status: z.enum([
+    "pending",
+    "confirmed",
+    "attended",
+    "cancelled",
+    "waitlisted",
+  ]),
   check_in_at: z.string().nullable(),
   waitlist_position: z.number().nullable(),
   qr_code_url: z.string().nullable(),
@@ -109,8 +122,6 @@ export const RegistrationSchema = z.object({
   event: EventSchema.optional(),
   ticket: TicketSchema.optional(),
 })
-
-
 
 export const PromoCodeSchema = z.object({
   id: z.number(),
@@ -127,11 +138,13 @@ export const PromoCodeSchema = z.object({
 
 export const EventsListSchema = z.object({
   data: z.array(EventSchema),
-  meta: z.object({
-    current_page: z.number(),
-    last_page: z.number(),
-    total: z.number(),
-  }).optional(),
+  meta: z
+    .object({
+      current_page: z.number(),
+      last_page: z.number(),
+      total: z.number(),
+    })
+    .optional(),
 })
 
 // Types inferred from schemas
@@ -143,4 +156,3 @@ export type RsvpPayload = {
   ticket_id: number
   additional_data?: any
 }
-

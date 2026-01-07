@@ -88,7 +88,9 @@ export default function EditCampaignPage() {
             status: campaign.status as "draft" | "active",
             featured_media_id: campaign.featured_media?.id,
             featured_media_url:
-              campaign.featured_media?.url || campaign.hero_image_url,
+              campaign.featured_media?.url ||
+              campaign.hero_image_url ||
+              undefined,
             gallery_media_ids: campaign.media?.map((m) => m.id) || [],
           }}
           isEdit

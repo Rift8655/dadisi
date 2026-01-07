@@ -25,6 +25,7 @@ import { z } from "zod"
 
 import type {
   AdminAuditLog,
+  AdminFinanceAnalytics,
   AdminPermission,
   AdminPlan,
   AdminPost,
@@ -223,7 +224,9 @@ export const reconciliationApi = {
 // Admin - Subscription Management
 export const subscriptionsApi = {
   list: (params?: Record<string, unknown>) =>
-    api.get<any>("/api/admin/subscriptions", { params }),
+    api.get<any>("/api/admin/subscriptions", {
+      params: params as Record<string, string | number | boolean>,
+    }),
   get: (id: number) => api.get<any>(`/api/admin/subscriptions/${id}`),
 }
 
@@ -900,13 +903,18 @@ export const adminApi = {
 export const financeApi = {
   payments: {
     list: (params?: Record<string, unknown>) =>
-      api.get<any>("/api/admin/finance/payments", { params }),
+      api.get<any>("/api/admin/finance/payments", {
+        params: params as Record<string, string | number | boolean>,
+      }),
     get: (id: number) => api.get<any>(`/api/admin/finance/payments/${id}`),
     refund: (id: number, reason: string) =>
       api.post<any>(`/api/admin/finance/payments/${id}/refund`, { reason }),
   },
   analytics: {
     get: (period: string = "month") =>
-      api.get<any>("/api/admin/finance/analytics", { params: { period } }),
+      api.get<ApiResponse<AdminFinanceAnalytics>>(
+        "/api/admin/finance/analytics",
+        { params: { period } }
+      ),
   },
 }

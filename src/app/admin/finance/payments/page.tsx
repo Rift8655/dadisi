@@ -5,6 +5,7 @@ import { format } from "date-fns"
 import { Eye, Filter, RotateCcw, Search } from "lucide-react"
 import { toast } from "sonner"
 
+import type { AdminPayment } from "@/types/admin"
 import { financeApi } from "@/lib/api-admin"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -39,7 +40,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { AdminDashboardShell } from "@/components/admin-dashboard-shell"
 
 export default function AdminPaymentsPage() {
-  const [payments, setPayments] = useState([])
+  const [payments, setPayments] = useState<AdminPayment[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState("")
   const [status, setStatus] = useState("all")
@@ -49,7 +50,9 @@ export default function AdminPaymentsPage() {
     last_page: 1,
     total: 0,
   })
-  const [selectedPayment, setSelectedPayment] = useState(null)
+  const [selectedPayment, setSelectedPayment] = useState<AdminPayment | null>(
+    null
+  )
   const [refundReason, setRefundReason] = useState("")
   const [isRefundDialogOpen, setIsRefundDialogOpen] = useState(false)
 
@@ -89,14 +92,14 @@ export default function AdminPaymentsPage() {
       setIsRefundDialogOpen(false)
       setRefundReason("")
       fetchPayments(pagination.current_page)
-    } catch (error) {
+    } catch (error: any) {
       console.error("Refund failed:", error)
       toast.error(error.message || "Refund failed")
     }
   }
 
-  const getStatusBadge = (status) => {
-    const variants = {
+  const getStatusBadge = (status: string) => {
+    const variants: Record<string, any> = {
       paid: "success",
       pending: "warning",
       refunded: "destructive",
@@ -200,7 +203,7 @@ export default function AdminPaymentsPage() {
                           {payment.payable_type
                             .split("\\")
                             .pop()
-                            .replace("Order", "")}
+                            ?.replace("Order", "") || "Payment"}
                         </TableCell>
                         <TableCell>{getStatusBadge(payment.status)}</TableCell>
                         <TableCell className="text-sm">

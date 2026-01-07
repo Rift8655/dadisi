@@ -24,11 +24,9 @@ export function PostInteractions({
   const { data: status, isLoading } = usePostLikeStatus(slug, !!user)
   const toggleLike = useToggleLike(slug)
 
-  const likes = status?.data ? status.data.likes_count : initialLikes || 0
-  const dislikes = status?.data
-    ? status.data.dislikes_count
-    : initialDislikes || 0
-  const userVote = status?.data?.user_vote
+  const likes = status ? status.likes_count : initialLikes || 0
+  const dislikes = status ? status.dislikes_count : initialDislikes || 0
+  const userVote = status?.user_vote
 
   const handleToggle = (type: "like" | "dislike") => {
     if (!user) {

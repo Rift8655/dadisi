@@ -388,3 +388,60 @@ export interface AdminStudentApprovalRequest {
   admin_notes?: string | null
   expires_at: string
 }
+
+export interface FinanceRevenueData {
+  date: string
+  total_revenue: string | number
+  transaction_count: number
+  [key: string]: any
+}
+
+export interface FinanceRefundData {
+  date: string
+  total_refunded: string | number
+  refund_count: number
+  [key: string]: any
+}
+
+export interface FinanceCategoryData {
+  label: string
+  total: number
+  count: number
+  [key: string]: any
+}
+
+export interface AdminFinanceAnalytics {
+  revenue: FinanceRevenueData[]
+  refunds: FinanceRefundData[]
+  categories: FinanceCategoryData[]
+  period: string
+}
+
+export interface AdminPayment {
+  id: number
+  payable_type: string
+  payable_id: number
+  payer_id: number | null
+  payer?: {
+    id: number
+    username: string
+    email: string
+    name?: string
+  } | null
+  gateway: string
+  method?: string | null
+  status: string
+  amount: string | number
+  currency: string
+  description?: string | null
+  reference: string
+  external_reference?: string | null
+  order_reference?: string | null
+  transaction_id?: string | null
+  pesapal_order_id?: string | null
+  receipt_url?: string | null
+  paid_at?: string | null
+  refunded_at?: string | null
+  created_at: string
+  updated_at: string
+}

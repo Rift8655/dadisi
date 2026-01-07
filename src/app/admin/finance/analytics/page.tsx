@@ -19,6 +19,7 @@ import {
 } from "recharts"
 import { toast } from "sonner"
 
+import type { AdminFinanceAnalytics } from "@/types/admin"
 import { financeApi } from "@/lib/api-admin"
 import {
   Card,
@@ -39,7 +40,7 @@ import { AdminDashboardShell } from "@/components/admin-dashboard-shell"
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8"]
 
 export default function FinanceAnalyticsPage() {
-  const [data, setData] = useState(null)
+  const [data, setData] = useState<AdminFinanceAnalytics | null>(null)
   const [loading, setLoading] = useState(true)
   const [period, setPeriod] = useState("month")
 
@@ -47,7 +48,7 @@ export default function FinanceAnalyticsPage() {
     setLoading(true)
     try {
       const response = await financeApi.analytics.get(period)
-      setData(response.data)
+      setData(response.data || null)
     } catch (error) {
       console.error("Failed to fetch analytics:", error)
       toast.error("Failed to load analytics data")
@@ -68,24 +69,32 @@ export default function FinanceAnalyticsPage() {
     )
   }
 
+  if (!data) {
+    return (
+      <div className="flex h-96 items-center justify-center">
+        No analytics data available.
+      </div>
+    )
+  }
+
   const combinedChartData =
-    data?.revenue.map((rev) => {
+    data.revenue.map((rev) => {
       const ref = data.refunds.find((r) => r.date === rev.date)
       return {
         date: rev.date.split(" ")[0], // Simplify date display
-        revenue: parseFloat(rev.total_revenue),
-        refunds: ref ? parseFloat(ref.total_refunded) : 0,
+        revenue: parseFloat(rev.total_revenue as string),
+        refunds: ref ? parseFloat(ref.total_refunded as string) : 0,
       }
     }) || []
 
   const totalRevenue =
-    data?.revenue.reduce(
-      (acc, curr) => acc + parseFloat(curr.total_revenue),
+    data.revenue.reduce(
+      (acc, curr) => acc + parseFloat(curr.total_revenue as string),
       0
     ) || 0
   const totalRefunds =
-    data?.refunds.reduce(
-      (acc, curr) => acc + (parseFloat(curr.total_refunded) || 0),
+    data.refunds.reduce(
+      (acc, curr) => acc + (parseFloat(curr.total_refunded as string) || 0),
       0
     ) || 0
   const netRevenue = totalRevenue - totalRefunds
@@ -142,7 +151,7 @@ export default function FinanceAnalyticsPage() {
                 KES {totalRefunds.toLocaleString()}
               </div>
               <p className="text-xs text-muted-foreground">
-                {data?.refunds.length || 0} refund transactions
+                {data.refunds.length || 0} refund transactions
               </p>
             </CardContent>
           </Card>
@@ -169,7 +178,7 @@ export default function FinanceAnalyticsPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {data?.revenue.reduce(
+                {data.revenue.reduce(
                   (acc, curr) => acc + curr.transaction_count,
                   0
                 ) || 0}
@@ -246,7 +255,7 @@ export default function FinanceAnalyticsPage() {
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
-                      data={data?.categories || []}
+                      data={data.categories || []}
                       cx="50%"
                       cy="50%"
                       innerRadius={60}
@@ -255,7 +264,7 @@ export default function FinanceAnalyticsPage() {
                       dataKey="total"
                       nameKey="label"
                     >
-                      {(data?.categories || []).map((entry, index) => (
+                      {data.categories.map((entry, index) => (
                         <Cell
                           key={`cell-${index}`}
                           fill={COLORS[index % COLORS.length]}
@@ -268,7 +277,7 @@ export default function FinanceAnalyticsPage() {
                 </ResponsiveContainer>
               </div>
               <div className="mt-4 space-y-2">
-                {data?.categories.map((cat, i) => (
+                {data.categories.map((cat, i) => (
                   <div
                     key={cat.label}
                     className="flex items-center justify-between text-sm"

@@ -167,6 +167,7 @@ export interface Speaker {
   website_url?: string | null
   linkedin_url?: string | null
   is_featured: boolean
+  photo_media?: Media | null
 }
 
 export interface Registration {
@@ -243,6 +244,12 @@ export interface Event {
   speakers?: Speaker[]
   tags?: EventTag[]
   registrations_count?: number
+  featured_media_id?: number | null
+  gallery_media_ids?: number[]
+  featured_media?: Media | null
+  gallery_media?: Media[]
+  hero_image_url?: string | null
+  is_attending?: boolean
   created_at: string
   updated_at: string
 }
@@ -295,7 +302,7 @@ export interface Media {
   file_path?: string
   type?: string
   mime_type?: string
-  size: number
+  size?: number
   visibility?: "public" | "private" | "shared"
   share_token?: string | null
   allow_download?: boolean
@@ -308,6 +315,6 @@ export interface Media {
     id: number
     name?: string
   }
-  created_at: string
-  updated_at: string
+  created_at?: string
+  updated_at?: string
 }
