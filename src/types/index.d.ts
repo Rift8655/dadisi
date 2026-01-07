@@ -307,7 +307,7 @@ export interface Media {
   share_token?: string | null
   allow_download?: boolean
   is_public?: boolean
-  url: string
+  url?: string
   original_url?: string
   attached_to?: string | null
   attached_to_id?: number | null

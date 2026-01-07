@@ -185,7 +185,7 @@ export const auditLogApi = {
 
     return PaginatedSchema(AdminAuditLogSchema)
       .or(z.array(AdminAuditLogSchema))
-      .parse(res.data)
+      .parse(res)
   },
 }
 
@@ -228,6 +228,8 @@ export const subscriptionsApi = {
       params: params as Record<string, string | number | boolean>,
     }),
   get: (id: number) => api.get<any>(`/api/admin/subscriptions/${id}`),
+  cancel: (id: number) =>
+    api.post<any>(`/api/admin/subscriptions/${id}/cancel`),
 }
 
 // Admin - Webhooks

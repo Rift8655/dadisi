@@ -430,16 +430,18 @@ export interface AdminPayment {
   } | null
   gateway: string
   method?: string | null
-  status: string
+  status: "paid" | "pending" | "failed" | "refunded" | "canceled" | string
   amount: string | number
   currency: string
   description?: string | null
-  reference: string
+  reference: string | null
   external_reference?: string | null
   order_reference?: string | null
   transaction_id?: string | null
   pesapal_order_id?: string | null
   receipt_url?: string | null
+  county?: string | null
+  meta?: Record<string, any>
   paid_at?: string | null
   refunded_at?: string | null
   created_at: string

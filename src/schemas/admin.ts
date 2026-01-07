@@ -152,7 +152,9 @@ export const AdminAuditLogSchema = z.object({
   ip_address: z.string().nullable().optional(),
   user_agent: z.string().nullable().optional(),
   notes: z.string().nullable().optional(),
+  description: z.string().nullable().optional(),
   created_at: z.string(),
+  updated_at: z.string().optional(),
 })
 
 export const AdminRenewalJobSchema = z.object({

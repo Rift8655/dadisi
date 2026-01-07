@@ -2,10 +2,11 @@
 
 import { useEffect, useState } from "react"
 import { format } from "date-fns"
-import { Eye, Filter, RotateCcw, Search, User } from "lucide-react"
+import { Eye, Filter, RotateCcw, Search, User, XCircle } from "lucide-react"
 import { toast } from "sonner"
+import Swal from "sweetalert2"
 
-import { plansApi } from "@/lib/api-admin"
+import { plansApi, subscriptionsApi } from "@/lib/api-admin"
 import { useAdminSubscriptions } from "@/hooks/useAdminSubscriptions"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -33,6 +34,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { AdminDashboardShell } from "@/components/admin-dashboard-shell"
+import { SubscriptionDetailsDialog } from "@/components/admin/subscription-details-dialog"
 
 export default function AdminSubscriptionsPage() {
   const [params, setParams] = useState({
@@ -42,6 +44,10 @@ export default function AdminSubscriptionsPage() {
     plan_id: "all",
   })
   const [plans, setPlans] = useState<any[]>([])
+  const [selectedSubscriptionId, setSelectedSubscriptionId] = useState<
+    number | null
+  >(null)
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false)
 
   const { data: response, isLoading } = useAdminSubscriptions({
     ...params,
@@ -63,6 +69,34 @@ export default function AdminSubscriptionsPage() {
 
   const handlePlanChange = (value: string) => {
     setParams((prev) => ({ ...prev, plan_id: value, page: 1 }))
+  }
+
+  const handleViewDetails = (id: number) => {
+    setSelectedSubscriptionId(id)
+    setIsDetailsOpen(true)
+  }
+
+  const handleCancelSub = async (id: number) => {
+    const result = await Swal.fire({
+      title: "Cancel Subscription?",
+      text: "This will terminate the member's subscription immediately. This action cannot be undone.",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#d33",
+      cancelButtonColor: "#3085d6",
+      confirmButtonText: "Yes, cancel it!",
+    })
+
+    if (result.isConfirmed) {
+      try {
+        await subscriptionsApi.cancel(id)
+        toast.success("Subscription cancelled successfully")
+        // Refresh data
+        setParams((p) => ({ ...p }))
+      } catch (err: any) {
+        toast.error(err.message || "Failed to cancel subscription")
+      }
+    }
   }
 
   const getStatusBadge = (status: string) => {
@@ -187,11 +221,6 @@ export default function AdminSubscriptionsPage() {
                             <span className="font-medium">
                               {sub.plan_display_name}
                             </span>
-                            {sub.enhancements_count > 0 && (
-                              <span className="text-xs text-muted-foreground">
-                                +{sub.enhancements_count} enhancements
-                              </span>
-                            )}
                           </div>
                         </TableCell>
                         <TableCell>{getStatusBadge(sub.status)}</TableCell>
@@ -222,18 +251,27 @@ export default function AdminSubscriptionsPage() {
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            title="View Details"
-                            onClick={() =>
-                              toast.info(
-                                `Viewing subscription #${sub.id} for ${sub.user_name}`
-                              )
-                            }
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
+                          <div className="flex justify-end gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              title="View Details"
+                              onClick={() => handleViewDetails(sub.id)}
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            {sub.status === "active" && sub.plan_price > 0 && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                                title="Cancel Subscription"
+                                onClick={() => handleCancelSub(sub.id)}
+                              >
+                                <XCircle className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))
@@ -268,6 +306,13 @@ export default function AdminSubscriptionsPage() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Details Dialog */}
+        <SubscriptionDetailsDialog
+          subscriptionId={selectedSubscriptionId}
+          open={isDetailsOpen}
+          onOpenChange={setIsDetailsOpen}
+        />
       </div>
     </AdminDashboardShell>
   )

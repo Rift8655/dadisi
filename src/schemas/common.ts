@@ -30,7 +30,7 @@ export const DonationSchema = z.object({
 
 export const MediaSchema = z.object({
   id: z.number(),
-  url: z.string(),
+  url: z.string().optional(),
   original_url: z.string().optional(),
   file_name: z.string().optional(),
   mime_type: z.string().optional(),

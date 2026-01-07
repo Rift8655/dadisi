@@ -87,7 +87,7 @@ export function MediaGallerySelector({
             {selectedMedia.map((item) => (
               <div key={item.id} className="group relative aspect-video">
                 <Image
-                  src={item.original_url || item.url}
+                  src={item.original_url || item.url || ""}
                   alt={item.file_name || "Gallery image"}
                   fill
                   className="rounded-md object-cover"

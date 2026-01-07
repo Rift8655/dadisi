@@ -299,7 +299,7 @@ export function FeaturedImageUpload({
 
                 const newImage = {
                   id: m.id,
-                  url: m.original_url || m.url,
+                  url: m.original_url || m.url || "",
                   file_name: m.file_name || "Featured Image",
                   isFeatured: true,
                   isTemporary: false, // Selected from library is NOT temporary

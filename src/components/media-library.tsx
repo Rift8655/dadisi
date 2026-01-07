@@ -276,7 +276,7 @@ export function MediaLibrary({ onSelect }: MediaLibraryProps) {
                   {file.mime_type?.startsWith("image/") ? (
                     <div className="relative h-full w-full">
                       <Image
-                        src={file.original_url || file.url}
+                        src={file.original_url || file.url || ""}
                         alt={file.file_name || "Media file"}
                         fill
                         className="object-cover"
@@ -366,7 +366,7 @@ export function MediaLibrary({ onSelect }: MediaLibraryProps) {
                         variant="secondary"
                         className="w-full"
                         onClick={() =>
-                          copyUrl(file.original_url || file.url, file.id)
+                          copyUrl(file.original_url || file.url || "", file.id)
                         }
                       >
                         {copiedId === file.id ? (

@@ -8,7 +8,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 
 interface MediaItem {
   id: number
-  url: string
+  url?: string
   original_url?: string
   file_name?: string
   mime_type?: string
@@ -79,7 +79,7 @@ export function MediaLibraryGrid({
               }`}
             >
               <Image
-                src={item.original_url || item.url}
+                src={item.original_url || item.url || ""}
                 alt={item.file_name || "Media"}
                 fill
                 className="object-cover"

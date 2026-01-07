@@ -1,8 +1,9 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import Link from "next/link"
 import { format } from "date-fns"
-import { Eye, Filter, RotateCcw, Search } from "lucide-react"
+import { ExternalLink, Eye, Filter, RotateCcw, Search } from "lucide-react"
 import { toast } from "sonner"
 
 import type { AdminPayment } from "@/types/admin"
@@ -38,6 +39,7 @@ import {
 } from "@/components/ui/table"
 import { Textarea } from "@/components/ui/textarea"
 import { AdminDashboardShell } from "@/components/admin-dashboard-shell"
+import { PaymentDetailsDialog } from "@/components/admin/payment-details-dialog"
 
 export default function AdminPaymentsPage() {
   const [payments, setPayments] = useState<AdminPayment[]>([])
@@ -55,6 +57,10 @@ export default function AdminPaymentsPage() {
   )
   const [refundReason, setRefundReason] = useState("")
   const [isRefundDialogOpen, setIsRefundDialogOpen] = useState(false)
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false)
+  const [selectedPaymentId, setSelectedPaymentId] = useState<number | null>(
+    null
+  )
 
   const fetchPayments = async (page = 1) => {
     setLoading(true)
@@ -96,6 +102,11 @@ export default function AdminPaymentsPage() {
       console.error("Refund failed:", error)
       toast.error(error.message || "Refund failed")
     }
+  }
+
+  const handleViewDetails = (id: number) => {
+    setSelectedPaymentId(id)
+    setIsDetailsOpen(true)
   }
 
   const getStatusBadge = (status: string) => {
@@ -186,13 +197,43 @@ export default function AdminPaymentsPage() {
                     payments.map((payment) => (
                       <TableRow key={payment.id}>
                         <TableCell className="font-mono text-xs font-medium">
-                          {payment.reference}
+                          {payment.reference ||
+                            payment.order_reference ||
+                            "N/A"}
                         </TableCell>
                         <TableCell>
                           <div className="flex flex-col">
-                            <span>{payment.payer?.name || "Guest"}</span>
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-medium">
+                                {payment.payer?.name || "Guest"}
+                              </span>
+                              {payment.payer_id ? (
+                                <Badge
+                                  variant="secondary"
+                                  className="h-4 bg-blue-100 px-1 text-[8px] font-bold uppercase text-blue-700 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400"
+                                >
+                                  User
+                                </Badge>
+                              ) : (
+                                <Badge
+                                  variant="outline"
+                                  className="h-4 px-1 text-[8px] font-bold uppercase text-muted-foreground"
+                                >
+                                  Guest
+                                </Badge>
+                              )}
+                              {payment.payer && (
+                                <Link
+                                  href={`/admin/users/${payment.payer.id}`}
+                                  className="text-primary transition-colors hover:text-primary/80"
+                                  title="View user profile"
+                                >
+                                  <ExternalLink className="h-3 w-3" />
+                                </Link>
+                              )}
+                            </div>
                             <span className="text-xs text-muted-foreground">
-                              {payment.payer?.email}
+                              {payment.payer?.email || payment.meta?.user_email}
                             </span>
                           </div>
                         </TableCell>
@@ -214,7 +255,11 @@ export default function AdminPaymentsPage() {
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-2">
-                            <Button variant="ghost" size="icon">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleViewDetails(payment.id)}
+                            >
                               <Eye className="h-4 w-4" />
                             </Button>
                             {payment.status === "paid" && (
@@ -301,6 +346,12 @@ export default function AdminPaymentsPage() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        <PaymentDetailsDialog
+          paymentId={selectedPaymentId}
+          open={isDetailsOpen}
+          onOpenChange={setIsDetailsOpen}
+        />
       </div>
     </AdminDashboardShell>
   )

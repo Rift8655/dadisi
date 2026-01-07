@@ -96,7 +96,7 @@ export const EventSchema = z.object({
   speakers: z.array(SpeakerSchema).optional(),
   tags: z.array(EventTagSchema).optional(),
   creator: z.object({ id: z.number(), name: z.string() }).nullable().optional(),
-  registrations_count: z.number().optional(),
+  registrations_count: z.coerce.number().optional(),
   is_attending: z.boolean().optional(),
   created_at: z.string(),
   updated_at: z.string(),

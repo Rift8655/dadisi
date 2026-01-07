@@ -1,123 +1,112 @@
 "use client"
 
-import { useState } from "react"
-import { ChevronDown, Eye } from "lucide-react"
+import { Fragment, useState } from "react"
+import { Eye } from "lucide-react"
 
 import { AdminAuditLog } from "@/types/admin"
 import { formatDate } from "@/lib/utils"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+
+import { AuditLogDetailsDialog } from "./audit-log-details-dialog"
 
 interface AuditLogTableProps {
   logs: AdminAuditLog[]
   isLoading?: boolean
-  onLoadMore?: () => void
-  hasMore?: boolean
 }
 
-export function AuditLogTable({
-  logs,
-  isLoading = false,
-  onLoadMore,
-  hasMore = false,
-}: AuditLogTableProps) {
-  const [expandedId, setExpandedId] = useState<number | null>(null)
+export function AuditLogTable({ logs, isLoading = false }: AuditLogTableProps) {
+  const [selectedLog, setSelectedLog] = useState<AdminAuditLog | null>(null)
+  const [isDialogOpen, setIsDialogOpen] = useState(false)
 
   return (
     <div className="space-y-4">
       <div className="overflow-x-auto rounded-md border">
         <table className="w-full text-sm">
-          <thead className="bg-gray-50 dark:bg-gray-900">
+          <thead className="bg-muted/50">
             <tr className="border-b">
-              <th className="px-4 py-2 text-left font-medium">User</th>
-              <th className="px-4 py-2 text-left font-medium">Model</th>
-              <th className="px-4 py-2 text-left font-medium">Action</th>
-              <th className="px-4 py-2 text-left font-medium">IP Address</th>
-              <th className="px-4 py-2 text-left font-medium">Date</th>
-              <th className="px-4 py-2 text-center font-medium">Details</th>
+              <th className="px-4 py-3 text-left font-medium">User</th>
+              <th className="px-4 py-3 text-left font-medium">Model</th>
+              <th className="px-4 py-3 text-left font-medium">Action</th>
+              <th className="px-4 py-3 text-left font-medium">IP Address</th>
+              <th className="px-4 py-3 text-left font-medium">Date</th>
+              <th className="px-4 py-3 text-right font-medium">Details</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="divide-y">
             {logs.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
+                <td
+                  colSpan={6}
+                  className="px-4 py-8 text-center text-muted-foreground"
+                >
                   {isLoading ? "Loading audit logs..." : "No audit logs found"}
                 </td>
               </tr>
             ) : (
               logs.map((log) => (
-                <div key={log.id}>
-                  <tr className="border-b hover:bg-gray-50 dark:hover:bg-gray-900">
-                    <td className="px-4 py-2">
-                      <div className="font-medium">
-                        {log.user?.username || "Unknown"}
-                      </div>
-                      <div className="text-xs text-gray-500">
-                        {log.user?.email}
-                      </div>
-                    </td>
-                    <td className="px-4 py-2 font-mono text-xs">{log.model_type}</td>
-                    <td className="px-4 py-2">
-                      <span className="inline-block rounded bg-blue-100 px-2 py-1 text-xs font-medium text-blue-800 dark:bg-blue-900 dark:text-blue-100">
-                        {log.action}
-                      </span>
-                    </td>
-                    <td className="px-4 py-2 font-mono text-xs">
-                      {log.ip_address}
-                    </td>
-                    <td className="px-4 py-2 text-xs text-gray-500">
-                      {formatDate(log.created_at)}
-                    </td>
-                    <td className="px-4 py-2 text-center">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() =>
-                          setExpandedId(expandedId === log.id ? null : log.id)
-                        }
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                    </td>
-                  </tr>
-                  {expandedId === log.id && (
-                    <tr className="border-b bg-gray-50 dark:bg-gray-900">
-                      <td colSpan={6} className="px-4 py-4">
-                        <div className="space-y-2">
-                          <div>
-                            <h4 className="mb-2 font-semibold">Changes:</h4>
-                            <pre className="max-h-48 overflow-auto rounded border bg-white p-2 text-xs dark:bg-gray-950">
-                              {JSON.stringify({ old: log.old_values, new: log.new_values }, null, 2)}
-                            </pre>
-                          </div>
-                          {log.user_agent && (
-                            <div>
-                              <h4 className="mb-1 text-xs font-semibold">
-                                User Agent:
-                              </h4>
-                              <p className="break-all text-xs text-gray-600 dark:text-gray-400">
-                                {log.user_agent}
-                              </p>
-                            </div>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  )}
-                </div>
+                <tr
+                  key={log.id}
+                  className="transition-colors hover:bg-muted/30"
+                >
+                  <td className="px-4 py-3">
+                    <div className="font-medium">
+                      {log.user?.username || "System"}
+                    </div>
+                    <div className="text-[10px] text-muted-foreground">
+                      {log.user?.email || `ID: ${log.user_id}`}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div
+                      className="max-w-[120px] truncate font-mono text-[10px] text-muted-foreground"
+                      title={log.model_type}
+                    >
+                      {log.model_type?.split("\\").pop()}
+                    </div>
+                    <div className="text-[10px] font-bold">
+                      ID: #{log.model_id}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3">
+                    <Badge
+                      variant="outline"
+                      className="bg-primary/5 text-[10px] capitalize"
+                    >
+                      {log.action.replace(/[._]/g, " ")}
+                    </Badge>
+                  </td>
+                  <td className="px-4 py-3 font-mono text-[10px]">
+                    {log.ip_address}
+                  </td>
+                  <td className="px-4 py-3 text-[10px] text-muted-foreground">
+                    {formatDate(log.created_at)}
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => {
+                        setSelectedLog(log)
+                        setIsDialogOpen(true)
+                      }}
+                    >
+                      <Eye className="h-4 w-4" />
+                    </Button>
+                  </td>
+                </tr>
               ))
             )}
           </tbody>
         </table>
       </div>
 
-      {hasMore && (
-        <div className="flex justify-center">
-          <Button onClick={onLoadMore} disabled={isLoading} variant="outline">
-            {isLoading ? "Loading..." : "Load More"}
-          </Button>
-        </div>
-      )}
+      <AuditLogDetailsDialog
+        log={selectedLog}
+        open={isDialogOpen}
+        onOpenChange={setIsDialogOpen}
+      />
     </div>
   )
 }
